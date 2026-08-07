@@ -1,0 +1,101 @@
+name: Home Lab Hub Prototype
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - homelab/hubs-v1
+    paths:
+      - '.github/workflows/homelab-hubs-prototype.yml'
+      - 'tooling/apply_homelab_hubs_patch.py'
+      - 'lib/ui/navigation/homelab_hub_routes.dart'
+      - 'lib/ui/screens/hubs/**'
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.44.1'
+
+jobs:
+  patch-build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out prototype branch
+        uses: actions/checkout@v4
+        with:
+          ref: homelab/hubs-v1
+          fetch-depth: 0
+
+      - name: Apply isolated router patch
+        run: python3 tooling/apply_homelab_hubs_patch.py
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Format touched Dart files
+        run: |
+          dart format \
+            lib/ui/navigation/app_router.dart \
+            lib/ui/navigation/homelab_hub_routes.dart \
+            lib/ui/screens/hubs/homelab_hub_screen.dart
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build prototype web bundle
+        run: flutter build web --wasm --release --base-href "/Moonfin/Web/"
+
+      - name: Write plugin runtime config
+        run: |
+          cat > build/web/config.json <<'EOF'
+          {
+            "schemaVersion": 1,
+            "defaultServerUrl": null,
+            "discoveryProxyUrl": null,
+            "enableWebRtcScan": true,
+            "brandingName": "Moonfin Home Lab",
+            "pluginMode": true,
+            "forcedServerUrl": null
+          }
+          EOF
+
+      - name: Package prototype
+        run: |
+          printf '%s\n' \
+            '{' \
+            '  "schemaVersion": 1,' \
+            '  "prototype": "homelab-hubs-v1",' \
+            '  "commit": "${{ github.sha }}",' \
+            '  "flutterVersion": "${{ env.FLUTTER_VERSION }}"' \
+            '}' > build/web/homelab-build-manifest.json
+          tar -czf homelab-moonfin-web.tar.gz -C build/web .
+          sha256sum homelab-moonfin-web.tar.gz > homelab-moonfin-web.tar.gz.sha256
+
+      - name: Commit generated router wiring after successful build
+        run: |
+          if git diff --quiet; then
+            echo "No generated patch changes to commit."
+            exit 0
+          fi
+          git config user.name "Home Lab Build Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            lib/ui/navigation/app_router.dart \
+            lib/ui/navigation/homelab_hub_routes.dart \
+            lib/ui/screens/hubs/homelab_hub_screen.dart
+          git commit -m "Wire Home Lab hub prototype into Moonfin"
+          git push origin HEAD:homelab/hubs-v1
+
+      - name: Upload prototype web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: homelab-moonfin-web
+          path: |
+            homelab-moonfin-web.tar.gz
+            homelab-moonfin-web.tar.gz.sha256
+            build/web/homelab-build-manifest.json
+          if-no-files-found: error
