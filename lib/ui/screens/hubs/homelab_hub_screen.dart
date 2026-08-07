@@ -28,16 +28,16 @@ enum HomelabHubKind { movies, tv, anime }
 
 extension HomelabHubKindX on HomelabHubKind {
   String get title => switch (this) {
-        HomelabHubKind.movies => 'Movies',
-        HomelabHubKind.tv => 'TV',
-        HomelabHubKind.anime => 'Anime',
-      };
+    HomelabHubKind.movies => 'Movies',
+    HomelabHubKind.tv => 'TV',
+    HomelabHubKind.anime => 'Anime',
+  };
 
   String get route => switch (this) {
-        HomelabHubKind.movies => HomelabHubRoutes.movies,
-        HomelabHubKind.tv => HomelabHubRoutes.tv,
-        HomelabHubKind.anime => HomelabHubRoutes.anime,
-      };
+    HomelabHubKind.movies => HomelabHubRoutes.movies,
+    HomelabHubKind.tv => HomelabHubRoutes.tv,
+    HomelabHubKind.anime => HomelabHubRoutes.anime,
+  };
 }
 
 class HomelabHubScreen extends StatefulWidget {
@@ -115,7 +115,9 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
     );
   }
 
-  List<AggregatedLibrary> _matchingLibraries(List<AggregatedLibrary> libraries) {
+  List<AggregatedLibrary> _matchingLibraries(
+    List<AggregatedLibrary> libraries,
+  ) {
     // Exact library names are intentional for the prototype. Using only
     // collectionType would merge Anime Movies into Movies and Anime into TV,
     // which is precisely the leakage these hubs are meant to prevent.
@@ -261,9 +263,10 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
                       child: Text(
                         data.discoveryNotice!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColorScheme.onSurface
-                                  .withValues(alpha: 0.65),
-                            ),
+                          color: AppColorScheme.onSurface.withValues(
+                            alpha: 0.65,
+                          ),
+                        ),
                       ),
                     ),
                   if (data.localRows.isNotEmpty) ...[
@@ -271,7 +274,8 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 18, 16, 2),
                       child: Text(
                         'From Your Library',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
                               color: AppColorScheme.onSurface,
                               fontWeight: FontWeight.w700,
                             ),
@@ -409,9 +413,9 @@ class _HubHeader extends StatelessWidget {
           Text(
             kind.title,
             style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  color: AppColorScheme.onSurface,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColorScheme.onSurface,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -439,8 +443,8 @@ class _HubHeader extends StatelessWidget {
               'Prototype discovery filter: Japanese-language Animation. '
               'MDBList-backed seasonal and curated rows come next.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColorScheme.onSurface.withValues(alpha: 0.58),
-                  ),
+                color: AppColorScheme.onSurface.withValues(alpha: 0.58),
+              ),
             ),
           ],
         ],
@@ -481,10 +485,7 @@ class _HubError extends StatelessWidget {
         children: [
           const Text('The hub could not be loaded.'),
           const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () => onRetry(),
-            child: const Text('Retry'),
-          ),
+          FilledButton(onPressed: () => onRetry(), child: const Text('Retry')),
         ],
       ),
     );

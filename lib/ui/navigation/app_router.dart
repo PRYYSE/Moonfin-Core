@@ -96,6 +96,7 @@ import '../screens/admin/logs/admin_log_viewer_screen.dart';
 import '../screens/admin/livetv/admin_live_tv_screen.dart';
 import '../screens/admin/metadata/admin_metadata_edit_screen.dart';
 import 'destinations.dart';
+import 'homelab_hub_routes.dart';
 import 'focus_route_observer.dart';
 import 'route_lifecycle_observer.dart';
 
@@ -200,6 +201,8 @@ final appRouter = GoRouter(
     return null;
   },
   routes: [
+    ...homelabHubRoutes(),
+
     // Auth
     GoRoute(
       path: Destinations.startup,
@@ -524,10 +527,7 @@ final appRouter = GoRouter(
                 channelId: state.uri.queryParameters['channelId'] ?? '',
               );
             }
-            return _opaqueFullScreenPage<void>(
-              state: state,
-              child: child,
-            );
+            return _opaqueFullScreenPage<void>(state: state, child: child);
           },
         ),
       ],
@@ -795,7 +795,8 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final personId = state.pathParameters['personId']!;
         final prefs = GetIt.instance<UserPreferences>();
-        if (prefs.get(UserPreferences.detailScreenStyle) == DetailScreenStyle.modern) {
+        if (prefs.get(UserPreferences.detailScreenStyle) ==
+            DetailScreenStyle.modern) {
           return ItemDetailScreen(
             key: ValueKey('tmdb:$personId'),
             itemId: 'tmdb:$personId',
@@ -804,7 +805,6 @@ final appRouter = GoRouter(
         return SeerrPersonScreen(personId: personId);
       },
     ),
-
   ],
 );
 
@@ -817,10 +817,10 @@ class PlayerRouteObserver extends NavigatorObserver {
     final name = route.settings.name;
     return name != null &&
         (name.startsWith('/player/') ||
-         name.startsWith('/game-player/') ||
-         name == '/live-tv/player' ||
-         name == Destinations.audioPlayer ||
-         name == Destinations.videoPlayer);
+            name.startsWith('/game-player/') ||
+            name == '/live-tv/player' ||
+            name == Destinations.audioPlayer ||
+            name == Destinations.videoPlayer);
   }
 
   @override

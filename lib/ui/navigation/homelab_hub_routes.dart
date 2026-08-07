@@ -14,19 +14,19 @@ abstract final class HomelabHubRoutes {
 }
 
 List<RouteBase> homelabHubRoutes() => [
-      GoRoute(
-        path: HomelabHubRoutes.movies,
-        builder: (context, state) =>
-            const HomelabHubScreen(kind: HomelabHubKind.movies),
-      ),
-      GoRoute(
-        path: HomelabHubRoutes.tv,
-        builder: (context, state) =>
-            const HomelabHubScreen(kind: HomelabHubKind.tv),
-      ),
-      GoRoute(
-        path: HomelabHubRoutes.anime,
-        builder: (context, state) =>
-            const HomelabHubScreen(kind: HomelabHubKind.anime),
-      ),
-    ];
+  GoRoute(
+    path: HomelabHubRoutes.movies,
+    builder: (context, state) =>
+        const HomelabHubScreen(kind: HomelabHubKind.movies),
+  ),
+  GoRoute(
+    path: HomelabHubRoutes.tv,
+    builder: (context, state) =>
+        const HomelabHubScreen(kind: HomelabHubKind.tv),
+  ),
+  GoRoute(
+    path: HomelabHubRoutes.anime,
+    builder: (context, state) =>
+        const HomelabHubScreen(kind: HomelabHubKind.anime),
+  ),
+];
