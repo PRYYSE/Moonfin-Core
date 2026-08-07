@@ -13,6 +13,7 @@ import '../../../data/services/row_data_source.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../../../preference/preference_constants.dart';
 import '../../../preference/user_preferences.dart';
+import '../../../util/platform_detection.dart';
 import '../../navigation/destinations.dart';
 import '../../navigation/homelab_hub_routes.dart';
 import '../../widgets/library_row.dart';
@@ -134,14 +135,16 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
 
   Future<List<_DiscoverHubRow>> _loadDiscoveryRows(SeerrRepository repo) async {
     if (widget.kind == HomelabHubKind.movies) {
+      // Use the generic Seerr discover endpoints here. They are available on
+      // the same Moonbase proxy path already proven by the Anime hub and avoid
+      // one unsupported convenience endpoint taking the whole page down.
       final pages = await Future.wait([
-        repo.getTrendingMovies(limit: 20),
-        repo.getTopMovies(limit: 20),
-        repo.getUpcomingMovies(page: 1),
+        repo.discoverMovies(page: 1, sortBy: 'popularity.desc'),
+        repo.discoverMovies(page: 1, sortBy: 'vote_average.desc'),
       ]);
       return [
         _DiscoverHubRow(
-          title: 'Trending Movies',
+          title: 'Popular Movies',
           mediaType: 'movie',
           items: pages[0].results,
         ),
@@ -150,23 +153,17 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
           mediaType: 'movie',
           items: pages[1].results,
         ),
-        _DiscoverHubRow(
-          title: 'Upcoming Movies',
-          mediaType: 'movie',
-          items: pages[2].results,
-        ),
       ];
     }
 
     if (widget.kind == HomelabHubKind.tv) {
       final pages = await Future.wait([
-        repo.getTrendingTv(limit: 20),
-        repo.getTopTv(limit: 20),
-        repo.getUpcomingTv(page: 1),
+        repo.discoverTv(page: 1, sortBy: 'popularity.desc'),
+        repo.discoverTv(page: 1, sortBy: 'vote_average.desc'),
       ]);
       return [
         _DiscoverHubRow(
-          title: 'Trending TV',
+          title: 'Popular TV',
           mediaType: 'tv',
           items: pages[0].results,
         ),
@@ -174,11 +171,6 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
           title: 'Top Rated TV',
           mediaType: 'tv',
           items: pages[1].results,
-        ),
-        _DiscoverHubRow(
-          title: 'Upcoming TV',
-          mediaType: 'tv',
-          items: pages[2].results,
         ),
       ];
     }
@@ -228,6 +220,12 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
     final topInset = navbarPosition == NavbarPosition.top
         ? TopToolbar.baseHeightFor(context) + 12
         : 20.0;
+    final hasPersistentLeftRail =
+        navbarPosition == NavbarPosition.left &&
+        (PlatformDetection.isTV ||
+            PlatformDetection.isDesktop ||
+            (PlatformDetection.isWeb && !PlatformDetection.useMobileUi));
+    final leftInset = hasPersistentLeftRail ? 92.0 : 20.0;
 
     return Scaffold(
       backgroundColor: AppColorScheme.background,
@@ -250,7 +248,7 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
               onRefresh: _refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(20, topInset, 20, 40),
+                padding: EdgeInsets.fromLTRB(leftInset, topInset, 20, 40),
                 children: [
                   _HubHeader(kind: widget.kind),
                   const SizedBox(height: 18),
