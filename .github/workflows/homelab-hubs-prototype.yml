@@ -27,7 +27,7 @@ jobs:
           ref: homelab/hubs-v1
           fetch-depth: 0
 
-      - name: Apply isolated router patch
+      - name: Apply isolated router and navigation patch
         run: python3 tooling/apply_homelab_hubs_patch.py
 
       - name: Set up Flutter
@@ -41,7 +41,9 @@ jobs:
           dart format \
             lib/ui/navigation/app_router.dart \
             lib/ui/navigation/homelab_hub_routes.dart \
-            lib/ui/screens/hubs/homelab_hub_screen.dart
+            lib/ui/screens/hubs/homelab_hub_screen.dart \
+            lib/ui/widgets/left_sidebar.dart \
+            lib/ui/widgets/top_toolbar.dart
 
       - name: Resolve dependencies
         run: flutter pub get
@@ -75,7 +77,7 @@ jobs:
           tar -czf homelab-moonfin-web.tar.gz -C build/web .
           sha256sum homelab-moonfin-web.tar.gz > homelab-moonfin-web.tar.gz.sha256
 
-      - name: Commit generated router wiring after successful build
+      - name: Commit generated prototype wiring after successful build
         run: |
           if git diff --quiet; then
             echo "No generated patch changes to commit."
@@ -85,9 +87,15 @@ jobs:
             git add \
               lib/ui/navigation/app_router.dart \
               lib/ui/navigation/homelab_hub_routes.dart \
-              lib/ui/screens/hubs/homelab_hub_screen.dart
-            git commit -m "Wire Home Lab hub prototype into Moonfin"
-            git push origin HEAD:homelab/hubs-v1
+              lib/ui/screens/hubs/homelab_hub_screen.dart \
+              lib/ui/widgets/left_sidebar.dart \
+              lib/ui/widgets/top_toolbar.dart
+            if git diff --cached --quiet; then
+              echo "No staged generated changes to commit."
+            else
+              git commit -m "Wire Home Lab hub prototype into Moonfin"
+              git push origin HEAD:homelab/hubs-v1
+            fi
           fi
 
       - name: Upload prototype web bundle artifact
