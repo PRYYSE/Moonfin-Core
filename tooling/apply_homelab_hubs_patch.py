@@ -337,7 +337,20 @@ def patch_hub_screen() -> None:
             (PlatformDetection.isWeb && !PlatformDetection.useMobileUi));
     final leftInset = hasPersistentLeftRail ? 92.0 : 20.0;
 """
-    text = replace_once(text, old_insets, new_insets, "hub sidebar inset")
+
+    # dart format rewrites the boolean expression above. Checking the formatted
+    # file against the literal replacement string therefore is not idempotent
+    # and previously inserted a second declaration on the next workflow run.
+    # Stable identifier sentinels avoid that while still failing on a partial
+    # or inconsistent patch state.
+    has_left_rail = "final hasPersistentLeftRail =" in text
+    has_left_inset = "final leftInset =" in text
+    if has_left_rail != has_left_inset:
+        raise SystemExit(
+            "Refusing to patch hub sidebar inset: partial inset wiring found."
+        )
+    if not has_left_rail:
+        text = replace_once(text, old_insets, new_insets, "hub sidebar inset")
 
     text = replace_once(
         text,
