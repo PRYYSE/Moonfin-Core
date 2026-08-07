@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/homelab-hubs-prototype.yml'
       - 'tooling/apply_homelab_hubs_patch.py'
+      - 'tooling/apply_homelab_mobile_nav_patch.py'
       - 'lib/ui/navigation/homelab_hub_routes.dart'
       - 'lib/ui/screens/hubs/**'
 
@@ -30,6 +31,9 @@ jobs:
       - name: Apply isolated router and navigation patch
         run: python3 tooling/apply_homelab_hubs_patch.py
 
+      - name: Apply native mobile navigation patch
+        run: python3 tooling/apply_homelab_mobile_nav_patch.py
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -43,6 +47,7 @@ jobs:
             lib/ui/navigation/homelab_hub_routes.dart \
             lib/ui/screens/hubs/homelab_hub_screen.dart \
             lib/ui/widgets/left_sidebar.dart \
+            lib/ui/widgets/mobile_bottom_nav_bar.dart \
             lib/ui/widgets/top_toolbar.dart
 
       - name: Resolve dependencies
@@ -89,6 +94,7 @@ jobs:
               lib/ui/navigation/homelab_hub_routes.dart \
               lib/ui/screens/hubs/homelab_hub_screen.dart \
               lib/ui/widgets/left_sidebar.dart \
+              lib/ui/widgets/mobile_bottom_nav_bar.dart \
               lib/ui/widgets/top_toolbar.dart
             if git diff --cached --quiet; then
               echo "No staged generated changes to commit."
