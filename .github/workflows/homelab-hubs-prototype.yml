@@ -79,18 +79,18 @@ jobs:
         run: |
           if git diff --quiet; then
             echo "No generated patch changes to commit."
-            exit 0
+          else
+            git config user.name "Home Lab Build Bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add \
+              lib/ui/navigation/app_router.dart \
+              lib/ui/navigation/homelab_hub_routes.dart \
+              lib/ui/screens/hubs/homelab_hub_screen.dart
+            git commit -m "Wire Home Lab hub prototype into Moonfin"
+            git push origin HEAD:homelab/hubs-v1
           fi
-          git config user.name "Home Lab Build Bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add \
-            lib/ui/navigation/app_router.dart \
-            lib/ui/navigation/homelab_hub_routes.dart \
-            lib/ui/screens/hubs/homelab_hub_screen.dart
-          git commit -m "Wire Home Lab hub prototype into Moonfin"
-          git push origin HEAD:homelab/hubs-v1
 
-      - name: Upload prototype web bundle
+      - name: Upload prototype web bundle artifact
         uses: actions/upload-artifact@v4
         with:
           name: homelab-moonfin-web
@@ -99,3 +99,26 @@ jobs:
             homelab-moonfin-web.tar.gz.sha256
             build/web/homelab-build-manifest.json
           if-no-files-found: error
+
+      - name: Publish stable prototype download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="homelab-hubs-v1-latest"
+          TITLE="Home Lab Moonfin Hubs v1 Prototype"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              homelab-moonfin-web.tar.gz \
+              homelab-moonfin-web.tar.gz.sha256 \
+              build/web/homelab-build-manifest.json \
+              --clobber
+          else
+            gh release create "$TAG" \
+              homelab-moonfin-web.tar.gz \
+              homelab-moonfin-web.tar.gz.sha256 \
+              build/web/homelab-build-manifest.json \
+              --target "${{ github.sha }}" \
+              --title "$TITLE" \
+              --notes "Automated web-only Home Lab prototype build. Do not merge into upstream/main until the hub UX is validated." \
+              --prerelease
+          fi
