@@ -1,0 +1,1 @@
+Force a fresh Home Lab hub prototype web build after cleanup patch 897c865.
