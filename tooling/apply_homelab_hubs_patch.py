@@ -49,6 +49,17 @@ def patch_router() -> None:
 def patch_left_sidebar() -> None:
     text = LEFT_SIDEBAR.read_text(encoding="utf-8")
 
+    # dart format may rewrite whitespace inside an already-applied insertion.
+    # Use stable widget/import sentinels so a later workflow run remains
+    # idempotent instead of trying to find the pre-insertion anchor again.
+    if (
+        "sidebar-homelab-movies" in text
+        and "sidebar-homelab-tv" in text
+        and "sidebar-homelab-anime" in text
+        and "homelab_hub_routes.dart" in text
+    ):
+        return
+
     text = replace_once(
         text,
         "import '../navigation/destinations.dart';\n",
@@ -122,6 +133,17 @@ def patch_left_sidebar() -> None:
 
 def patch_top_toolbar() -> None:
     text = TOP_TOOLBAR.read_text(encoding="utf-8")
+
+    # Same rationale as the sidebar guard above: the hub buttons are already
+    # wired on generated builds, but dart format changes the literal insertion
+    # enough that comparing the whole block is not a reliable idempotency test.
+    if (
+        "toolbar_homelab_movies" in text
+        and "toolbar_homelab_tv" in text
+        and "toolbar_homelab_anime" in text
+        and "homelab_hub_routes.dart" in text
+    ):
+        return
 
     text = replace_once(
         text,
