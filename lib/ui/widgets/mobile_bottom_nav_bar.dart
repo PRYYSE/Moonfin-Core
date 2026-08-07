@@ -17,6 +17,7 @@ import '../../preference/user_preferences.dart';
 import '../../util/overlay_color_palette.dart';
 import '../../util/game_library.dart';
 import '../navigation/destinations.dart';
+import '../navigation/homelab_hub_routes.dart';
 import '../navigation/home_refresh_bus.dart';
 import '../screens/settings/settings_side_panel.dart';
 import '../screens/syncplay/syncplay_screen.dart';
@@ -31,6 +32,7 @@ const double _kBarHeight = 54.0;
 const double _kIconSize = 24.0;
 const double _kFloatingInset = 14.0;
 const double _kFloatingRadius = 22.0;
+
 class MobileBottomNavBar extends StatefulWidget {
   final String? activeRoute;
 
@@ -168,6 +170,33 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
         },
       ),
       _BottomNavAction(
+        icon: Icons.movie_rounded,
+        label: 'Movies',
+        isActive: _isActive(HomelabHubRoutes.movies),
+        onTap: () {
+          if (_isActive(HomelabHubRoutes.movies)) return;
+          context.navigateTopLevel(HomelabHubRoutes.movies);
+        },
+      ),
+      _BottomNavAction(
+        icon: Icons.tv_rounded,
+        label: 'TV',
+        isActive: _isActive(HomelabHubRoutes.tv),
+        onTap: () {
+          if (_isActive(HomelabHubRoutes.tv)) return;
+          context.navigateTopLevel(HomelabHubRoutes.tv);
+        },
+      ),
+      _BottomNavAction(
+        icon: Icons.auto_awesome_rounded,
+        label: 'Anime',
+        isActive: _isActive(HomelabHubRoutes.anime),
+        onTap: () {
+          if (_isActive(HomelabHubRoutes.anime)) return;
+          context.navigateTopLevel(HomelabHubRoutes.anime);
+        },
+      ),
+      _BottomNavAction(
         icon: Icons.search_rounded,
         label: l10n.search,
         isActive: _isActive(Destinations.search),
@@ -237,7 +266,8 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
       );
     }
 
-    final showSyncPlay = _prefs.get(UserPreferences.syncPlayEnabled) &&
+    final showSyncPlay =
+        _prefs.get(UserPreferences.syncPlayEnabled) &&
         _prefs.get(UserPreferences.showSyncPlayButton);
     if (showSyncPlay) {
       actions.add(
@@ -283,7 +313,8 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
             fit: BoxFit.contain,
           ),
           label: l10n.libraries,
-          isActive: activeRoute.startsWith('/library') ||
+          isActive:
+              activeRoute.startsWith('/library') ||
               activeRoute.startsWith('/music'),
           onTap: () => _showLibrariesSheet(context),
         ),
@@ -539,8 +570,7 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
   }
 
   double _overlayOpacity() {
-    return (_prefs.get(UserPreferences.navbarOpacity) / 100.0)
-        .clamp(0.0, 1.0);
+    return (_prefs.get(UserPreferences.navbarOpacity) / 100.0).clamp(0.0, 1.0);
   }
 
   Color _resolveBarColor(BuildContext context, {bool forSheet = false}) {
@@ -562,8 +592,11 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
             : const SizedBox.shrink());
   }
 
-  Widget _buildTab(BuildContext context, _BottomNavAction action,
-      {required int slot}) {
+  Widget _buildTab(
+    BuildContext context,
+    _BottomNavAction action, {
+    required int slot,
+  }) {
     final accent = Theme.of(context).colorScheme.primary;
     final slotColor = AppColorScheme.navColorForSlot(slot);
     final baseColor = slotColor ?? accent;
@@ -646,8 +679,9 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
     final row = Material(
       type: MaterialType.transparency,
       child: Row(
-        mainAxisAlignment:
-            fill ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
+        mainAxisAlignment: fill
+            ? MainAxisAlignment.spaceBetween
+            : MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < tabs.length; i++)
@@ -722,10 +756,7 @@ class _SheetSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      child: Material(
-        color: color,
-        child: child,
-      ),
+      child: Material(color: color, child: child),
     );
   }
 }
