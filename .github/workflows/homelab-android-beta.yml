@@ -1,0 +1,87 @@
+name: Home Lab Android Beta
+
+on:
+  push:
+    branches:
+      - homelab/hubs-v1
+    paths:
+      - '.github/workflows/homelab-android-beta.yml'
+      - 'lib/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.44.1'
+
+jobs:
+  android-beta:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Home Lab branch
+        uses: actions/checkout@v4
+        with:
+          ref: homelab/hubs-v1
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build separate Home Lab Android app
+        run: |
+          flutter build apk --release \
+            --flavor mobile-beta \
+            --dart-define=DISTRIBUTION_CHANNEL=apk
+
+          APK="$(find build/app/outputs/flutter-apk -maxdepth 1 -type f -name '*mobile-beta*release.apk' -print -quit)"
+          if [ -z "$APK" ] || [ ! -f "$APK" ]; then
+            echo "Home Lab beta APK was not produced." >&2
+            find build/app/outputs/flutter-apk -maxdepth 1 -type f -print || true
+            exit 1
+          fi
+
+          cp "$APK" Moonfin_HomeLab_Android.apk
+          sha256sum Moonfin_HomeLab_Android.apk > Moonfin_HomeLab_Android.apk.sha256
+
+      - name: Upload Home Lab Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Moonfin-HomeLab-Android
+          path: |
+            Moonfin_HomeLab_Android.apk
+            Moonfin_HomeLab_Android.apk.sha256
+          if-no-files-found: error
+
+      - name: Publish stable Home Lab Android test download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="homelab-android-beta-latest"
+          TITLE="Moonfin Home Lab Android Beta"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              Moonfin_HomeLab_Android.apk \
+              Moonfin_HomeLab_Android.apk.sha256 \
+              --clobber
+          else
+            gh release create "$TAG" \
+              Moonfin_HomeLab_Android.apk \
+              Moonfin_HomeLab_Android.apk.sha256 \
+              --target homelab/hubs-v1 \
+              --title "$TITLE" \
+              --notes "Home Lab test build using the separate org.moonfin.androidtv.beta application ID so it can coexist with the normal Moonfin app."
+          fi
