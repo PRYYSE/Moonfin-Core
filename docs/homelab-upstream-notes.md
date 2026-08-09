@@ -1,6 +1,6 @@
 # Home Lab upstream Moonfin notes
 
-This file records upstream Moonfin changes that matter to the Home Lab fork so future hub/UI work does not accidentally remove or duplicate them.
+This file records upstream Moonfin/Moonbase changes that matter to the Home Lab fork so future hub/UI work does not accidentally remove or duplicate them.
 
 ## Current upstream baseline
 
@@ -9,8 +9,9 @@ This file records upstream Moonfin changes that matter to the Home Lab fork so f
 - Android TV version: `2.4.0`, build `2000013`.
 - `homelab/hubs-v1-pre-2.4-sync` preserves the pre-sync Home Lab branch as rollback/reference.
 - Keep the Home Lab hub/navigation patches on top of upstream rather than freezing an old Moonfin base.
+- Current Home Lab server was on Moonbase `2.0.2.0`; upstream Moonbase `2.0.3.0` was released 2026-08-08 and should be installed before the next web baseline is signed off.
 
-## Upstream features/fixes to preserve
+## Upstream Moonfin features/fixes to preserve
 
 - OLED Mode with Subtle/Vivid options and true-black-oriented presentation.
 - Configurable personal rating styles and server-backed personal ratings. This is relevant to future per-user recommendation work.
@@ -28,14 +29,25 @@ This file records upstream Moonfin changes that matter to the Home Lab fork so f
 - Updated trickplay and Live TV direct-play defaults.
 - Ongoing localization updates.
 
+## Moonbase 2.0.3 changes to preserve/use
+
+- New Playback admin-defaults tab for autoplay, language/subtitle defaults, skip lengths, intro behaviour, Still Watching, Next Up timeout and rewind durations.
+- Admin-default pickers for Action Buttons and Seerr Discovery row order.
+- Sync profile support for OLED Mode, player time labels and newer home-row options.
+- ROM/BIOS routes now answer HEAD requests for client-side size checks.
+- Fixes incorrect admin preference keys/units that previously caused some defaults to silently do nothing.
+- Removes stale admin controls that no longer map to client settings while retaining underlying sync properties.
+- Corrects Resume/Unpause Rewind option values and the Details Screen Blur label.
+
 ## Home Lab design implications
 
 - Do not reimplement personal ratings; use the upstream capability as an input to future per-user recommendations where practical.
 - Preserve upstream Seerr ownership/request routing when building custom discovery rows.
 - Preserve upstream home-row focus/return behaviour when redesigning Home.
 - Keep OLED Mode available and compatible with the Home Lab visual redesign.
+- Use Moonbase's new Seerr discovery row-order/profile capabilities where useful instead of duplicating server-side settings.
 - Custom Movies / TV / Anime hubs should remain a thin overlay on current upstream Moonfin so playback, navigation, library and Seerr fixes continue to flow through.
 
 ## Update rule
 
-Before a major Home Lab Moonfin release or after a meaningful upstream Moonfin release, compare/sync current upstream `main`, review new release notes/commits for UI, playback, Seerr, recommendation and platform changes, preserve relevant behaviour, then rebuild only the affected Home Lab targets. Run the full platform matrix only at milestone validation points.
+Before a major Home Lab Moonfin release or after a meaningful upstream Moonfin/Moonbase release, compare/sync current upstream, review new release notes/commits for UI, playback, Seerr, recommendation and platform changes, preserve relevant behaviour, then rebuild only the affected Home Lab targets. Run the full platform matrix only at milestone validation points.
