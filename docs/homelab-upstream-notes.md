@@ -1,0 +1,41 @@
+# Home Lab upstream Moonfin notes
+
+This file records upstream Moonfin changes that matter to the Home Lab fork so future hub/UI work does not accidentally remove or duplicate them.
+
+## Current upstream baseline
+
+- Synced Home Lab fork to upstream `Moonfin-Client/Moonfin-Core` through commit `3e9184dbcd5e48abd7a02c3f1beed235a2269dce` on 2026-08-09.
+- Moonfin version: `2.4.0+30000146`.
+- Android TV version: `2.4.0`, build `2000013`.
+- `homelab/hubs-v1-pre-2.4-sync` preserves the pre-sync Home Lab branch as rollback/reference.
+- Keep the Home Lab hub/navigation patches on top of upstream rather than freezing an old Moonfin base.
+
+## Upstream features/fixes to preserve
+
+- OLED Mode with Subtle/Vivid options and true-black-oriented presentation.
+- Configurable personal rating styles and server-backed personal ratings. This is relevant to future per-user recommendation work.
+- Seerr improvements for continuing TV series: Request More remains available where appropriate, available seasons get a green check, and continuing-series handling was tightened.
+- External/discovery row taps now resolve owned titles back to the local library and non-owned titles through Seerr/TMDb.
+- Mobile library initial-load/scroll crash guards.
+- Library lazy-loading, local search, letter-jump and cold-start prefix-scan performance fixes.
+- Home-screen return behaviour realigns the viewport to the row the user came from.
+- Mobile media-bar trailer playback/width fixes.
+- Specials displayed inside a regular season retain the correct season context during playback/navigation.
+- Optional auto-hide behaviour for Skip Intro/Outro controls.
+- MPEG-4 Part 2 direct play when the client device can decode it.
+- Android TV Dolby Vision Profile 7 support documentation and reworked audio passthrough behaviour.
+- Media3 playback fixes: audio view mounting and heap-aware buffer budgeting, especially important for low-RAM Android/TV hardware.
+- Updated trickplay and Live TV direct-play defaults.
+- Ongoing localization updates.
+
+## Home Lab design implications
+
+- Do not reimplement personal ratings; use the upstream capability as an input to future per-user recommendations where practical.
+- Preserve upstream Seerr ownership/request routing when building custom discovery rows.
+- Preserve upstream home-row focus/return behaviour when redesigning Home.
+- Keep OLED Mode available and compatible with the Home Lab visual redesign.
+- Custom Movies / TV / Anime hubs should remain a thin overlay on current upstream Moonfin so playback, navigation, library and Seerr fixes continue to flow through.
+
+## Update rule
+
+Before a major Home Lab Moonfin release or after a meaningful upstream Moonfin release, compare/sync current upstream `main`, review new release notes/commits for UI, playback, Seerr, recommendation and platform changes, preserve relevant behaviour, then rebuild only the affected Home Lab targets. Run the full platform matrix only at milestone validation points.
