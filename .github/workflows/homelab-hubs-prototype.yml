@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/homelab-hubs-prototype.yml'
       - 'tooling/apply_homelab_hubs_patch.py'
+      - 'tooling/apply_homelab_home_redesign_patch.py'
       - 'tooling/apply_homelab_mobile_nav_patch.py'
       - 'lib/ui/navigation/homelab_hub_routes.dart'
       - 'lib/ui/screens/hubs/**'
@@ -38,6 +39,9 @@ jobs:
       - name: Apply native mobile navigation patch
         run: python3 tooling/apply_homelab_mobile_nav_patch.py
 
+      - name: Apply web-first Home redesign
+        run: python3 tooling/apply_homelab_home_redesign_patch.py
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -49,6 +53,7 @@ jobs:
           dart format \
             lib/ui/navigation/app_router.dart \
             lib/ui/navigation/homelab_hub_routes.dart \
+            lib/ui/screens/home/home_screen.dart \
             lib/ui/screens/hubs/homelab_hub_screen.dart \
             lib/ui/widgets/left_sidebar.dart \
             lib/ui/widgets/mobile_bottom_nav_bar.dart \
@@ -80,6 +85,7 @@ jobs:
             '{' \
             '  "schemaVersion": 1,' \
             '  "prototype": "homelab-hubs-v1",' \
+            '  "design": "home-web-v1",' \
             '  "commit": "${{ github.sha }}",' \
             '  "flutterVersion": "${{ env.FLUTTER_VERSION }}"' \
             '}' > build/web/homelab-build-manifest.json
@@ -96,6 +102,7 @@ jobs:
             git add \
               lib/ui/navigation/app_router.dart \
               lib/ui/navigation/homelab_hub_routes.dart \
+              lib/ui/screens/home/home_screen.dart \
               lib/ui/screens/hubs/homelab_hub_screen.dart \
               lib/ui/widgets/left_sidebar.dart \
               lib/ui/widgets/mobile_bottom_nav_bar.dart \
@@ -103,7 +110,7 @@ jobs:
             if git diff --cached --quiet; then
               echo "No staged generated changes to commit."
             else
-              git commit -m "Wire Home Lab hub prototype into Moonfin"
+              git commit -m "Wire Home Lab UI redesign into Moonfin"
               for attempt in 1 2 3; do
                 git fetch origin homelab/hubs-v1
                 if git rebase origin/homelab/hubs-v1; then
