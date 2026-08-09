@@ -217,9 +217,12 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
   @override
   Widget build(BuildContext context) {
     final navbarPosition = _prefs.get(UserPreferences.navbarPosition);
+    final safeTopInset = PlatformDetection.useMobileUi
+        ? MediaQuery.paddingOf(context).top
+        : 0.0;
     final topInset = navbarPosition == NavbarPosition.top
-        ? TopToolbar.baseHeightFor(context) + 12
-        : 20.0;
+        ? safeTopInset + TopToolbar.baseHeightFor(context) + 12
+        : safeTopInset + 20.0;
     final hasPersistentLeftRail =
         navbarPosition == NavbarPosition.left &&
         (PlatformDetection.isTV ||
