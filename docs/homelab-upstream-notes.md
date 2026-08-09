@@ -39,6 +39,13 @@ This file records upstream Moonfin/Moonbase changes that matter to the Home Lab 
 - Removes stale admin controls that no longer map to client settings while retaining underlying sync properties.
 - Corrects Resume/Unpause Rewind option values and the Details Screen Blur label.
 
+## LG lounge TV client
+
+- The official `Moonfin-Client/Smart-TV` client explicitly supports LG TVs from 2016 onward and webOS 3.0+, so the LG OLED65C6PSA is in its documented support range.
+- The webOS package is a native TV-oriented `.ipk` using the separate Enact/Sandstone Smart-TV codebase and webOS Starfish playback pipeline.
+- Therefore the LG client will not automatically inherit Flutter `Moonfin-Core` UI patches. Home / Movies / TV / Anime row logic should remain conceptually consistent, but LG navigation/layout changes must be ported to the Smart-TV fork separately.
+- This is desirable for the Home Lab design: shared content/row intent, platform-specific navigation, sizing, focus and remote behaviour.
+
 ## Home Lab design implications
 
 - Do not reimplement personal ratings; use the upstream capability as an input to future per-user recommendations where practical.
@@ -47,7 +54,8 @@ This file records upstream Moonfin/Moonbase changes that matter to the Home Lab 
 - Keep OLED Mode available and compatible with the Home Lab visual redesign.
 - Use Moonbase's new Seerr discovery row-order/profile capabilities where useful instead of duplicating server-side settings.
 - Custom Movies / TV / Anime hubs should remain a thin overlay on current upstream Moonfin so playback, navigation, library and Seerr fixes continue to flow through.
+- For LG webOS, port the final logical hub/row model into `Moonfin-Client/Smart-TV` rather than trying to install the Flutter Android/TV build.
 
 ## Update rule
 
-Before a major Home Lab Moonfin release or after a meaningful upstream Moonfin/Moonbase release, compare/sync current upstream, review new release notes/commits for UI, playback, Seerr, recommendation and platform changes, preserve relevant behaviour, then rebuild only the affected Home Lab targets. Run the full platform matrix only at milestone validation points.
+Before a major Home Lab Moonfin release or after a meaningful upstream Moonfin/Moonbase/Smart-TV release, compare/sync current upstream, review new release notes/commits for UI, playback, Seerr, recommendation and platform changes, preserve relevant behaviour, then rebuild only the affected Home Lab targets. Run the full platform matrix only at milestone validation points.
