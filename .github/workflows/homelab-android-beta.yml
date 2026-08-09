@@ -12,6 +12,10 @@ on:
       - 'pubspec.lock'
   workflow_dispatch:
 
+concurrency:
+  group: homelab-android-beta
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
