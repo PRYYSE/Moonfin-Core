@@ -96,7 +96,6 @@ import '../screens/admin/logs/admin_log_viewer_screen.dart';
 import '../screens/admin/livetv/admin_live_tv_screen.dart';
 import '../screens/admin/metadata/admin_metadata_edit_screen.dart';
 import 'destinations.dart';
-import 'homelab_hub_routes.dart';
 import 'focus_route_observer.dart';
 import 'route_lifecycle_observer.dart';
 
@@ -201,8 +200,6 @@ final appRouter = GoRouter(
     return null;
   },
   routes: [
-    ...homelabHubRoutes(),
-
     // Auth
     GoRoute(
       path: Destinations.startup,
@@ -383,11 +380,15 @@ final appRouter = GoRouter(
         final itemId = state.pathParameters['itemId']!;
         final serverId = state.uri.queryParameters['serverId'];
         final autoPlay = state.uri.queryParameters['autoPlay'] == 'true';
+        final contextSeasonId = state.uri.queryParameters['seasonContext'];
         return ItemDetailScreen(
-          key: ValueKey(itemId),
+          // The browsed season decides which episode list this screen loads, so
+          // a change of context has to remount rather than reuse the view model.
+          key: ValueKey('$itemId|${contextSeasonId ?? ''}'),
           itemId: itemId,
           serverId: serverId,
           autoPlay: autoPlay,
+          contextSeasonId: contextSeasonId,
         );
       },
       routes: [
@@ -527,7 +528,10 @@ final appRouter = GoRouter(
                 channelId: state.uri.queryParameters['channelId'] ?? '',
               );
             }
-            return _opaqueFullScreenPage<void>(state: state, child: child);
+            return _opaqueFullScreenPage<void>(
+              state: state,
+              child: child,
+            );
           },
         ),
       ],
@@ -795,8 +799,7 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final personId = state.pathParameters['personId']!;
         final prefs = GetIt.instance<UserPreferences>();
-        if (prefs.get(UserPreferences.detailScreenStyle) ==
-            DetailScreenStyle.modern) {
+        if (prefs.get(UserPreferences.detailScreenStyle) == DetailScreenStyle.modern) {
           return ItemDetailScreen(
             key: ValueKey('tmdb:$personId'),
             itemId: 'tmdb:$personId',
@@ -805,6 +808,7 @@ final appRouter = GoRouter(
         return SeerrPersonScreen(personId: personId);
       },
     ),
+
   ],
 );
 
@@ -817,10 +821,10 @@ class PlayerRouteObserver extends NavigatorObserver {
     final name = route.settings.name;
     return name != null &&
         (name.startsWith('/player/') ||
-            name.startsWith('/game-player/') ||
-            name == '/live-tv/player' ||
-            name == Destinations.audioPlayer ||
-            name == Destinations.videoPlayer);
+         name.startsWith('/game-player/') ||
+         name == '/live-tv/player' ||
+         name == Destinations.audioPlayer ||
+         name == Destinations.videoPlayer);
   }
 
   @override
