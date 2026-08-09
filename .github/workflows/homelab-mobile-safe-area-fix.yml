@@ -1,6 +1,11 @@
 name: Home Lab Mobile Safe Area Fix
 
 on:
+  push:
+    branches:
+      - homelab/hubs-v1
+    paths:
+      - '.github/workflows/homelab-mobile-safe-area-fix.yml'
   workflow_dispatch:
 
 permissions:
