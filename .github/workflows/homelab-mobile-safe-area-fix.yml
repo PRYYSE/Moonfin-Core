@@ -40,8 +40,6 @@ jobs:
               raise SystemExit(f'Expected one hub inset anchor, found {text.count(old)}')
           PY
 
-          dart format lib/ui/screens/hubs/homelab_hub_screen.dart
-
       - name: Commit generated fix
         run: |
           if git diff --quiet; then
