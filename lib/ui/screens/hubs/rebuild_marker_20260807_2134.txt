@@ -1,1 +1,1 @@
-Force a fresh Home Lab hub prototype web build after cleanup patch 897c865.
+Reapply Home Lab hub/router wiring and rebuild web after syncing upstream Moonfin 2.4.0 on 2026-08-09.
