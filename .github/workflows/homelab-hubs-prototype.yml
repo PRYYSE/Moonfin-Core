@@ -15,6 +15,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: homelab-hubs-prototype
+  cancel-in-progress: true
+
 env:
   FLUTTER_VERSION: '3.44.1'
 
@@ -100,7 +104,20 @@ jobs:
               echo "No staged generated changes to commit."
             else
               git commit -m "Wire Home Lab hub prototype into Moonfin"
-              git push origin HEAD:homelab/hubs-v1
+              for attempt in 1 2 3; do
+                git fetch origin homelab/hubs-v1
+                if git rebase origin/homelab/hubs-v1; then
+                  if git push origin HEAD:homelab/hubs-v1; then
+                    exit 0
+                  fi
+                else
+                  git rebase --abort || true
+                fi
+                echo "Generated wiring push raced with another branch update; retrying ($attempt/3)."
+                sleep 2
+              done
+              echo "Could not safely publish generated wiring after 3 attempts."
+              exit 1
             fi
           fi
 
