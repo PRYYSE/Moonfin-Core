@@ -1,0 +1,55 @@
+name: Home Lab Mobile Safe Area Fix
+
+on:
+  push:
+    branches:
+      - homelab/hubs-v1
+    paths:
+      - '.github/workflows/homelab-mobile-safe-area-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Home Lab branch
+        uses: actions/checkout@v4
+        with:
+          ref: homelab/hubs-v1
+
+      - name: Apply safe-area-aware mobile hub inset
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('lib/ui/screens/hubs/homelab_hub_screen.dart')
+          text = path.read_text(encoding='utf-8')
+
+          old = """    final navbarPosition = _prefs.get(UserPreferences.navbarPosition);\n    final topInset = navbarPosition == NavbarPosition.top\n        ? TopToolbar.baseHeightFor(context) + 12\n        : 20.0;\n"""
+          new = """    final navbarPosition = _prefs.get(UserPreferences.navbarPosition);\n    final safeTopInset = PlatformDetection.useMobileUi\n        ? MediaQuery.paddingOf(context).top\n        : 0.0;\n    final topInset = navbarPosition == NavbarPosition.top\n        ? safeTopInset + TopToolbar.baseHeightFor(context) + 12\n        : safeTopInset + 20.0;\n"""
+
+          if new in text:
+              print('Safe-area fix already present.')
+          elif text.count(old) == 1:
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+              print('Applied mobile safe-area inset fix.')
+          else:
+              raise SystemExit(f'Expected one hub inset anchor, found {text.count(old)}')
+          PY
+
+          dart format lib/ui/screens/hubs/homelab_hub_screen.dart
+
+      - name: Commit generated fix
+        run: |
+          if git diff --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/ui/screens/hubs/homelab_hub_screen.dart
+          git commit -m 'Fix mobile hub safe-area spacing'
+          git push origin HEAD:homelab/hubs-v1
