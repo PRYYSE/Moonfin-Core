@@ -17,7 +17,7 @@ import '../../../preference/user_preferences.dart';
 import '../../../util/platform_detection.dart';
 import '../../navigation/destinations.dart';
 import '../../navigation/homelab_hub_routes.dart';
-import 'homelab_web_hub_screen.dart';
+import 'homelab_web_hub_screen_v2_candidate.dart';
 import '../../widgets/library_row.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/navigation_layout.dart';
@@ -219,7 +219,7 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
   @override
   Widget build(BuildContext context) {
     if (kIsWeb && !PlatformDetection.useMobileUi) {
-      return HomelabWebHubScreen(kind: widget.kind.name);
+      return HomelabWebHubScreenV2Candidate(kind: widget.kind.name);
     }
 
     final navbarPosition = _prefs.get(UserPreferences.navbarPosition);
