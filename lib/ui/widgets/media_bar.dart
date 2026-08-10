@@ -169,6 +169,7 @@ class _MediaBarState extends State<MediaBar>
       });
     }
   }
+
   bool _mainPlaybackActive = false;
   bool _trailerUsingMedia3 = false;
   String? _activeYouTubeVideoId;
@@ -228,8 +229,9 @@ class _MediaBarState extends State<MediaBar>
       appRouter.routerDelegate.currentConfiguration.uri.path,
     );
     appRouter.routerDelegate.addListener(_onRouteChanged);
-    PlayerRouteObserver.instance.isPlayerActive
-        .addListener(_onPlayerRouteChanged);
+    PlayerRouteObserver.instance.isPlayerActive.addListener(
+      _onPlayerRouteChanged,
+    );
     widget.viewModel.addListener(_onStateChanged);
     widget.prefs.addListener(_onPrefsChanged);
     _screensaverController.visible.addListener(_onScreensaverVisibleChanged);
@@ -307,8 +309,9 @@ class _MediaBarState extends State<MediaBar>
     _screensaverController.visible.removeListener(_onScreensaverVisibleChanged);
     WidgetsBinding.instance.removeObserver(this);
     appRouter.routerDelegate.removeListener(_onRouteChanged);
-    PlayerRouteObserver.instance.isPlayerActive
-        .removeListener(_onPlayerRouteChanged);
+    PlayerRouteObserver.instance.isPlayerActive.removeListener(
+      _onPlayerRouteChanged,
+    );
     super.dispose();
   }
 
@@ -1061,7 +1064,9 @@ class _MediaBarState extends State<MediaBar>
           if (!mounted || resolveId != _trailerResolveId) return;
         }
         await _media3TrailerBackend!.setVolume(0);
-        await _media3TrailerBackend.configureSubtitleStyle(verticalOffset: 0.15);
+        await _media3TrailerBackend.configureSubtitleStyle(
+          verticalOffset: 0.15,
+        );
         if (!mounted || resolveId != _trailerResolveId) return;
 
         final payload = <String, dynamic>{
@@ -1773,32 +1778,35 @@ class _MediaBarState extends State<MediaBar>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = widget.viewModel.state;
-    final mode = UserPreferences.normalizeMediaBarMode(
-      widget.prefs.get(UserPreferences.mediaBarMode),
-    );
+    // The comprehensive web pass uses one cinematic hero language across
+    // Home, Movies, TV and Anime. Keep every other platform governed by
+    // its existing Moonbase/user media-bar preference.
+    final mode = kIsWeb && !PlatformDetection.useMobileUi
+        ? UserPreferences.mediaBarModeMakd
+        : UserPreferences.normalizeMediaBarMode(
+            widget.prefs.get(UserPreferences.mediaBarMode),
+          );
     final useMakdStyle = mode == UserPreferences.mediaBarModeMakd;
     final useBookshelfStyle = mode == UserPreferences.mediaBarModeBookshelf;
     final useGalleryStyle = mode == UserPreferences.mediaBarModeGallery;
 
     return switch (state) {
       MediaBarLoading() => _wrapStatusFocus(
-          SizedBox(
-            height: widget.height,
-            child: const Center(
-              child: CircularProgressIndicator(),
-            ),
-          ),
+        SizedBox(
+          height: widget.height,
+          child: const Center(child: CircularProgressIndicator()),
         ),
+      ),
       MediaBarDisabled() => const SizedBox.shrink(),
       MediaBarError(message: final message) => _wrapStatusFocus(
-          _buildStatusPanel(
-            context,
-            title: l10n.mediaBarError,
-            detail: message,
-            showRetry: true,
-          ),
-          onSelect: () => widget.viewModel.load(context: context, force: true),
+        _buildStatusPanel(
+          context,
+          title: l10n.mediaBarError,
+          detail: message,
+          showRetry: true,
         ),
+        onSelect: () => widget.viewModel.load(context: context, force: true),
+      ),
       MediaBarReady(items: final items) =>
         items.isEmpty
             ? const SizedBox.shrink()
@@ -1947,7 +1955,7 @@ class _MediaBarState extends State<MediaBar>
                     ),
                   ),
                   ..._buildVideoOverlays(allowPersistentMedia3: true),
-                  if(!_isTrailerPlaying) // no gradient when trailer playing
+                  if (!_isTrailerPlaying) // no gradient when trailer playing
                     _GradientOverlay(
                       color: overlayColor,
                       opacity: overlayOpacity,
@@ -2167,7 +2175,8 @@ class _MediaBarState extends State<MediaBar>
                     ),
                   if (!isMobile)
                     ..._buildVideoOverlays(allowPersistentMedia3: true),
-                  if (!isMobile && !_isTrailerPlaying) // no gradient when trailer playing
+                  if (!isMobile &&
+                      !_isTrailerPlaying) // no gradient when trailer playing
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -2190,7 +2199,8 @@ class _MediaBarState extends State<MediaBar>
                         ),
                       ),
                     ),
-                  if (!isMobile && !_isTrailerPlaying) // no gradient when trailer playing
+                  if (!isMobile &&
+                      !_isTrailerPlaying) // no gradient when trailer playing
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -2710,8 +2720,7 @@ class _MediaBarState extends State<MediaBar>
                   ? Media3VideoView(
                       fill: Colors.transparent,
                       role: 'preview',
-                      onPlatformViewCreated: (id) =>
-                          _media3PlatformViewId = id,
+                      onPlatformViewCreated: (id) => _media3PlatformViewId = id,
                     )
                   : _trailerUsingAppleTv
                   ? FittedBox(
@@ -2929,9 +2938,10 @@ class _KenBurnsImageState extends State<_KenBurnsImage>
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration)
       ..forward();
-    _scale = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
   }
 
   @override

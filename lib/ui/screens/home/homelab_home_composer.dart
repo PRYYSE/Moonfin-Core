@@ -40,7 +40,6 @@ class HomelabHomeComposer {
       HomeSectionType.resume,
       if (!mergeContinueWatchingNextUp) HomeSectionType.nextUp,
       HomeSectionType.sinceYouWatched1,
-      HomeSectionType.sinceYouWatched2,
       HomeSectionType.rewatch,
       HomeSectionType.seerrWatchlist,
       HomeSectionType.seerrTrending,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +17,7 @@ import '../../../preference/user_preferences.dart';
 import '../../../util/platform_detection.dart';
 import '../../navigation/destinations.dart';
 import '../../navigation/homelab_hub_routes.dart';
+import 'homelab_web_hub_screen.dart';
 import '../../widgets/library_row.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/navigation_layout.dart';
@@ -216,6 +218,10 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb && !PlatformDetection.useMobileUi) {
+      return HomelabWebHubScreen(kind: widget.kind.name);
+    }
+
     final navbarPosition = _prefs.get(UserPreferences.navbarPosition);
     final safeTopInset = PlatformDetection.useMobileUi
         ? MediaQuery.paddingOf(context).top

@@ -965,6 +965,12 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   HomeRow? _placeholderForConfig(HomeSectionConfig cfg) {
+    // Premium web shelves appear only once content exists. The stock
+    // placeholder rows reserve a full poster shelf each, which produces
+    // giant empty gaps on a cold desktop-web load. Mobile/TV keep the
+    // proven placeholder behaviour.
+    if (HomelabHomeComposer.enabled) return null;
+
     if (cfg.isPluginDynamic) {
       final section = cfg.pluginSection;
       if (section == null || section.isEmpty) return null;
