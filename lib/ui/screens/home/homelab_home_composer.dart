@@ -63,9 +63,11 @@ class HomelabHomeComposer {
     ];
 
     items.sort((a, b) {
-      final aDate = a.premiereDate ??
+      final aDate =
+          a.premiereDate ??
           (a.productionYear == null ? null : DateTime(a.productionYear!));
-      final bDate = b.premiereDate ??
+      final bDate =
+          b.premiereDate ??
           (b.productionYear == null ? null : DateTime(b.productionYear!));
       if (aDate != null && bDate != null) return bDate.compareTo(aDate);
       if (aDate != null) return -1;

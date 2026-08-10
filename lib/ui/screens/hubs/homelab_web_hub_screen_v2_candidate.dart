@@ -36,10 +36,7 @@ import '../../widgets/top_toolbar.dart';
 class HomelabWebHubScreenV2Candidate extends StatefulWidget {
   final String kind;
 
-  const HomelabWebHubScreenV2Candidate({
-    super.key,
-    required this.kind,
-  });
+  const HomelabWebHubScreenV2Candidate({super.key, required this.kind});
 
   @override
   State<HomelabWebHubScreenV2Candidate> createState() =>
@@ -50,37 +47,37 @@ enum _DestinationKind { movies, tv, anime }
 
 extension _DestinationKindX on _DestinationKind {
   String get title => switch (this) {
-        _DestinationKind.movies => 'Movies',
-        _DestinationKind.tv => 'TV',
-        _DestinationKind.anime => 'Anime',
-      };
+    _DestinationKind.movies => 'Movies',
+    _DestinationKind.tv => 'TV',
+    _DestinationKind.anime => 'Anime',
+  };
 
   String get kicker => switch (this) {
-        _DestinationKind.movies => 'HOME LAB CINEMA',
-        _DestinationKind.tv => 'HOME LAB SERIES',
-        _DestinationKind.anime => 'HOME LAB ANIME',
-      };
+    _DestinationKind.movies => 'HOME LAB CINEMA',
+    _DestinationKind.tv => 'HOME LAB SERIES',
+    _DestinationKind.anime => 'HOME LAB ANIME',
+  };
 
   String get route => switch (this) {
-        _DestinationKind.movies => HomelabHubRoutes.movies,
-        _DestinationKind.tv => HomelabHubRoutes.tv,
-        _DestinationKind.anime => HomelabHubRoutes.anime,
-      };
+    _DestinationKind.movies => HomelabHubRoutes.movies,
+    _DestinationKind.tv => HomelabHubRoutes.tv,
+    _DestinationKind.anime => HomelabHubRoutes.anime,
+  };
 
   Set<String> get libraryNames => switch (this) {
-        _DestinationKind.movies => const {'movies'},
-        _DestinationKind.tv => const {'tv'},
-        _DestinationKind.anime => const {'anime', 'anime movies'},
-      };
+    _DestinationKind.movies => const {'movies'},
+    _DestinationKind.tv => const {'tv'},
+    _DestinationKind.anime => const {'anime', 'anime movies'},
+  };
 
   String get fallbackDescription => switch (this) {
-        _DestinationKind.movies =>
-          'New releases, acclaimed films, curated picks and your own collection.',
-        _DestinationKind.tv =>
-          'Series worth starting, seasons worth returning to and what is trending now.',
-        _DestinationKind.anime =>
-          'A focused anime destination for series, films and seasonal discovery.',
-      };
+    _DestinationKind.movies =>
+      'New releases, acclaimed films, curated picks and your own collection.',
+    _DestinationKind.tv =>
+      'Series worth starting, seasons worth returning to and what is trending now.',
+    _DestinationKind.anime =>
+      'A focused anime destination for series, films and seasonal discovery.',
+  };
 }
 
 class _HomelabWebHubScreenV2CandidateState
@@ -94,10 +91,10 @@ class _HomelabWebHubScreenV2CandidateState
   Future<_DestinationData>? _future;
 
   _DestinationKind get _kind => switch (widget.kind.toLowerCase()) {
-        'movies' => _DestinationKind.movies,
-        'tv' => _DestinationKind.tv,
-        _ => _DestinationKind.anime,
-      };
+    'movies' => _DestinationKind.movies,
+    'tv' => _DestinationKind.tv,
+    _ => _DestinationKind.anime,
+  };
 
   @override
   void initState() {
@@ -135,10 +132,7 @@ class _HomelabWebHubScreenV2CandidateState
     final discoveryFuture = repo == null
         ? Future.value(const <_Shelf>[])
         : _loadDiscovery(repo);
-    final editorialFuture = _loadEditorial(
-      repo,
-      forceRefresh: forceRefresh,
-    );
+    final editorialFuture = _loadEditorial(repo, forceRefresh: forceRefresh);
 
     final discovery = await discoveryFuture;
     final editorial = await editorialFuture;
@@ -150,9 +144,7 @@ class _HomelabWebHubScreenV2CandidateState
       final watchlist = discovery.where((row) => row.isWatchlist).toList();
       shelves.addAll(watchlist);
       shelves.addAll(editorial);
-      shelves.addAll(
-        discovery.skip(1).where((row) => !row.isWatchlist),
-      );
+      shelves.addAll(discovery.skip(1).where((row) => !row.isWatchlist));
     } else {
       shelves.addAll(editorial);
     }
@@ -224,15 +216,16 @@ class _HomelabWebHubScreenV2CandidateState
     SeerrRepository? repo, {
     required bool forceRefresh,
   }) async {
-    final configs = _prefs.activeHomeSectionConfigs
-        .where(
-          (config) =>
-              config.enabled &&
-              config.isPluginDynamic &&
-              config.pluginSource == HomeSectionPluginSource.custom,
-        )
-        .toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    final configs =
+        _prefs.activeHomeSectionConfigs
+            .where(
+              (config) =>
+                  config.enabled &&
+                  config.isPluginDynamic &&
+                  config.pluginSource == HomeSectionPluginSource.custom,
+            )
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
 
     final result = await Future.wait(
       configs.map((config) async {
@@ -248,12 +241,12 @@ class _HomelabWebHubScreenV2CandidateState
           if (_kind == _DestinationKind.anime) {
             if (repo == null) return null;
             final verified = await _resolveEditorialAnime(repo, raw);
-            return verified.isEmpty
-                ? null
-                : _Shelf(displayTitle, verified);
+            return verified.isEmpty ? null : _Shelf(displayTitle, verified);
           }
 
-          final expectedType = _kind == _DestinationKind.movies ? 'movie' : 'tv';
+          final expectedType = _kind == _DestinationKind.movies
+              ? 'movie'
+              : 'tv';
           final items = raw
               .where((item) {
                 final type = item.type.toLowerCase();
@@ -306,9 +299,9 @@ class _HomelabWebHubScreenV2CandidateState
         }
       },
     );
-    return _dedupeItems(resolved.whereType<_HubItem>())
-        .take(24)
-        .toList(growable: false);
+    return _dedupeItems(
+      resolved.whereType<_HubItem>(),
+    ).take(24).toList(growable: false);
   }
 
   Future<List<_Shelf>> _loadDiscovery(SeerrRepository repo) async {
@@ -346,89 +339,63 @@ class _HomelabWebHubScreenV2CandidateState
       _loadShelf(
         'Action',
         'movie',
-        () => repo.discoverMovies(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 28,
-        ),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 28),
       ),
       _loadShelf(
         'Science Fiction',
         'movie',
-        () => repo.discoverMovies(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 878,
-        ),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 878),
       ),
       _loadShelf(
         'Fantasy',
         'movie',
-        () => repo.discoverMovies(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 14,
-        ),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 14),
       ),
       _loadShelf(
         'Thrillers',
         'movie',
-        () => repo.discoverMovies(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 53,
-        ),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 53),
       ),
       _loadShelf(
         'Comedy',
         'movie',
-        () => repo.discoverMovies(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 35,
-        ),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 35),
       ),
       _loadShelf(
         'Horror',
         'movie',
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 27),
+      ),
+      _loadMergedShelf('Studio Spotlight', 'movie', [
         () => repo.discoverMovies(
           page: 1,
           sortBy: 'popularity.desc',
-          genre: 27,
+          studio: 41077,
         ),
-      ),
-      _loadMergedShelf(
-        'Studio Spotlight',
-        'movie',
-        [
-          () => repo.discoverMovies(
-                page: 1,
-                sortBy: 'popularity.desc',
-                studio: 41077,
-              ),
-          () => repo.discoverMovies(
-                page: 1,
-                sortBy: 'popularity.desc',
-                studio: 420,
-              ),
-          () => repo.discoverMovies(
-                page: 1,
-                sortBy: 'popularity.desc',
-                studio: 174,
-              ),
-        ],
-      ),
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'popularity.desc',
+          studio: 420,
+        ),
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'popularity.desc',
+          studio: 174,
+        ),
+      ]),
     ];
     return (await Future.wait(tasks)).whereType<_Shelf>().toList();
   }
 
   Future<List<_Shelf>> _loadTv(SeerrRepository repo) async {
     final tasks = <Future<_Shelf?>>[
-      _loadShelf(
-        'Trending Series',
-        'tv',
-        () => repo.getTrendingTv(limit: 30),
-      ),
+      _loadShelf('Trending Series', 'tv', () => repo.getTrendingTv(limit: 30)),
       _loadShelf(
         'Your Watchlist',
         'tv',
@@ -436,249 +403,90 @@ class _HomelabWebHubScreenV2CandidateState
         filterMediaType: 'tv',
         isWatchlist: true,
       ),
-      _loadShelf(
-        'Critically Acclaimed',
-        'tv',
-        () => repo.getTopTv(limit: 30),
-      ),
-      _loadShelf(
-        'New & Upcoming',
-        'tv',
-        () => repo.getUpcomingTv(page: 1),
-      ),
+      _loadShelf('Critically Acclaimed', 'tv', () => repo.getTopTv(limit: 30)),
+      _loadShelf('New & Upcoming', 'tv', () => repo.getUpcomingTv(page: 1)),
       _loadShelf(
         'Drama',
         'tv',
-        () => repo.discoverTv(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 18,
-        ),
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 18),
       ),
       _loadShelf(
         'Comedy',
         'tv',
-        () => repo.discoverTv(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 35,
-        ),
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 35),
       ),
       _loadShelf(
         'Crime',
         'tv',
-        () => repo.discoverTv(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 80,
-        ),
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 80),
       ),
       _loadShelf(
         'Mystery & Suspense',
         'tv',
-        () => repo.discoverTv(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 9648,
-        ),
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 9648),
       ),
       _loadShelf(
         'Sci-Fi & Fantasy',
         'tv',
-        () => repo.discoverTv(
-          page: 1,
-          sortBy: 'popularity.desc',
-          genre: 10765,
-        ),
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10765),
       ),
-      _loadMergedShelf(
-        'Network Spotlight',
-        'tv',
-        [
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'popularity.desc',
-                network: 49,
-              ),
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'popularity.desc',
-                network: 2552,
-              ),
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'popularity.desc',
-                network: 213,
-              ),
-        ],
-      ),
+      _loadMergedShelf('Network Spotlight', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', network: 49),
+        () =>
+            repo.discoverTv(page: 1, sortBy: 'popularity.desc', network: 2552),
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', network: 213),
+      ]),
     ];
     return (await Future.wait(tasks)).whereType<_Shelf>().toList();
   }
 
   Future<List<_Shelf>> _loadAnime(SeerrRepository repo) async {
     final tasks = <Future<_Shelf?>>[
-      _loadAnimeShelf(
-        repo,
-        'Popular Anime',
-        'tv',
-        [
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'popularity.desc',
-                genre: 16,
-              ),
-          () => repo.discoverTv(
-                page: 2,
-                sortBy: 'popularity.desc',
-                genre: 16,
-              ),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Your Anime Watchlist',
-        'tv',
-        [() => repo.getWatchlist(page: 1)],
-        isWatchlist: true,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Top Rated Anime',
-        'tv',
-        [
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'vote_average.desc',
-                genre: 16,
-              ),
-          () => repo.discoverTv(
-                page: 2,
-                sortBy: 'vote_average.desc',
-                genre: 16,
-              ),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'New This Season',
-        'tv',
-        [
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'first_air_date.desc',
-                genre: 16,
-              ),
-          () => repo.getUpcomingTv(page: 1),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Anime Movies',
-        'movie',
-        [
-          () => repo.discoverMovies(
-                page: 1,
-                sortBy: 'popularity.desc',
-                genre: 16,
-              ),
-          () => repo.discoverMovies(
-                page: 2,
-                sortBy: 'vote_average.desc',
-                genre: 16,
-              ),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Action & Adventure',
-        'tv',
-        [
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'popularity.desc',
-                genre: 10759,
-              ),
-          () => repo.discoverTv(
-                page: 2,
-                sortBy: 'popularity.desc',
-                genre: 10759,
-              ),
-        ],
-        secondaryGenre: 10759,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Sci-Fi & Fantasy',
-        'tv',
-        [
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'popularity.desc',
-                genre: 10765,
-              ),
-          () => repo.discoverTv(
-                page: 2,
-                sortBy: 'popularity.desc',
-                genre: 10765,
-              ),
-        ],
-        secondaryGenre: 10765,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Comedy',
-        'tv',
-        [
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'popularity.desc',
-                genre: 35,
-              ),
-          () => repo.discoverTv(
-                page: 2,
-                sortBy: 'popularity.desc',
-                genre: 35,
-              ),
-        ],
-        secondaryGenre: 35,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Drama',
-        'tv',
-        [
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'popularity.desc',
-                genre: 18,
-              ),
-          () => repo.discoverTv(
-                page: 2,
-                sortBy: 'popularity.desc',
-                genre: 18,
-              ),
-        ],
-        secondaryGenre: 18,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Mystery & Suspense',
-        'tv',
-        [
-          () => repo.discoverTv(
-                page: 1,
-                sortBy: 'popularity.desc',
-                genre: 9648,
-              ),
-          () => repo.discoverTv(
-                page: 2,
-                sortBy: 'popularity.desc',
-                genre: 9648,
-              ),
-        ],
-        secondaryGenre: 9648,
-      ),
+      _loadAnimeShelf(repo, 'Popular Anime', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 16),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 16),
+      ]),
+      _loadAnimeShelf(repo, 'Your Anime Watchlist', 'tv', [
+        () => repo.getWatchlist(page: 1),
+      ], isWatchlist: true),
+      _loadAnimeShelf(repo, 'Top Rated Anime', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'vote_average.desc', genre: 16),
+        () => repo.discoverTv(page: 2, sortBy: 'vote_average.desc', genre: 16),
+      ]),
+      _loadAnimeShelf(repo, 'New This Season', 'tv', [
+        () =>
+            repo.discoverTv(page: 1, sortBy: 'first_air_date.desc', genre: 16),
+        () => repo.getUpcomingTv(page: 1),
+      ]),
+      _loadAnimeShelf(repo, 'Anime Movies', 'movie', [
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 16),
+        () => repo.discoverMovies(
+          page: 2,
+          sortBy: 'vote_average.desc',
+          genre: 16,
+        ),
+      ]),
+      _loadAnimeShelf(repo, 'Action & Adventure', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10759),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10759),
+      ], secondaryGenre: 10759),
+      _loadAnimeShelf(repo, 'Sci-Fi & Fantasy', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10765),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10765),
+      ], secondaryGenre: 10765),
+      _loadAnimeShelf(repo, 'Comedy', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 35),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 35),
+      ], secondaryGenre: 35),
+      _loadAnimeShelf(repo, 'Drama', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 18),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 18),
+      ], secondaryGenre: 18),
+      _loadAnimeShelf(repo, 'Mystery & Suspense', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 9648),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 9648),
+      ], secondaryGenre: 9648),
     ];
     return (await Future.wait(tasks)).whereType<_Shelf>().toList();
   }
@@ -759,7 +567,8 @@ class _HomelabWebHubScreenV2CandidateState
           final key = '$mediaType:${item.id}';
           return seen.add(key) &&
               _basicAnimeCandidate(item) &&
-              (secondaryGenre == null || item.genreIds.contains(secondaryGenre));
+              (secondaryGenre == null ||
+                  item.genreIds.contains(secondaryGenre));
         })
         .take(40)
         .toList(growable: false);
@@ -769,9 +578,9 @@ class _HomelabWebHubScreenV2CandidateState
       5,
       (item) => _verifyAnime(repo, item),
     );
-    final items = verified
-        .whereType<SeerrDiscoverItem>()
-        .map((item) => _HubItem.fromSeerr(item, fallbackMediaType));
+    final items = verified.whereType<SeerrDiscoverItem>().map(
+      (item) => _HubItem.fromSeerr(item, fallbackMediaType),
+    );
     final cleaned = _dedupeItems(items).take(30).toList(growable: false);
     return cleaned.isEmpty
         ? null
@@ -779,9 +588,7 @@ class _HomelabWebHubScreenV2CandidateState
   }
 
   bool _safeDiscover(SeerrDiscoverItem item) =>
-      !item.adult &&
-      !item.isBlacklisted &&
-      item.displayTitle.trim().isNotEmpty;
+      !item.adult && !item.isBlacklisted && item.displayTitle.trim().isNotEmpty;
 
   bool _basicAnimeCandidate(SeerrDiscoverItem item) {
     if (!_safeDiscover(item)) return false;
@@ -854,7 +661,8 @@ class _HomelabWebHubScreenV2CandidateState
     final tags = rawTags is List
         ? rawTags.map((entry) => entry?.toString() ?? '').join(' ')
         : '';
-    final text = '${item.name} ${item.overview ?? ''} '
+    final text =
+        '${item.name} ${item.overview ?? ''} '
         '${item.genres.join(' ')} $tags';
     return !_looksExplicit(text);
   }
@@ -867,13 +675,7 @@ class _HomelabWebHubScreenV2CandidateState
       if (!titles.add(key)) continue;
       final items = _dedupeItems(shelf.items);
       if (items.isEmpty) continue;
-      result.add(
-        _Shelf(
-          shelf.title,
-          items,
-          isWatchlist: shelf.isWatchlist,
-        ),
-      );
+      result.add(_Shelf(shelf.title, items, isWatchlist: shelf.isWatchlist));
     }
     return result;
   }
@@ -903,7 +705,8 @@ class _HomelabWebHubScreenV2CandidateState
     final topInset = nav == NavbarPosition.top
         ? safeTop + TopToolbar.baseHeightFor(context)
         : safeTop;
-    final leftRail = nav == NavbarPosition.left &&
+    final leftRail =
+        nav == NavbarPosition.left &&
         (PlatformDetection.isDesktop ||
             (PlatformDetection.isWeb && !PlatformDetection.useMobileUi));
     final rowInset = leftRail ? 78.0 : 0.0;
@@ -961,7 +764,8 @@ class _HomelabWebHubScreenV2CandidateState
                           ),
                           child: Text(
                             'FROM YOUR LIBRARY',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
                                   color: AppColorScheme.accent,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 1.8,
@@ -984,7 +788,8 @@ class _HomelabWebHubScreenV2CandidateState
                           ),
                           child: Text(
                             data.notice!,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
                                   color: AppColorScheme.onSurface.withValues(
                                     alpha: 0.58,
                                   ),
@@ -1237,17 +1042,18 @@ class _DestinationHeroState extends State<_DestinationHero> {
                       Text(
                         widget.kind.kicker,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: AppColorScheme.accent,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 2.3,
-                            ),
+                          color: AppColorScheme.accent,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2.3,
+                        ),
                       ),
                       const SizedBox(height: 9),
                       Text(
                         item.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(
                               color: AppColorScheme.onSurface,
                               fontWeight: FontWeight.w900,
                               letterSpacing: -1.0,
@@ -1272,7 +1078,8 @@ class _DestinationHeroState extends State<_DestinationHero> {
                           item.overview!,
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
                                 color: AppColorScheme.onSurface.withValues(
                                   alpha: 0.86,
                                 ),
@@ -1412,27 +1219,27 @@ class _HeroFallback extends StatelessWidget {
                   Text(
                     kind.kicker,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppColorScheme.accent,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2.3,
-                        ),
+                      color: AppColorScheme.accent,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2.3,
+                    ),
                   ),
                   const SizedBox(height: 9),
                   Text(
                     kind.title,
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          color: AppColorScheme.onSurface,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -1.1,
-                        ),
+                      color: AppColorScheme.onSurface,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.1,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     kind.fallbackDescription,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColorScheme.onSurface.withValues(alpha: 0.70),
-                          height: 1.35,
-                        ),
+                      color: AppColorScheme.onSurface.withValues(alpha: 0.70),
+                      height: 1.35,
+                    ),
                   ),
                 ],
               ),
@@ -1466,9 +1273,9 @@ class _HeroPill extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppColorScheme.onSurface,
-                fontWeight: FontWeight.w700,
-              ),
+            color: AppColorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
@@ -1488,7 +1295,9 @@ class _DestinationLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width.clamp(320.0, 640.0).toDouble();
+    final width = MediaQuery.sizeOf(
+      context,
+    ).width.clamp(320.0, 640.0).toDouble();
     final tokens = ThemeRegistry.active;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -1497,7 +1306,12 @@ class _DestinationLoading extends StatelessWidget {
         SizedBox(
           height: topInset + 390,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(leftInset + 34, topInset + 110, 56, 40),
+            padding: EdgeInsets.fromLTRB(
+              leftInset + 34,
+              topInset + 110,
+              56,
+              40,
+            ),
             child: Align(
               alignment: Alignment.bottomLeft,
               child: Column(
@@ -1525,8 +1339,8 @@ class _DestinationLoading extends StatelessWidget {
                   Text(
                     'Loading $title…',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppColorScheme.onSurface.withValues(alpha: 0.48),
-                        ),
+                      color: AppColorScheme.onSurface.withValues(alpha: 0.48),
+                    ),
                   ),
                 ],
               ),
@@ -1595,15 +1409,12 @@ class _DestinationError extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'This destination could not be loaded.',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColorScheme.onSurface,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: AppColorScheme.onSurface),
           ),
           const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () => onRetry(),
-            child: const Text('Retry'),
-          ),
+          FilledButton(onPressed: () => onRetry(), child: const Text('Retry')),
         ],
       ),
     );
@@ -1629,21 +1440,14 @@ class _Shelf {
   final List<_HubItem> items;
   final bool isWatchlist;
 
-  const _Shelf(
-    this.title,
-    this.items, {
-    this.isWatchlist = false,
-  });
+  const _Shelf(this.title, this.items, {this.isWatchlist = false});
 }
 
 class _LocalShelf {
   final AggregatedLibrary library;
   final HomeRow row;
 
-  const _LocalShelf({
-    required this.library,
-    required this.row,
-  });
+  const _LocalShelf({required this.library, required this.row});
 }
 
 class _HubItem {
@@ -1673,10 +1477,7 @@ class _HubItem {
 
   bool get isAvailable => seerrStatus == 4 || seerrStatus == 5;
 
-  factory _HubItem.fromSeerr(
-    SeerrDiscoverItem item,
-    String fallbackMediaType,
-  ) {
+  factory _HubItem.fromSeerr(SeerrDiscoverItem item, String fallbackMediaType) {
     final date = item.releaseDate ?? item.firstAirDate;
     return _HubItem(
       tmdbId: item.id,
