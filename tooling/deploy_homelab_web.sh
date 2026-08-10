@@ -4,6 +4,8 @@ set -euo pipefail
 REPO="PRYYSE/Moonfin-Core"
 TAG="homelab-hubs-v1-latest"
 BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+EXPECTED_PROTOTYPE="homelab-hubs-v1"
+EXPECTED_DESIGN="home-web-comprehensive-v1"
 APPDATA="/srv/appdata/jellyfin"
 PLUGIN_ROOT="${APPDATA}/data/plugins"
 BACKUP_ROOT="${APPDATA}/backups"
@@ -39,6 +41,7 @@ STAGE="${PLUGIN_DIR}/.frontend-homelab-stage-${STAMP}"
 BACKUP="${BACKUP_ROOT}/moonfin-web-${STAMP}"
 TARBALL="${TMP}/homelab-moonfin-web.tar.gz"
 SHA_FILE="${TMP}/homelab-moonfin-web.tar.gz.sha256"
+REMOTE_MANIFEST="${TMP}/homelab-build-manifest.json"
 
 cleanup() {
   rm -rf "$TMP" "$STAGE" 2>/dev/null || true
@@ -48,29 +51,34 @@ trap cleanup EXIT
 mkdir -p "$BACKUP_ROOT"
 
 echo "Moonfin plugin: $PLUGIN_DIR"
-echo "Waiting for the latest Home Lab web bundle..."
+echo "Checking the published Home Lab Home baseline..."
 
 READY=0
 for attempt in $(seq 1 45); do
-  if curl -fL --connect-timeout 10 --max-time 120 \
-      "${BASE_URL}/homelab-moonfin-web.tar.gz" -o "$TARBALL" 2>/dev/null && \
-     curl -fL --connect-timeout 10 --max-time 60 \
-      "${BASE_URL}/homelab-moonfin-web.tar.gz.sha256" -o "$SHA_FILE" 2>/dev/null; then
+  if curl -fL --connect-timeout 10 --max-time 30 \
+      "${BASE_URL}/homelab-build-manifest.json" -o "$REMOTE_MANIFEST" 2>/dev/null && \
+     grep -q '"prototype": "'"${EXPECTED_PROTOTYPE}"'"' "$REMOTE_MANIFEST" && \
+     grep -q '"design": "'"${EXPECTED_DESIGN}"'"' "$REMOTE_MANIFEST"; then
     READY=1
     break
   fi
-  rm -f "$TARBALL" "$SHA_FILE"
+  rm -f "$REMOTE_MANIFEST"
   if [ "$attempt" -eq 45 ]; then
     break
   fi
-  printf '  build not published yet; retrying in 20 seconds (%s/45)\n' "$attempt"
+  printf '  comprehensive Home build not published yet; retrying (%s/45)\n' "$attempt"
   sleep 20
 done
 
 if [ "$READY" -ne 1 ]; then
-  echo "ERROR: prototype bundle was not published within 15 minutes."
+  echo "ERROR: comprehensive Home baseline is not the currently published release."
   exit 1
 fi
+
+curl -fL --connect-timeout 10 --max-time 120 \
+  "${BASE_URL}/homelab-moonfin-web.tar.gz" -o "$TARBALL"
+curl -fL --connect-timeout 10 --max-time 60 \
+  "${BASE_URL}/homelab-moonfin-web.tar.gz.sha256" -o "$SHA_FILE"
 
 (
   cd "$TMP"
@@ -89,9 +97,14 @@ printf '%s\n' "$CONTENTS" | grep -qx 'homelab-build-manifest.json' || {
 
 mkdir -p "$STAGE"
 tar -xzf "$TARBALL" -C "$STAGE"
-grep -q '"prototype": "homelab-hubs-v1"' \
+grep -q '"prototype": "'"${EXPECTED_PROTOTYPE}"'"' \
   "$STAGE/homelab-build-manifest.json" || {
-  echo "ERROR: bundle manifest is not the Home Lab hubs prototype."
+  echo "ERROR: bundle manifest is not the Home Lab branch build."
+  exit 1
+}
+grep -q '"design": "'"${EXPECTED_DESIGN}"'"' \
+  "$STAGE/homelab-build-manifest.json" || {
+  echo "ERROR: bundle is not the comprehensive Home redesign."
   exit 1
 }
 
@@ -116,7 +129,7 @@ rollback() {
   exit 1
 }
 
-printf '\nDeploying prototype...\n'
+printf '\nDeploying comprehensive Home baseline...\n'
 docker stop jellyfin >/dev/null
 mv "$FRONTEND" "$BACKUP/frontend"
 mv "$STAGE" "$FRONTEND"
@@ -134,10 +147,11 @@ done
 
 SERVED_MANIFEST="$(curl -fsS \
   http://127.0.0.1:8096/Moonfin/Web/homelab-build-manifest.json || true)"
-printf '%s' "$SERVED_MANIFEST" | grep -q '"prototype": "homelab-hubs-v1"' || rollback
+printf '%s' "$SERVED_MANIFEST" | grep -q '"prototype": "'"${EXPECTED_PROTOTYPE}"'"' || rollback
+printf '%s' "$SERVED_MANIFEST" | grep -q '"design": "'"${EXPECTED_DESIGN}"'"' || rollback
 
-printf '\nMOONFIN HUB PROTOTYPE DEPLOYED\n'
+printf '\nMOONFIN HOME REDESIGN DEPLOYED\n'
 echo "Moonfin Web: HTTP 200"
-echo "Prototype manifest: confirmed"
+echo "Comprehensive Home manifest: confirmed"
 echo "Rollback backup: $BACKUP"
 echo "Open: http://192.168.50.12:8096/Moonfin/Web/"
