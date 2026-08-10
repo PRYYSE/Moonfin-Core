@@ -1,125 +1,16 @@
-name: Home Lab Source Consolidation
+name: Home Lab Web UI (manual only)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - homelab/hubs-v1
-    paths:
-      - '.github/workflows/homelab-hubs-prototype.yml'
-      - 'tooling/apply_homelab_hubs_patch.py'
-      - 'tooling/apply_homelab_home_redesign_patch.py'
-      - 'tooling/apply_homelab_home_visual_polish_patch.py'
 
 permissions:
   contents: read
 
-concurrency:
-  group: homelab-web-ui
-  cancel-in-progress: true
-
-env:
-  FLUTTER_VERSION: '3.44.1'
-
 jobs:
-  consolidate-build-web:
+  status:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out triggering commit
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Validate consolidation helpers
+      - name: Development moved to docker01
         run: |
-          python3 -m py_compile \
-            tooling/apply_homelab_hubs_patch.py \
-            tooling/apply_homelab_home_redesign_patch.py \
-            tooling/apply_homelab_home_visual_polish_patch.py
-
-      - name: Consolidate existing Home Lab source changes
-        run: |
-          python3 tooling/apply_homelab_hubs_patch.py
-          python3 tooling/apply_homelab_home_redesign_patch.py
-          python3 tooling/apply_homelab_home_visual_polish_patch.py
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
-
-      - name: Resolve dependencies
-        run: flutter pub get
-
-      - name: Format consolidated source
-        run: |
-          dart format \
-            lib/ui/navigation/app_router.dart \
-            lib/ui/navigation/homelab_hub_routes.dart \
-            lib/ui/screens/home/home_screen.dart \
-            lib/ui/screens/home/home_view_model.dart \
-            lib/ui/screens/home/homelab_home_composer.dart \
-            lib/ui/screens/hubs/homelab_hub_screen.dart \
-            lib/ui/widgets/left_sidebar.dart \
-            lib/ui/widgets/top_toolbar.dart
-          git diff --check
-
-      - name: Analyse consolidated source
-        run: flutter analyze --no-fatal-warnings --no-fatal-infos
-
-      - name: Build consolidated web baseline
-        run: flutter build web --wasm --release --base-href "/Moonfin/Web/"
-
-      - name: Write preview runtime config
-        run: |
-          cat > build/web/config.json <<'EOF'
-          {
-            "schemaVersion": 1,
-            "defaultServerUrl": null,
-            "discoveryProxyUrl": null,
-            "enableWebRtcScan": true,
-            "brandingName": "Moonfin Home Lab",
-            "pluginMode": true,
-            "forcedServerUrl": null
-          }
-          EOF
-          printf '%s\n' \
-            '{' \
-            '  "schemaVersion": 1,' \
-            '  "prototype": "homelab-hubs-v1",' \
-            '  "design": "home-web-comprehensive-v1",' \
-            '  "commit": "${{ github.sha }}",' \
-            '  "purpose": "source-consolidation-preview",' \
-            '  "flutterVersion": "${{ env.FLUTTER_VERSION }}"' \
-            '}' > build/web/homelab-build-manifest.json
-
-      - name: Package preview web bundle
-        run: |
-          tar -czf homelab-moonfin-web-preview.tar.gz -C build/web .
-          sha256sum homelab-moonfin-web-preview.tar.gz > homelab-moonfin-web-preview.tar.gz.sha256
-
-      - name: Upload consolidated source
-        uses: actions/upload-artifact@v4
-        with:
-          name: homelab-consolidated-source
-          path: |
-            lib/ui/navigation/app_router.dart
-            lib/ui/navigation/homelab_hub_routes.dart
-            lib/ui/screens/home/home_screen.dart
-            lib/ui/screens/home/home_view_model.dart
-            lib/ui/screens/home/homelab_home_composer.dart
-            lib/ui/screens/hubs/homelab_hub_screen.dart
-            lib/ui/widgets/left_sidebar.dart
-            lib/ui/widgets/top_toolbar.dart
-          if-no-files-found: error
-
-      - name: Upload preview web bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: homelab-moonfin-web-preview
-          path: |
-            homelab-moonfin-web-preview.tar.gz
-            homelab-moonfin-web-preview.tar.gz.sha256
-            build/web/homelab-build-manifest.json
-          if-no-files-found: error
+          echo "Home Lab UI development now uses the persistent source tree on docker01."
+          echo "This workflow is intentionally manual-only until the redesigned Dart source is committed and a simple validation workflow is restored."
