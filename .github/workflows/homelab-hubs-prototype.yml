@@ -1,4 +1,4 @@
-name: Home Lab Hub Prototype
+name: Home Lab Web UI
 
 on:
   workflow_dispatch:
@@ -11,13 +11,14 @@ on:
       - 'tooling/apply_homelab_home_redesign_patch.py'
       - 'tooling/apply_homelab_mobile_nav_patch.py'
       - 'lib/ui/navigation/homelab_hub_routes.dart'
+      - 'lib/ui/screens/home/**'
       - 'lib/ui/screens/hubs/**'
 
 permissions:
   contents: write
 
 concurrency:
-  group: homelab-hubs-prototype
+  group: homelab-web-ui
   cancel-in-progress: true
 
 env:
@@ -27,7 +28,7 @@ jobs:
   patch-build-web:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out prototype branch
+      - name: Check out Home Lab branch
         uses: actions/checkout@v4
         with:
           ref: homelab/hubs-v1
@@ -39,7 +40,7 @@ jobs:
       - name: Apply native mobile navigation patch
         run: python3 tooling/apply_homelab_mobile_nav_patch.py
 
-      - name: Apply web-first Home redesign
+      - name: Apply comprehensive web Home redesign
         run: python3 tooling/apply_homelab_home_redesign_patch.py
 
       - name: Set up Flutter
@@ -54,6 +55,8 @@ jobs:
             lib/ui/navigation/app_router.dart \
             lib/ui/navigation/homelab_hub_routes.dart \
             lib/ui/screens/home/home_screen.dart \
+            lib/ui/screens/home/home_view_model.dart \
+            lib/ui/screens/home/homelab_home_composer.dart \
             lib/ui/screens/hubs/homelab_hub_screen.dart \
             lib/ui/widgets/left_sidebar.dart \
             lib/ui/widgets/mobile_bottom_nav_bar.dart \
@@ -62,7 +65,7 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Build prototype web bundle
+      - name: Build web redesign bundle
         run: flutter build web --wasm --release --base-href "/Moonfin/Web/"
 
       - name: Write plugin runtime config
@@ -79,20 +82,20 @@ jobs:
           }
           EOF
 
-      - name: Package prototype
+      - name: Package Home redesign
         run: |
           printf '%s\n' \
             '{' \
             '  "schemaVersion": 1,' \
             '  "prototype": "homelab-hubs-v1",' \
-            '  "design": "home-web-v1",' \
+            '  "design": "home-web-comprehensive-v1",' \
             '  "commit": "${{ github.sha }}",' \
             '  "flutterVersion": "${{ env.FLUTTER_VERSION }}"' \
             '}' > build/web/homelab-build-manifest.json
           tar -czf homelab-moonfin-web.tar.gz -C build/web .
           sha256sum homelab-moonfin-web.tar.gz > homelab-moonfin-web.tar.gz.sha256
 
-      - name: Commit generated prototype wiring after successful build
+      - name: Commit generated wiring after successful build
         run: |
           if git diff --quiet; then
             echo "No generated patch changes to commit."
@@ -103,6 +106,8 @@ jobs:
               lib/ui/navigation/app_router.dart \
               lib/ui/navigation/homelab_hub_routes.dart \
               lib/ui/screens/home/home_screen.dart \
+              lib/ui/screens/home/home_view_model.dart \
+              lib/ui/screens/home/homelab_home_composer.dart \
               lib/ui/screens/hubs/homelab_hub_screen.dart \
               lib/ui/widgets/left_sidebar.dart \
               lib/ui/widgets/mobile_bottom_nav_bar.dart \
@@ -110,7 +115,7 @@ jobs:
             if git diff --cached --quiet; then
               echo "No staged generated changes to commit."
             else
-              git commit -m "Wire Home Lab UI redesign into Moonfin"
+              git commit -m "Generate comprehensive Home Lab web redesign"
               for attempt in 1 2 3; do
                 git fetch origin homelab/hubs-v1
                 if git rebase origin/homelab/hubs-v1; then
@@ -128,7 +133,7 @@ jobs:
             fi
           fi
 
-      - name: Upload prototype web bundle artifact
+      - name: Upload web bundle artifact
         uses: actions/upload-artifact@v4
         with:
           name: homelab-moonfin-web
@@ -138,12 +143,12 @@ jobs:
             build/web/homelab-build-manifest.json
           if-no-files-found: error
 
-      - name: Publish stable prototype download
+      - name: Publish stable Home redesign download
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="homelab-hubs-v1-latest"
-          TITLE="Home Lab Moonfin Hubs v1 Prototype"
+          TITLE="Home Lab Moonfin Web UI"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" \
               homelab-moonfin-web.tar.gz \
@@ -157,6 +162,6 @@ jobs:
               build/web/homelab-build-manifest.json \
               --target "${{ github.sha }}" \
               --title "$TITLE" \
-              --notes "Automated web-only Home Lab prototype build. Do not merge into upstream/main until the hub UX is validated." \
+              --notes "Web-first Home Lab UI redesign. Keep the Home Lab fork unmerged until the UX milestone is approved." \
               --prerelease
           fi
