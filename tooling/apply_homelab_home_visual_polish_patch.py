@@ -45,20 +45,18 @@ def main() -> None:
 """
     text = replace_once(text, old_banner, new_banner, "desktop cinematic hero mode")
 
-    # Make every piece of row geometry use the same modern-card decision as the
-    # renderer. Without this, forcing V2 visually can leave classic row heights
-    # and clipping calculations underneath it.
+    # Make row geometry use the same modern-card decision as the renderer.
+    # Deliberately target only row-specific checks. Do not replace the helper's
+    # own preference fallback or it would recurse on non-web platforms.
     direct_v2_patterns = [
         "prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 &&\n          !isSeerrRowOverride",
         "prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 &&\n          !_isSeerrFilterRow(row)",
         "widget.prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 &&\n        !_isSeerrFilterRow(row)",
-        "widget.prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2",
     ]
     replacements = [
         "_isHomeRowsStyleV2() &&\n          !isSeerrRowOverride",
         "_isHomeRowsStyleV2() &&\n          !_isSeerrFilterRow(row)",
         "_isHomeRowsStyleV2() &&\n        !_isSeerrFilterRow(row)",
-        "_isHomeRowsStyleV2()",
     ]
     for old, new in zip(direct_v2_patterns, replacements):
         text = text.replace(old, new)
