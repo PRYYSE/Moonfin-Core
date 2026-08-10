@@ -101,6 +101,23 @@ def main() -> None:
 """
     text = replace_once(text, old_row_inset, new_row_inset, "desktop row gutter")
 
+    # Consumer Home shelves should be titled by intent, not by their backing
+    # API. Keep source provenance in settings/other platforms where it helps
+    # diagnose configuration, but suppress it in the desktop web experience.
+    old_custom_provenance = """    final config = widget.prefs.homeSectionsConfig.firstWhereOrNull((c) => c.stableId == row.id);
+    if (config != null && config.pluginSource == HomeSectionPluginSource.custom) {
+"""
+    new_custom_provenance = """    final config = widget.prefs.homeSectionsConfig.firstWhereOrNull((c) => c.stableId == row.id);
+    if (config != null && config.pluginSource == HomeSectionPluginSource.custom) {
+      if (premiumWeb) return null;
+"""
+    text = replace_once(
+        text,
+        old_custom_provenance,
+        new_custom_provenance,
+        "custom row provenance cleanup",
+    )
+
     # Modern streaming UIs react quickly enough to feel intentional but not so
     # quickly that simply crossing a card starts video. Web remains muted until
     # the existing user-gesture logic allows audio.
