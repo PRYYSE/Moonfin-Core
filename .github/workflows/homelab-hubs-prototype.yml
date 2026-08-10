@@ -47,6 +47,47 @@ jobs:
           if grep -q 'HomelabHomeComposer.augmentConfigs' lib/ui/screens/home/home_view_model.dart; then
             echo 'Comprehensive Home structural wiring already present.'
           else
+            # The branch contains the earlier visual spike in formatted form,
+            # while the comprehensive patch deliberately accepts either stock
+            # or its own final form. Normalise only the two intermediate shelf
+            # fragments so the comprehensive transition can complete once.
+            python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('lib/ui/screens/home/home_screen.dart')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              'premiumWeb ? 14 : (isRowsV2 ? 6 : 16)',
+              'isRowsV2 ? 6 : 16',
+          ).replace(
+              'premiumWeb ? 7 : (isRowsV2 ? 1 : 8)',
+              'isRowsV2 ? 1 : 8',
+          )
+
+          if 'letterSpacing: premiumWeb ? -0.25 : null' in text:
+              pattern = re.compile(
+                  r'''(?P<indent>\s*)style:\s*\(premiumWeb\s*\?\s*Theme\.of\(context\)\.textTheme\.titleLarge\s*:\s*Theme\.of\(context\)\.textTheme\.titleMedium\)\s*\?\.copyWith\(\s*color:\s*AppColorScheme\.onSurface,\s*fontWeight:\s*premiumWeb\s*\?\s*FontWeight\.w700\s*:\s*FontWeight\.w600,\s*letterSpacing:\s*premiumWeb\s*\?\s*-0\.25\s*:\s*null,\s*\),''',
+                  re.MULTILINE,
+              )
+
+              def stock_title(match):
+                  indent = match.group('indent')
+                  return (
+                      f'{indent}style: Theme.of(context).textTheme.titleMedium?.copyWith(\n'
+                      f'{indent}  color: AppColorScheme.onSurface,\n'
+                      f'{indent}  fontWeight: FontWeight.w600,\n'
+                      f'{indent}),'
+                  )
+
+              text, count = pattern.subn(stock_title, text, count=1)
+              if count != 1:
+                  raise SystemExit(
+                      'Could not normalise the intermediate premium shelf title.'
+                  )
+
+          path.write_text(text, encoding='utf-8')
+          PY
             python3 tooling/apply_homelab_home_redesign_patch.py
           fi
 
