@@ -9,6 +9,7 @@ on:
       - '.github/workflows/homelab-hubs-prototype.yml'
       - 'tooling/apply_homelab_hubs_patch.py'
       - 'tooling/apply_homelab_home_redesign_patch.py'
+      - 'tooling/apply_homelab_home_visual_polish_patch.py'
       - 'tooling/apply_homelab_mobile_nav_patch.py'
       - 'lib/ui/navigation/homelab_hub_routes.dart'
       - 'lib/ui/screens/home/**'
@@ -20,6 +21,7 @@ on:
       - '.github/workflows/homelab-hubs-prototype.yml'
       - 'tooling/apply_homelab_hubs_patch.py'
       - 'tooling/apply_homelab_home_redesign_patch.py'
+      - 'tooling/apply_homelab_home_visual_polish_patch.py'
       - 'tooling/apply_homelab_mobile_nav_patch.py'
       - 'lib/ui/navigation/homelab_hub_routes.dart'
       - 'lib/ui/screens/home/**'
@@ -53,6 +55,9 @@ jobs:
 
       - name: Apply comprehensive web Home redesign
         run: python3 tooling/apply_homelab_home_redesign_patch.py
+
+      - name: Apply comprehensive web Home visual polish
+        run: python3 tooling/apply_homelab_home_visual_polish_patch.py
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
