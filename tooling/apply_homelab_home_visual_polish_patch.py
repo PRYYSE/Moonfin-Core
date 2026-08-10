@@ -22,6 +22,26 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def replace_optional_once(text: str, old: str, new: str, label: str) -> str:
+    """Apply a cosmetic cleanup when its exact source shape is available.
+
+    Optional presentation-only edits must not block source consolidation merely
+    because upstream/Dart formatting changed. Ambiguous multiple matches remain
+    fatal because modifying the wrong location would be unsafe.
+    """
+    if new in text:
+        return text
+    count = text.count(old)
+    if count == 0:
+        print(f"Skipping optional {label}: source anchor not present.")
+        return text
+    if count != 1:
+        raise SystemExit(
+            f"Refusing optional {label}: expected at most one anchor, found {count}."
+        )
+    return text.replace(old, new, 1)
+
+
 def main() -> None:
     text = HOME_SCREEN.read_text(encoding="utf-8")
 
@@ -102,10 +122,9 @@ def main() -> None:
     text = replace_once(text, old_row_inset, new_row_inset, "desktop row gutter")
 
     # Consumer Home shelves should be titled by intent, not by their backing
-    # API. Keep source provenance in settings/other platforms where it helps
-    # diagnose configuration, but suppress it in the desktop web experience.
-    # This anchor deliberately matches dart format's multiline output so a
-    # previously formatted partial Home state is safe to resume from.
+    # API. This cleanup is deliberately optional during one-time consolidation:
+    # source provenance remains harmless if upstream formatting no longer
+    # exposes this exact block, and it can be consolidated directly later.
     old_custom_provenance = """    final config = widget.prefs.homeSectionsConfig.firstWhereOrNull(
       (c) => c.stableId == row.id,
     );
@@ -119,7 +138,7 @@ def main() -> None:
         config.pluginSource == HomeSectionPluginSource.custom) {
       if (premiumWeb) return null;
 """
-    text = replace_once(
+    text = replace_optional_once(
         text,
         old_custom_provenance,
         new_custom_provenance,
