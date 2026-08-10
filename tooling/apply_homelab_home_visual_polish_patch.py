@@ -104,11 +104,19 @@ def main() -> None:
     # Consumer Home shelves should be titled by intent, not by their backing
     # API. Keep source provenance in settings/other platforms where it helps
     # diagnose configuration, but suppress it in the desktop web experience.
-    old_custom_provenance = """    final config = widget.prefs.homeSectionsConfig.firstWhereOrNull((c) => c.stableId == row.id);
-    if (config != null && config.pluginSource == HomeSectionPluginSource.custom) {
+    # This anchor deliberately matches dart format's multiline output so a
+    # previously formatted partial Home state is safe to resume from.
+    old_custom_provenance = """    final config = widget.prefs.homeSectionsConfig.firstWhereOrNull(
+      (c) => c.stableId == row.id,
+    );
+    if (config != null &&
+        config.pluginSource == HomeSectionPluginSource.custom) {
 """
-    new_custom_provenance = """    final config = widget.prefs.homeSectionsConfig.firstWhereOrNull((c) => c.stableId == row.id);
-    if (config != null && config.pluginSource == HomeSectionPluginSource.custom) {
+    new_custom_provenance = """    final config = widget.prefs.homeSectionsConfig.firstWhereOrNull(
+      (c) => c.stableId == row.id,
+    );
+    if (config != null &&
+        config.pluginSource == HomeSectionPluginSource.custom) {
       if (premiumWeb) return null;
 """
     text = replace_once(
