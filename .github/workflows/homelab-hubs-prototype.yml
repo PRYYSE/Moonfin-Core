@@ -13,12 +13,23 @@ on:
       - 'lib/ui/navigation/homelab_hub_routes.dart'
       - 'lib/ui/screens/home/**'
       - 'lib/ui/screens/hubs/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/homelab-hubs-prototype.yml'
+      - 'tooling/apply_homelab_hubs_patch.py'
+      - 'tooling/apply_homelab_home_redesign_patch.py'
+      - 'tooling/apply_homelab_mobile_nav_patch.py'
+      - 'lib/ui/navigation/homelab_hub_routes.dart'
+      - 'lib/ui/screens/home/**'
+      - 'lib/ui/screens/hubs/**'
 
 permissions:
   contents: write
 
 concurrency:
-  group: homelab-web-ui
+  group: homelab-web-ui-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -96,6 +107,7 @@ jobs:
           sha256sum homelab-moonfin-web.tar.gz > homelab-moonfin-web.tar.gz.sha256
 
       - name: Commit generated wiring after successful build
+        if: github.event_name == 'push'
         run: |
           if git diff --quiet; then
             echo "No generated patch changes to commit."
@@ -144,6 +156,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish stable Home redesign download
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
