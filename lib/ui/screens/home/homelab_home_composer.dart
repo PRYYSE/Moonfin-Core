@@ -25,8 +25,9 @@ class HomelabHomeComposer {
   /// only for this in-memory web composition and are not written back to the
   /// user's Moonbase profile.
   static List<HomeSectionConfig> augmentConfigs(
-    List<HomeSectionConfig> configured,
-  ) {
+    List<HomeSectionConfig> configured, {
+    required bool mergeContinueWatchingNextUp,
+  }) {
     if (!enabled) return configured;
 
     final byType = <HomeSectionType, HomeSectionConfig>{
@@ -35,9 +36,9 @@ class HomelabHomeComposer {
     };
     final dynamic = configured.where((cfg) => cfg.isPluginDynamic).toList();
 
-    const required = <HomeSectionType>[
+    final required = <HomeSectionType>[
       HomeSectionType.resume,
-      HomeSectionType.nextUp,
+      if (!mergeContinueWatchingNextUp) HomeSectionType.nextUp,
       HomeSectionType.sinceYouWatched1,
       HomeSectionType.sinceYouWatched2,
       HomeSectionType.rewatch,
