@@ -11,18 +11,7 @@ on:
       - 'tooling/apply_homelab_home_redesign_patch.py'
       - 'tooling/apply_homelab_home_visual_polish_patch.py'
       - 'tooling/apply_homelab_mobile_nav_patch.py'
-      - 'lib/ui/navigation/homelab_hub_routes.dart'
-      - 'lib/ui/screens/home/**'
-      - 'lib/ui/screens/hubs/**'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/homelab-hubs-prototype.yml'
-      - 'tooling/apply_homelab_hubs_patch.py'
-      - 'tooling/apply_homelab_home_redesign_patch.py'
-      - 'tooling/apply_homelab_home_visual_polish_patch.py'
-      - 'tooling/apply_homelab_mobile_nav_patch.py'
+      - 'tooling/deploy_homelab_web.sh'
       - 'lib/ui/navigation/homelab_hub_routes.dart'
       - 'lib/ui/screens/home/**'
       - 'lib/ui/screens/hubs/**'
@@ -31,7 +20,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: homelab-web-ui-${{ github.event_name }}-${{ github.ref }}
+  group: homelab-web-ui
   cancel-in-progress: true
 
 env:
@@ -54,10 +43,18 @@ jobs:
         run: python3 tooling/apply_homelab_mobile_nav_patch.py
 
       - name: Apply comprehensive web Home redesign
-        run: python3 tooling/apply_homelab_home_redesign_patch.py
+        run: |
+          if grep -q 'HomelabHomeComposer.augmentConfigs' lib/ui/screens/home/home_view_model.dart; then
+            echo 'Comprehensive Home structural wiring already present.'
+          else
+            python3 tooling/apply_homelab_home_redesign_patch.py
+          fi
 
       - name: Apply comprehensive web Home visual polish
         run: python3 tooling/apply_homelab_home_visual_polish_patch.py
+
+      - name: Validate deploy helper
+        run: bash -n tooling/deploy_homelab_web.sh
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -112,7 +109,6 @@ jobs:
           sha256sum homelab-moonfin-web.tar.gz > homelab-moonfin-web.tar.gz.sha256
 
       - name: Commit generated wiring after successful build
-        if: github.event_name == 'push'
         run: |
           if git diff --quiet; then
             echo "No generated patch changes to commit."
@@ -161,7 +157,6 @@ jobs:
           if-no-files-found: error
 
       - name: Publish stable Home redesign download
-        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
