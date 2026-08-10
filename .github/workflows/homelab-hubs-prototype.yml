@@ -51,52 +51,6 @@ jobs:
           if grep -q 'HomelabHomeComposer.augmentConfigs' lib/ui/screens/home/home_view_model.dart; then
             echo 'Comprehensive Home structural wiring already present.'
           else
-            # An earlier design spike was formatted and partially committed
-            # before the comprehensive composer wiring existed. Convert only
-            # that known intermediate shelf state back to the stock anchors the
-            # comprehensive patch expects. This path disappears after the first
-            # successful generated-wiring commit.
-            python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('lib/ui/screens/home/home_screen.dart')
-          text = path.read_text(encoding='utf-8')
-
-          text = text.replace(
-              'premiumWeb ? 14 : (isRowsV2 ? 6 : 16)',
-              'isRowsV2 ? 6 : 16',
-          ).replace(
-              'premiumWeb ? 7 : (isRowsV2 ? 1 : 8)',
-              'isRowsV2 ? 1 : 8',
-          )
-
-          marker = 'letterSpacing: premiumWeb ? -0.25 : null,'
-          if marker in text:
-              lines = text.splitlines(keepends=True)
-              marker_index = next(
-                  i for i, line in enumerate(lines) if marker in line
-              )
-              style_index = next(
-                  i
-                  for i in range(marker_index, -1, -1)
-                  if lines[i].lstrip().startswith('style:')
-              )
-              style_end = next(
-                  i
-                  for i in range(marker_index, len(lines))
-                  if lines[i].strip() == '),'
-              )
-              stock_style = [
-                  '                        style: Theme.of(context).textTheme.titleMedium?.copyWith(\n',
-                  '                          color: AppColorScheme.onSurface,\n',
-                  '                          fontWeight: FontWeight.w600,\n',
-                  '                        ),\n',
-              ]
-              lines[style_index : style_end + 1] = stock_style
-              text = ''.join(lines)
-
-          path.write_text(text, encoding='utf-8')
-          PY
             python3 tooling/apply_homelab_home_redesign_patch.py
           fi
 
@@ -154,10 +108,10 @@ jobs:
           tar -czf homelab-moonfin-web.tar.gz -C build/web .
           sha256sum homelab-moonfin-web.tar.gz > homelab-moonfin-web.tar.gz.sha256
 
-      - name: Commit generated wiring after successful build
+      - name: Commit generated Home source after successful build
         run: |
           if git diff --quiet; then
-            echo "No generated patch changes to commit."
+            echo "No generated Home source changes to commit."
           else
             git config user.name "Home Lab Build Bot"
             git config user.email "actions@users.noreply.github.com"
@@ -171,9 +125,9 @@ jobs:
               lib/ui/widgets/left_sidebar.dart \
               lib/ui/widgets/top_toolbar.dart
             if git diff --cached --quiet; then
-              echo "No staged generated changes to commit."
+              echo "No staged Home source changes to commit."
             else
-              git commit -m "Generate comprehensive Home Lab web redesign [skip ci]"
+              git commit -m "Bake comprehensive Home Lab web redesign [skip ci]"
               for attempt in 1 2 3; do
                 git fetch origin homelab/hubs-v1
                 if git rebase origin/homelab/hubs-v1; then
@@ -183,10 +137,10 @@ jobs:
                 else
                   git rebase --abort || true
                 fi
-                echo "Generated wiring push raced with another branch update; retrying ($attempt/3)."
+                echo "Home source push raced with another branch update; retrying ($attempt/3)."
                 sleep 2
               done
-              echo "Could not safely publish generated wiring after 3 attempts."
+              echo "Could not safely publish baked Home source after 3 attempts."
               exit 1
             fi
           fi
