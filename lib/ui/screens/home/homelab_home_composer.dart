@@ -50,7 +50,8 @@ class HomelabHomeComposer {
       HomeSectionType.libraryTilesSmall,
     ];
 
-    var syntheticOrder = configured.fold<int>(
+    var syntheticOrder =
+        configured.fold<int>(
           -1,
           (max, cfg) => cfg.order > max ? cfg.order : max,
         ) +
