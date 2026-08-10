@@ -1,4 +1,4 @@
-name: Home Lab Web UI
+name: Home Lab Source Consolidation
 
 on:
   workflow_dispatch:
@@ -7,16 +7,9 @@ on:
       - homelab/hubs-v1
     paths:
       - '.github/workflows/homelab-hubs-prototype.yml'
-      - 'tooling/apply_homelab_hubs_patch.py'
-      - 'tooling/apply_homelab_home_redesign_patch.py'
-      - 'tooling/apply_homelab_home_visual_polish_patch.py'
-      - 'tooling/deploy_homelab_web.sh'
-      - 'lib/ui/navigation/homelab_hub_routes.dart'
-      - 'lib/ui/screens/home/**'
-      - 'lib/ui/screens/hubs/**'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: homelab-web-ui
@@ -26,36 +19,26 @@ env:
   FLUTTER_VERSION: '3.44.1'
 
 jobs:
-  patch-build-web:
+  consolidate-build-web:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out Home Lab branch
+      - name: Check out triggering commit
         uses: actions/checkout@v4
         with:
-          ref: homelab/hubs-v1
           fetch-depth: 0
 
-      - name: Validate Home Lab helpers
+      - name: Validate consolidation helpers
         run: |
           python3 -m py_compile \
             tooling/apply_homelab_hubs_patch.py \
             tooling/apply_homelab_home_redesign_patch.py \
             tooling/apply_homelab_home_visual_polish_patch.py
-          bash -n tooling/deploy_homelab_web.sh
 
-      - name: Apply isolated router and navigation patch
-        run: python3 tooling/apply_homelab_hubs_patch.py
-
-      - name: Apply comprehensive web Home redesign
+      - name: Consolidate existing Home Lab source changes
         run: |
-          if grep -q 'HomelabHomeComposer.augmentConfigs' lib/ui/screens/home/home_view_model.dart; then
-            echo 'Comprehensive Home structural wiring already present.'
-          else
-            python3 tooling/apply_homelab_home_redesign_patch.py
-          fi
-
-      - name: Apply comprehensive web Home visual polish
-        run: python3 tooling/apply_homelab_home_visual_polish_patch.py
+          python3 tooling/apply_homelab_hubs_patch.py
+          python3 tooling/apply_homelab_home_redesign_patch.py
+          python3 tooling/apply_homelab_home_visual_polish_patch.py
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -63,7 +46,10 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
-      - name: Format touched Dart files
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Format consolidated source
         run: |
           dart format \
             lib/ui/navigation/app_router.dart \
@@ -74,14 +60,15 @@ jobs:
             lib/ui/screens/hubs/homelab_hub_screen.dart \
             lib/ui/widgets/left_sidebar.dart \
             lib/ui/widgets/top_toolbar.dart
+          git diff --check
 
-      - name: Resolve dependencies
-        run: flutter pub get
+      - name: Analyse consolidated source
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
-      - name: Build web redesign bundle
+      - name: Build consolidated web baseline
         run: flutter build web --wasm --release --base-href "/Moonfin/Web/"
 
-      - name: Write plugin runtime config
+      - name: Write preview runtime config
         run: |
           cat > build/web/config.json <<'EOF'
           {
@@ -94,86 +81,42 @@ jobs:
             "forcedServerUrl": null
           }
           EOF
-
-      - name: Package Home redesign
-        run: |
           printf '%s\n' \
             '{' \
             '  "schemaVersion": 1,' \
             '  "prototype": "homelab-hubs-v1",' \
             '  "design": "home-web-comprehensive-v1",' \
             '  "commit": "${{ github.sha }}",' \
+            '  "purpose": "source-consolidation-preview",' \
             '  "flutterVersion": "${{ env.FLUTTER_VERSION }}"' \
             '}' > build/web/homelab-build-manifest.json
-          tar -czf homelab-moonfin-web.tar.gz -C build/web .
-          sha256sum homelab-moonfin-web.tar.gz > homelab-moonfin-web.tar.gz.sha256
 
-      - name: Commit generated Home source after successful build
+      - name: Package preview web bundle
         run: |
-          if git diff --quiet; then
-            echo "No generated Home source changes to commit."
-          else
-            git config user.name "Home Lab Build Bot"
-            git config user.email "actions@users.noreply.github.com"
-            git add \
-              lib/ui/navigation/app_router.dart \
-              lib/ui/navigation/homelab_hub_routes.dart \
-              lib/ui/screens/home/home_screen.dart \
-              lib/ui/screens/home/home_view_model.dart \
-              lib/ui/screens/home/homelab_home_composer.dart \
-              lib/ui/screens/hubs/homelab_hub_screen.dart \
-              lib/ui/widgets/left_sidebar.dart \
-              lib/ui/widgets/top_toolbar.dart
-            if git diff --cached --quiet; then
-              echo "No staged Home source changes to commit."
-            else
-              git commit -m "Bake comprehensive Home Lab web redesign [skip ci]"
-              for attempt in 1 2 3; do
-                git fetch origin homelab/hubs-v1
-                if git rebase origin/homelab/hubs-v1; then
-                  if git push origin HEAD:homelab/hubs-v1; then
-                    exit 0
-                  fi
-                else
-                  git rebase --abort || true
-                fi
-                echo "Home source push raced with another branch update; retrying ($attempt/3)."
-                sleep 2
-              done
-              echo "Could not safely publish baked Home source after 3 attempts."
-              exit 1
-            fi
-          fi
+          tar -czf homelab-moonfin-web-preview.tar.gz -C build/web .
+          sha256sum homelab-moonfin-web-preview.tar.gz > homelab-moonfin-web-preview.tar.gz.sha256
 
-      - name: Upload web bundle artifact
+      - name: Upload consolidated source
         uses: actions/upload-artifact@v4
         with:
-          name: homelab-moonfin-web
+          name: homelab-consolidated-source
           path: |
-            homelab-moonfin-web.tar.gz
-            homelab-moonfin-web.tar.gz.sha256
-            build/web/homelab-build-manifest.json
+            lib/ui/navigation/app_router.dart
+            lib/ui/navigation/homelab_hub_routes.dart
+            lib/ui/screens/home/home_screen.dart
+            lib/ui/screens/home/home_view_model.dart
+            lib/ui/screens/home/homelab_home_composer.dart
+            lib/ui/screens/hubs/homelab_hub_screen.dart
+            lib/ui/widgets/left_sidebar.dart
+            lib/ui/widgets/top_toolbar.dart
           if-no-files-found: error
 
-      - name: Publish stable Home redesign download
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="homelab-hubs-v1-latest"
-          TITLE="Home Lab Moonfin Web UI"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" \
-              homelab-moonfin-web.tar.gz \
-              homelab-moonfin-web.tar.gz.sha256 \
-              build/web/homelab-build-manifest.json \
-              --clobber
-          else
-            gh release create "$TAG" \
-              homelab-moonfin-web.tar.gz \
-              homelab-moonfin-web.tar.gz.sha256 \
-              build/web/homelab-build-manifest.json \
-              --target "${{ github.sha }}" \
-              --title "$TITLE" \
-              --notes "Web-first Home Lab UI redesign. Keep the Home Lab fork unmerged until the UX milestone is approved." \
-              --prerelease
-          fi
+      - name: Upload preview web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: homelab-moonfin-web-preview
+          path: |
+            homelab-moonfin-web-preview.tar.gz
+            homelab-moonfin-web-preview.tar.gz.sha256
+            build/web/homelab-build-manifest.json
+          if-no-files-found: error
