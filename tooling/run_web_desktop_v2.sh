@@ -254,8 +254,8 @@ sudo chown -R "$OWNER" "$STAGE"
 GOOD_LIVE="$RUN/live-good-before-v2"
 "${D[@]}" stop jellyfin >/dev/null
 sudo mv "$FRONTEND" "$GOOD_LIVE"
-sudo mv "$STAGE" "$FRONTEND"
 CANDIDATE_DEPLOYED=1
+sudo mv "$STAGE" "$FRONTEND"
 "${D[@]}" start jellyfin >/dev/null
 wait_for_moonfin || fail 'Jellyfin did not serve Moonfin after v2 deployment.'
 SERVED="$(served_manifest)"
