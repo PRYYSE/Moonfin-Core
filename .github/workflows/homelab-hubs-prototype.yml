@@ -10,7 +10,6 @@ on:
       - 'tooling/apply_homelab_hubs_patch.py'
       - 'tooling/apply_homelab_home_redesign_patch.py'
       - 'tooling/apply_homelab_home_visual_polish_patch.py'
-      - 'tooling/apply_homelab_mobile_nav_patch.py'
       - 'tooling/deploy_homelab_web.sh'
       - 'lib/ui/navigation/homelab_hub_routes.dart'
       - 'lib/ui/screens/home/**'
@@ -36,20 +35,27 @@ jobs:
           ref: homelab/hubs-v1
           fetch-depth: 0
 
+      - name: Validate Home Lab helpers
+        run: |
+          python3 -m py_compile \
+            tooling/apply_homelab_hubs_patch.py \
+            tooling/apply_homelab_home_redesign_patch.py \
+            tooling/apply_homelab_home_visual_polish_patch.py
+          bash -n tooling/deploy_homelab_web.sh
+
       - name: Apply isolated router and navigation patch
         run: python3 tooling/apply_homelab_hubs_patch.py
-
-      - name: Apply native mobile navigation patch
-        run: python3 tooling/apply_homelab_mobile_nav_patch.py
 
       - name: Apply comprehensive web Home redesign
         run: |
           if grep -q 'HomelabHomeComposer.augmentConfigs' lib/ui/screens/home/home_view_model.dart; then
             echo 'Comprehensive Home structural wiring already present.'
           else
-            # Normalise the only known partially-generated shelf state left by
-            # the earlier visual spike. This is deliberately narrow and runs
-            # only until the comprehensive wiring has been generated once.
+            # An earlier design spike was formatted and partially committed
+            # before the comprehensive composer wiring existed. Convert only
+            # that known intermediate shelf state back to the stock anchors the
+            # comprehensive patch expects. This path disappears after the first
+            # successful generated-wiring commit.
             python3 - <<'PY'
           from pathlib import Path
 
@@ -66,19 +72,28 @@ jobs:
 
           marker = 'letterSpacing: premiumWeb ? -0.25 : null,'
           if marker in text:
-              marker_pos = text.index(marker)
-              start = text.rfind('\n                        style:', 0, marker_pos)
-              end = text.find('\n                        if (subtitle != null', marker_pos)
-              if start < 0 or end < 0:
-                  raise SystemExit(
-                      'Could not locate the intermediate premium shelf title block.'
-                  )
-              start += 1
-              stock_style = '''                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColorScheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),'''
-              text = text[:start] + stock_style + text[end:]
+              lines = text.splitlines(keepends=True)
+              marker_index = next(
+                  i for i, line in enumerate(lines) if marker in line
+              )
+              style_index = next(
+                  i
+                  for i in range(marker_index, -1, -1)
+                  if lines[i].lstrip().startswith('style:')
+              )
+              style_end = next(
+                  i
+                  for i in range(marker_index, len(lines))
+                  if lines[i].strip() == '),'
+              )
+              stock_style = [
+                  '                        style: Theme.of(context).textTheme.titleMedium?.copyWith(\n',
+                  '                          color: AppColorScheme.onSurface,\n',
+                  '                          fontWeight: FontWeight.w600,\n',
+                  '                        ),\n',
+              ]
+              lines[style_index : style_end + 1] = stock_style
+              text = ''.join(lines)
 
           path.write_text(text, encoding='utf-8')
           PY
@@ -87,9 +102,6 @@ jobs:
 
       - name: Apply comprehensive web Home visual polish
         run: python3 tooling/apply_homelab_home_visual_polish_patch.py
-
-      - name: Validate deploy helper
-        run: bash -n tooling/deploy_homelab_web.sh
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -107,7 +119,6 @@ jobs:
             lib/ui/screens/home/homelab_home_composer.dart \
             lib/ui/screens/hubs/homelab_hub_screen.dart \
             lib/ui/widgets/left_sidebar.dart \
-            lib/ui/widgets/mobile_bottom_nav_bar.dart \
             lib/ui/widgets/top_toolbar.dart
 
       - name: Resolve dependencies
@@ -158,7 +169,6 @@ jobs:
               lib/ui/screens/home/homelab_home_composer.dart \
               lib/ui/screens/hubs/homelab_hub_screen.dart \
               lib/ui/widgets/left_sidebar.dart \
-              lib/ui/widgets/mobile_bottom_nav_bar.dart \
               lib/ui/widgets/top_toolbar.dart
             if git diff --cached --quiet; then
               echo "No staged generated changes to commit."
