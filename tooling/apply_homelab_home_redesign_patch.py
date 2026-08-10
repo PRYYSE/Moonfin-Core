@@ -2,12 +2,14 @@
 """Apply the comprehensive Home Lab web Home redesign.
 
 The redesign is intentionally layered on Moonfin's existing Home implementation:
-- Moonbase / HomeSectionConfig remain the data-source infrastructure.
+- Moonbase / HomeSectionConfig remain the current data-source infrastructure.
 - HomelabHomeComposer supplies an opinionated web-only content hierarchy.
 - Existing playback, Seerr routing, focus-return, previews, ratings and theme
   plumbing remain untouched.
 - Android/mobile and TV layouts remain on the proven baseline until their later
   responsive/native passes.
+
+These are implementation choices for this baseline, not permanent constraints.
 """
 
 from pathlib import Path
@@ -35,7 +37,7 @@ def patch_home_view_model() -> None:
 
     text = replace_once(
         text,
-        "import 'home_view_model.dart';\n" if False else "import '../../../data/models/home_row.dart';\n",
+        "import '../../../data/models/home_row.dart';\n",
         "import '../../../data/models/home_row.dart';\nimport 'homelab_home_composer.dart';\n",
         "Home composer import",
     )
@@ -52,6 +54,7 @@ def patch_home_view_model() -> None:
               (c) => !(c.isBuiltin && merge && c.type == HomeSectionType.nextUp),
             )
             .toList(),
+        mergeContinueWatchingNextUp: merge,
       );
 """
     text = replace_once(
@@ -76,8 +79,6 @@ def patch_home_view_model() -> None:
 def patch_home_screen() -> None:
     text = HOME_SCREEN.read_text(encoding="utf-8")
 
-    # The previous home-web-v1 experiment may already be generated into the
-    # branch. Replace that exact spike with the final baseline treatment.
     old_scrim = """class _GradientScrim extends StatelessWidget {
   const _GradientScrim();
 
@@ -145,7 +146,6 @@ def patch_home_screen() -> None:
   }
 }
 """
-    # Also support a branch where the old spike has not yet been generated.
     stock_scrim = """class _GradientScrim extends StatelessWidget {
   const _GradientScrim();
 
@@ -196,9 +196,6 @@ def patch_home_screen() -> None:
       );
     }
 
-    // Three restrained layers keep hero copy legible, preserve central
-    // artwork, and resolve into the active theme's background. OLED themes
-    // therefore reach true black without hard-coding black into other themes.
     return RepaintBoundary(
       child: Stack(
         fit: StackFit.expand,
@@ -275,9 +272,6 @@ def patch_home_screen() -> None:
 """
     new_hero = """    if (!PlatformDetection.useMobileUi) {
       if (kIsWeb) {
-        // Responsive cinematic hero: broad displays can show more artwork and
-        // still reveal the first shelf; taller desktop windows retain a little
-        // more hero presence. This is composition, not a fixed-height splash.
         final aspect = screenWidth / screenHeight;
         final factor = aspect >= 1.75 ? 0.66 : (aspect >= 1.45 ? 0.7 : 0.74);
         return (screenHeight * factor).clamp(500.0, 780.0).toDouble();
@@ -289,9 +283,6 @@ def patch_home_screen() -> None:
         anchor = old_experiment_hero if old_experiment_hero in text else stock_hero
         text = replace_once(text, anchor, new_hero, "responsive web hero")
 
-    # Web gets the existing modern V2 poster -> landscape focus treatment,
-    # metadata expansion, ratings and preview behaviour. Other platforms keep
-    # their saved setting until the later responsive/native pass.
     old_v2 = """  bool _isHomeRowsStyleV2() {
     return widget.prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2;
   }
@@ -303,8 +294,6 @@ def patch_home_screen() -> None:
 """
     text = replace_once(text, old_v2, new_v2, "premium web card system")
 
-    # The experiment already introduced source-label cleanup and stronger row
-    # headings. Apply them only if they are not generated yet.
     old_provenance = """    if (row.id.startsWith('seerr_')) return l10n.seerrDiscoveryRows;
     if (row.id.startsWith('tmdb_')) return 'TMDB Lists';
     if (row.id.startsWith('imdb_')) return 'IMDb List';
@@ -316,12 +305,7 @@ def patch_home_screen() -> None:
     if (!premiumWeb && row.id.startsWith('tmdb_')) return 'TMDB Lists';
     if (!premiumWeb && row.id.startsWith('imdb_')) return 'IMDb List';
 """
-    text = replace_once(
-        text,
-        old_provenance,
-        new_provenance,
-        "consumer-facing row labels",
-    )
+    text = replace_once(text, old_provenance, new_provenance, "consumer-facing row labels")
 
     old_header_start = """  }) {
     final isRowsV2 = _isHomeRowsStyleV2();
@@ -334,12 +318,7 @@ def patch_home_screen() -> None:
     final showHeaderControls =
         hasItems && PlatformDetection.useDesktopUi && !PlatformDetection.isTV;
 """
-    text = replace_once(
-        text,
-        old_header_start,
-        new_header_start,
-        "premium row heading mode",
-    )
+    text = replace_once(text, old_header_start, new_header_start, "premium row heading mode")
 
     old_header_padding = """            padding: EdgeInsets.fromLTRB(
               _kHomeRowLabelInset,
@@ -355,12 +334,7 @@ def patch_home_screen() -> None:
               premiumWeb ? 8 : (isRowsV2 ? 1 : 8),
             ),
 """
-    text = replace_once(
-        text,
-        old_header_padding,
-        new_header_padding,
-        "premium shelf rhythm",
-    )
+    text = replace_once(text, old_header_padding, new_header_padding, "premium shelf rhythm")
 
     old_title_style = """                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: AppColorScheme.onSurface,
@@ -378,15 +352,8 @@ def patch_home_screen() -> None:
                               letterSpacing: premiumWeb ? -0.35 : null,
                             ),
 """
-    text = replace_once(
-        text,
-        old_title_style,
-        new_title_style,
-        "premium shelf typography",
-    )
+    text = replace_once(text, old_title_style, new_title_style, "premium shelf typography")
 
-    # If the experiment is already generated, refine its 14/7 spacing to the
-    # final 18/8 rhythm without depending on the stock anchor above.
     text = text.replace(
         "premiumWeb ? 14 : (isRowsV2 ? 6 : 16)",
         "premiumWeb ? 18 : (isRowsV2 ? 6 : 16)",
@@ -398,8 +365,6 @@ def patch_home_screen() -> None:
         "letterSpacing: premiumWeb ? -0.35 : null",
     )
 
-    # Medium web posters create a denser catalogue than the giant TV-style
-    # cards while leaving enough room for V2's landscape expansion on hover.
     old_poster = """    final posterSize =
         (_isHomeRowsStyleV2() &&
             !prefs.containsPreference(UserPreferences.posterSize))
@@ -413,8 +378,7 @@ def patch_home_screen() -> None:
         ? PosterSize.small
         : prefs.get(UserPreferences.posterSize);
 """
-    count = text.count(old_poster)
-    if count:
+    if old_poster in text:
         text = text.replace(old_poster, new_poster)
 
     HOME_SCREEN.write_text(text, encoding="utf-8")
