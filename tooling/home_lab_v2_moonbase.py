@@ -134,12 +134,25 @@ def discover_admin_token(root='/srv/appdata/jellyfin'):
     for db in candidate_databases(root):
         for token in token_candidates(db):
             try:
+                me = request_json('GET', '/Users/Me', token)
+                if not isinstance(me, dict):
+                    continue
+                policy = me.get('Policy') or me.get('policy') or {}
+                if not isinstance(policy, dict):
+                    continue
+                is_admin = bool(
+                    policy.get('IsAdministrator') or policy.get('isAdministrator')
+                )
+                if not is_admin:
+                    continue
                 users = request_json('GET', '/Users', token)
                 if isinstance(users, list):
                     return token
             except Exception:
                 continue
-    raise RuntimeError('Could not automatically locate a working Jellyfin administrator token.')
+    raise RuntimeError(
+        'Could not automatically locate a working Jellyfin administrator user token.'
+    )
 
 
 def atomic_json(path, value):
