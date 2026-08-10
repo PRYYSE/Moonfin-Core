@@ -7,6 +7,9 @@ on:
       - homelab/hubs-v1
     paths:
       - '.github/workflows/homelab-hubs-prototype.yml'
+      - 'tooling/apply_homelab_hubs_patch.py'
+      - 'tooling/apply_homelab_home_redesign_patch.py'
+      - 'tooling/apply_homelab_home_visual_polish_patch.py'
 
 permissions:
   contents: read
