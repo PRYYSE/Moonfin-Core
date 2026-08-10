@@ -43,7 +43,9 @@ class HomelabHomeComposer {
 
     final mergedRecent = _mergeRecentlyReleased(recentRows);
     if (mergedRecent != null) {
-      final index = (recentInsertIndex ?? output.length).clamp(0, output.length);
+      final index = (recentInsertIndex ?? output.length)
+          .clamp(0, output.length)
+          .toInt();
       output.insert(index, mergedRecent);
     }
 
@@ -61,15 +63,10 @@ class HomelabHomeComposer {
     ];
 
     items.sort((a, b) {
-      DateTime? dateFor(dynamic item) {
-        final premiere = item.premiereDate as DateTime?;
-        if (premiere != null) return premiere;
-        final year = item.productionYear as int?;
-        return year == null ? null : DateTime(year);
-      }
-
-      final aDate = dateFor(a);
-      final bDate = dateFor(b);
+      final aDate = a.premiereDate ??
+          (a.productionYear == null ? null : DateTime(a.productionYear!));
+      final bDate = b.premiereDate ??
+          (b.productionYear == null ? null : DateTime(b.productionYear!));
       if (aDate != null && bDate != null) return bDate.compareTo(aDate);
       if (aDate != null) return -1;
       if (bDate != null) return 1;
