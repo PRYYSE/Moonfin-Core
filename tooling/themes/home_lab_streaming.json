@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "id": "home_lab_streaming",
+  "displayName": "Home Lab",
+  "description": "OLED-first cinematic Home Lab streaming interface: deep neutral blacks, cool cyan focus, restrained violet secondary semantics, low-noise chrome and soft premium focus treatment.",
+  "fontFamily": "NotoSans",
+  "transparentNavbarSurface": true,
+  "colors": {
+    "background": "#FF000000",
+    "onBackground": "#FFF4F8FB",
+    "surface": "#FF070B0F",
+    "onSurface": "#FFF4F8FB",
+    "surfaceVariant": "#FF111820",
+    "scrim": "#E6000000",
+    "accent": "#FF59D7FF",
+    "onAccent": "#FF00141D",
+    "buttonNormal": "#E618222B",
+    "buttonFocused": "#FF59D7FF",
+    "buttonDisabled": "#FF11161C",
+    "buttonActive": "#FF22313D",
+    "onButtonNormal": "#FFF4F8FB",
+    "onButtonFocused": "#FF00141D",
+    "onButtonDisabled": "#FF687580",
+    "inputBackground": "#FF0C1218",
+    "inputFocused": "#FF121D26",
+    "inputBorder": "#FF273642",
+    "inputBorderFocused": "#FF59D7FF",
+    "rangeTrack": "#FF26333D",
+    "rangeProgress": "#FF59D7FF",
+    "rangeThumb": "#FF59D7FF",
+    "seekbarBuffered": "#66C8D7E0",
+    "badgeBackground": "#E6152530",
+    "onBadge": "#FFF4F8FB",
+    "badgeUnplayed": "#FF59D7FF",
+    "badgeWatched": "#FF69D19B",
+    "recordingActive": "#FFFF5D6C",
+    "recordingScheduled": "#FFFFC857",
+    "error": "#FFFF5D6C",
+    "card": "#FF090E13"
+  },
+  "borders": {
+    "cardBorder": {
+      "color": "#243B5160",
+      "width": 0.7
+    },
+    "chipBorder": {
+      "color": "#4059D7FF",
+      "width": 0.8
+    },
+    "focusBorder": {
+      "color": "#FF59D7FF",
+      "width": 2.0
+    },
+    "cardRadius": 12,
+    "chipRadius": 999,
+    "chipBackground": "#CC0C141B",
+    "focusGlow": [
+      {
+        "color": "#5559D7FF",
+        "blurRadius": 15,
+        "spreadRadius": 0.5,
+        "offsetX": 0,
+        "offsetY": 0
+      },
+      {
+        "color": "#309B8CFF",
+        "blurRadius": 24,
+        "spreadRadius": -2,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    ],
+    "navBorder": {
+      "color": "#2459D7FF",
+      "width": 1.0
+    }
+  },
+  "semantic": {
+    "statusAvailable": "#FF69D19B",
+    "statusRequested": "#FFAE8CFF",
+    "statusPending": "#FFFFC857",
+    "statusDownloading": "#FF59D7FF",
+    "statusError": "#FFFF5D6C",
+    "mediaTypeBadgeMovie": "#FF59D7FF",
+    "mediaTypeBadgeShow": "#FF9B8CFF"
+  },
+  "book": {
+    "background": "#FF02070B",
+    "accent": "#FF59D7FF",
+    "mutedText": "#FF90A6B5",
+    "primaryText": "#FFEFF6FA",
+    "sectionTitle": "#FFC6EFFF",
+    "divider": "#223D5668",
+    "placeholder": "#FF163244",
+    "shadow": "#66000000",
+    "gradientTop": "#FF0B1720",
+    "gradientBottom": "#FF02070B",
+    "inactiveChip": "#663B5160",
+    "placeholderPalette": [
+      "#FF12324A",
+      "#FF114554",
+      "#FF183B5D",
+      "#FF24365F",
+      "#FF342D5E",
+      "#FF193E49",
+      "#FF2D4454",
+      "#FF1C3050"
+    ]
+  },
+  "textGlow": [],
+  "navColorCycle": []
+}
