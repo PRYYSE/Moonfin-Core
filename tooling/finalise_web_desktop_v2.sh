@@ -13,7 +13,7 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 RUN="/srv/appdata/jellyfin/backups/web-desktop-v2-final-$STAMP"
 LOG="$DEV/logs/web-desktop-v2-finalise-$STAMP.log"
 
-mkdir -p "$DEV/logs"
+mkdir -p "$DEV/logs" "$DEV/pub-cache"
 exec > >(tee -a "$LOG") 2>&1
 
 fail() {
@@ -51,15 +51,28 @@ git merge-base --is-ancestor "$REQUIRED_FIX" HEAD || \
 
 echo "Staging: $(git rev-parse HEAD)"
 
-printf '\n=== 2. FORMAT SOURCE ONLY (NO BUILD) ===\n'
+printf '\n=== 2. PREPARE FORMATTER DEPENDENCIES ===\n'
 HOST_UID="$(id -u)"
 HOST_GID="$(id -g)"
 
 "${D[@]}" run --rm \
   --user "$HOST_UID:$HOST_GID" \
   -e HOME=/home/builder \
+  -e PUB_CACHE=/home/builder/.pub-cache \
   -e PATH=/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
   -v "$SRC:/workspace" \
+  -v "$DEV/pub-cache:/home/builder/.pub-cache" \
+  -w /workspace \
+  "$IMAGE" flutter pub get
+
+printf '\n=== 3. FORMAT SOURCE ONLY (NO BUILD) ===\n'
+"${D[@]}" run --rm \
+  --user "$HOST_UID:$HOST_GID" \
+  -e HOME=/home/builder \
+  -e PUB_CACHE=/home/builder/.pub-cache \
+  -e PATH=/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  -v "$SRC:/workspace" \
+  -v "$DEV/pub-cache:/home/builder/.pub-cache" \
   -w /workspace \
   "$IMAGE" dart format "${FORMAT_PATHS[@]}"
 
@@ -72,7 +85,7 @@ if (( ${#CHANGED[@]} )); then
     for expected in "${FORMAT_PATHS[@]}"; do
       [[ "$path" == "$expected" ]] && allowed=1 && break
     done
-    [[ "$allowed" == 1 ]] || fail "Formatter changed unexpected file: $path"
+    [[ "$allowed" == 1 ]] || fail "Unexpected source change before build: $path"
   done
 
   echo 'Formatter changes:'
@@ -88,7 +101,7 @@ fi
 COMMIT="$(git rev-parse HEAD)"
 echo "Build commit: $COMMIT"
 
-printf '\n=== 3. FINAL COMMITTED-SOURCE BUILD ===\n'
+printf '\n=== 4. FINAL COMMITTED-SOURCE BUILD ===\n'
 timeout --signal=TERM --kill-after=30s 30m \
   bash "$SRC/tooling/build_web_desktop_v2.sh" final
 
@@ -112,7 +125,7 @@ grep -Fq '"theme": "home_lab_streaming"' "$MANIFEST" || fail 'Theme marker missi
 
 echo "BUILD/BUNDLE PASS: $COMMIT"
 
-printf '\n=== 4. LOCATE LIVE PLUGIN + CREATE ROLLBACK ===\n'
+printf '\n=== 5. LOCATE LIVE PLUGIN + CREATE ROLLBACK ===\n'
 PLUGIN_DIR=''
 for candidate in "$PLUGIN_ROOT"/Moonbase_* "$PLUGIN_ROOT"/Moonfin*; do
   if [[ -d "$candidate" && -f "$candidate/Moonfin.Server.dll" ]]; then
@@ -124,7 +137,8 @@ FRONTEND="$PLUGIN_DIR/frontend"
 [[ -f "$FRONTEND/index.html" ]] || fail "Live frontend missing: $FRONTEND"
 
 sudo mkdir -p "$RUN"
-sudo chmod 700 "$RUN"
+sudo chown "$(id -u):$(id -g)" "$RUN"
+chmod 700 "$RUN"
 CONFIG_APPLIED=0
 DEPLOYED=0
 OLD_FRONTEND="$RUN/frontend-before-final"
@@ -137,9 +151,9 @@ restore_transaction() {
   if [[ $rc -ne 0 ]]; then
     echo
     echo '=== FINALISATION FAILED: AUTOMATIC RESTORE ==='
-    if [[ "$DEPLOYED" == 1 && -d "$OLD_FRONTEND" ]]; then
+    if [[ "$DEPLOYED" == 1 ]] && sudo test -d "$OLD_FRONTEND"; then
       "${D[@]}" stop jellyfin >/dev/null 2>&1 || true
-      if [[ -d "$FRONTEND" ]]; then
+      if sudo test -d "$FRONTEND"; then
         sudo mv "$FRONTEND" "$RUN/failed-final-frontend" 2>/dev/null || sudo rm -rf "$FRONTEND"
       fi
       sudo mv "$OLD_FRONTEND" "$FRONTEND" 2>/dev/null || true
@@ -159,7 +173,12 @@ restore_transaction() {
 }
 trap restore_transaction EXIT
 
-printf '\n=== 5. APPLY THEME/DESKTOP CONFIG + SERVER DATA GATES ===\n'
+printf '\n=== 6. APPLY THEME/DESKTOP CONFIG + SERVER DATA GATES ===\n'
+python3 -m py_compile \
+  "$SRC/tooling/home_lab_v2_moonbase.py" \
+  "$SRC/tooling/home_lab_v2_runtime_gate.py" \
+  "$SRC/tooling/home_lab_v2_personal_gate_all_users.py"
+
 sudo env PYTHONPATH="$SRC/tooling" \
   python3 "$SRC/tooling/home_lab_v2_moonbase.py" apply \
   --backup-dir "$RUN/moonbase" \
@@ -167,12 +186,12 @@ sudo env PYTHONPATH="$SRC/tooling" \
 CONFIG_APPLIED=1
 
 sudo env PYTHONPATH="$SRC/tooling" \
-  python3 "$SRC/tooling/home_lab_v2_moonbase.py" validate
+  python3 "$SRC/tooling/home_lab_v2_runtime_gate.py"
 
 sudo env PYTHONPATH="$SRC/tooling" \
-  python3 "$SRC/tooling/home_lab_v2_personal_gate.py"
+  python3 "$SRC/tooling/home_lab_v2_personal_gate_all_users.py"
 
-printf '\n=== 6. DEPLOY EXACT VALIDATED BUILD ===\n'
+printf '\n=== 7. DEPLOY EXACT VALIDATED BUILD ===\n'
 STAGE="$PLUGIN_DIR/.frontend-v2-final-$STAMP"
 OWNER="$(stat -c '%u:%g' "$FRONTEND")"
 sudo rm -rf "$STAGE"
@@ -201,7 +220,7 @@ grep -Fq "\"sourceCommit\": \"$COMMIT\"" <<<"$LIVE" || fail 'Live source commit 
 grep -Fq '"theme": "home_lab_streaming"' <<<"$LIVE" || fail 'Live theme marker mismatch.'
 echo "$LIVE"
 
-printf '\n=== 7. PROMOTE EXACT VALIDATED SOURCE ===\n'
+printf '\n=== 8. PROMOTE EXACT VALIDATED SOURCE ===\n'
 git push origin HEAD:"$MAIN_BRANCH"
 git checkout -B "$MAIN_BRANCH" HEAD
 git branch --set-upstream-to="origin/$MAIN_BRANCH" "$MAIN_BRANCH" >/dev/null 2>&1 || true
@@ -221,4 +240,5 @@ echo "Backup: $RUN"
 echo "Log: $LOG"
 echo 'Home Lab theme/config: PASS'
 echo 'Movies/TV/Anime runtime data gate: PASS'
+echo 'Personal recommendation gate: PASS/SKIP only if no eligible history exists'
 echo 'Live manifest: PASS'
