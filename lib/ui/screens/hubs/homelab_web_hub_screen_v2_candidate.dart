@@ -329,7 +329,8 @@ class _HomelabWebHubScreenV2CandidateState
       _loadShelf(
         'Critically Acclaimed',
         'movie',
-        () => repo.getTopMovies(limit: 30),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'vote_average.desc'),
       ),
       _loadShelf(
         'New & Upcoming',
@@ -403,7 +404,11 @@ class _HomelabWebHubScreenV2CandidateState
         filterMediaType: 'tv',
         isWatchlist: true,
       ),
-      _loadShelf('Critically Acclaimed', 'tv', () => repo.getTopTv(limit: 30)),
+      _loadShelf(
+        'Critically Acclaimed',
+        'tv',
+        () => repo.discoverTv(page: 1, sortBy: 'vote_average.desc'),
+      ),
       _loadShelf('New & Upcoming', 'tv', () => repo.getUpcomingTv(page: 1)),
       _loadShelf(
         'Drama',

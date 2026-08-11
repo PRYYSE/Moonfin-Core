@@ -428,20 +428,27 @@ def anime_basic(item):
 def validate_discovery(token):
     movie_paths = [
         'discover/movies?page=1',
-        'discover/movies/top?limit=20&offset=0',
+        'discover/movies?page=1&sortBy=vote_average.desc',
         'discover/movies/upcoming?page=1',
         'discover/movies?page=1&sortBy=popularity.desc&genre=28',
         'discover/movies?page=1&sortBy=popularity.desc&genre=878',
     ]
     tv_paths = [
         'discover/tv?page=1',
-        'discover/tv/top?limit=20&offset=0',
+        'discover/tv?page=1&sortBy=vote_average.desc',
         'discover/tv/upcoming?page=1',
         'discover/tv?page=1&sortBy=popularity.desc&genre=18',
         'discover/tv?page=1&sortBy=popularity.desc&genre=10765',
     ]
-    movie_nonempty = sum(bool(results(seerr_get(token, p))) for p in movie_paths)
-    tv_nonempty = sum(bool(results(seerr_get(token, p))) for p in tv_paths)
+    def safe_results(path):
+        try:
+            return results(seerr_get(token, path))
+        except ApiError as exc:
+            print(f'RUNTIME WARN: shelf unavailable: {path}: {exc}')
+            return []
+
+    movie_nonempty = sum(bool(safe_results(p)) for p in movie_paths)
+    tv_nonempty = sum(bool(safe_results(p)) for p in tv_paths)
     if movie_nonempty < 4:
         raise RuntimeError(f'Movie discovery gate failed: only {movie_nonempty}/5 core shelves returned content.')
     if tv_nonempty < 4:
@@ -460,7 +467,7 @@ def validate_discovery(token):
     verified_total = 0
     checked = 0
     for fallback_type, path in anime_queries:
-        candidates = [x for x in results(seerr_get(token, path)) if anime_basic(x)][:10]
+        candidates = [x for x in safe_results(path) if anime_basic(x)][:10]
         verified = 0
         for item in candidates:
             tmdb_id = item.get('id') or item.get('tmdbId')
