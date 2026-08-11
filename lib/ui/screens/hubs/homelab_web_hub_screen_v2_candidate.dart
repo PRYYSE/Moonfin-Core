@@ -329,8 +329,7 @@ class _HomelabWebHubScreenV2CandidateState
       _loadShelf(
         'Critically Acclaimed',
         'movie',
-        () =>
-            repo.discoverMovies(page: 1, sortBy: 'vote_average.desc'),
+        () => repo.discoverMovies(page: 1, sortBy: 'vote_average.desc'),
       ),
       _loadShelf(
         'New & Upcoming',
