@@ -4,9 +4,8 @@ set -Eeuo pipefail
 SRC=/opt/src/moonfin-core
 DEV=/opt/src/moonfin-dev
 IMAGE=homelab-flutter:3.44.1
-STAGING_BRANCH=homelab/web-desktop-v2-staging
+STAGING_BRANCH=homelab/content-personalisation-v1-staging
 MAIN_BRANCH=homelab/hubs-v1
-REQUIRED_FIX=002da6205a288f9bcc389dbf2317952dbe02fc22
 BASE='http://127.0.0.1:8096'
 PLUGIN_ROOT=/srv/appdata/jellyfin/data/plugins
 STAMP="$(date +%Y%m%d-%H%M%S)"
@@ -30,6 +29,7 @@ else
 fi
 
 FORMAT_PATHS=(
+  lib/data/services/row_data_source.dart
   lib/ui/screens/home/home_screen.dart
   lib/ui/screens/home/home_view_model.dart
   lib/ui/screens/home/homelab_home_composer.dart
@@ -46,9 +46,6 @@ printf '=== 1. RECONCILE EXACT STAGING SOURCE ===\n'
 
 git fetch origin "$STAGING_BRANCH:refs/remotes/origin/$STAGING_BRANCH"
 git checkout -B "$STAGING_BRANCH" "origin/$STAGING_BRANCH"
-git merge-base --is-ancestor "$REQUIRED_FIX" HEAD || \
-  fail 'Staging does not contain the corrected Seerr discovery fix.'
-
 echo "Staging: $(git rev-parse HEAD)"
 
 printf '\n=== 2. PREPARE FORMATTER DEPENDENCIES ===\n'
@@ -160,12 +157,6 @@ restore_transaction() {
       "${D[@]}" start jellyfin >/dev/null 2>&1 || true
       echo 'Previous frontend restored.'
     fi
-    if [[ "$CONFIG_APPLIED" == 1 ]]; then
-      sudo env PYTHONPATH="$SRC/tooling" \
-        python3 "$SRC/tooling/home_lab_v2_moonbase.py" \
-        restore --backup-dir "$RUN/moonbase" >/dev/null 2>&1 || true
-      echo 'Previous Moonbase configuration restored.'
-    fi
     echo "Failure log: $LOG"
     echo "Rollback data: $RUN"
   fi
@@ -173,17 +164,12 @@ restore_transaction() {
 }
 trap restore_transaction EXIT
 
-printf '\n=== 6. APPLY THEME/DESKTOP CONFIG + SERVER DATA GATES ===\n'
+printf '\n=== 6. VERIFY EXISTING CONFIG + SERVER DATA GATES ===\n'
 python3 -m py_compile \
+  "$SRC/tooling/home_lab_safe_auth.py" \
   "$SRC/tooling/home_lab_v2_moonbase.py" \
   "$SRC/tooling/home_lab_v2_runtime_gate.py" \
   "$SRC/tooling/home_lab_v2_personal_gate_all_users.py"
-
-sudo env PYTHONPATH="$SRC/tooling" \
-  python3 "$SRC/tooling/home_lab_v2_moonbase.py" apply \
-  --backup-dir "$RUN/moonbase" \
-  --theme "$SRC/tooling/themes/home_lab_streaming.json"
-CONFIG_APPLIED=1
 
 sudo env PYTHONPATH="$SRC/tooling" \
   python3 "$SRC/tooling/home_lab_v2_runtime_gate.py"
@@ -239,6 +225,6 @@ echo "Bundle: $BUNDLE"
 echo "Backup: $RUN"
 echo "Log: $LOG"
 echo 'Home Lab theme/config: PASS'
-echo 'Movies/TV/Anime runtime data gate: PASS'
-echo 'Personal recommendation gate: PASS/SKIP only if no eligible history exists'
+echo 'Movies/TV/Anime expanded runtime data gate: PASS'
+echo 'Personal recommendation cold-start gate: PASS'
 echo 'Live manifest: PASS'

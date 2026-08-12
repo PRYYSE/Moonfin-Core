@@ -2090,25 +2090,17 @@ class RowDataSource {
     final prefs = GetIt.instance<UserPreferences>();
     final sourceType = prefs.get(UserPreferences.sinceYouWatchedSourceType);
     final sourceItemType = prefs.get(UserPreferences.sinceYouWatchedSourceItem);
-    final isLocal = prefs.get(UserPreferences.sinceYouWatchedSource) == SinceYouWatchedSource.local;
+    final isLocal =
+        prefs.get(UserPreferences.sinceYouWatchedSource) ==
+        SinceYouWatchedSource.local;
 
-    final List<String> queryItemTypes;
-    if (sourceItemType == SinceYouWatchedSourceItem.recentlyWatched) {
-      if (sourceType == SinceYouWatchedSourceType.movies) {
-        queryItemTypes = const ['Movie'];
-      } else if (sourceType == SinceYouWatchedSourceType.shows) {
-        queryItemTypes = const ['Episode'];
-      } else {
-        queryItemTypes = const ['Movie', 'Episode'];
-      }
+    final List<String> historyItemTypes;
+    if (sourceType == SinceYouWatchedSourceType.movies) {
+      historyItemTypes = const ['Movie'];
+    } else if (sourceType == SinceYouWatchedSourceType.shows) {
+      historyItemTypes = const ['Episode'];
     } else {
-      if (sourceType == SinceYouWatchedSourceType.movies) {
-        queryItemTypes = const ['Movie'];
-      } else if (sourceType == SinceYouWatchedSourceType.shows) {
-        queryItemTypes = const ['Series'];
-      } else {
-        queryItemTypes = const ['Movie', 'Series'];
-      }
+      historyItemTypes = const ['Movie', 'Episode'];
     }
 
     final List<String> candidateItemTypes = switch (sourceType) {
@@ -2117,136 +2109,235 @@ class RowDataSource {
       SinceYouWatchedSourceType.both => const ['Movie', 'Series'],
     };
 
-    // Fetch the list of possible base items (specifying Tags and People fields to avoid subsequent detail calls)
-    List<AggregatedItem> baseItems = [];
+    final baseItems = <AggregatedItem>[];
+    final seedOrigins = <String, String>{};
+
+    String seedKey(AggregatedItem item) {
+      final externalId = item.tmdbId;
+      final id = externalId != null && externalId.isNotEmpty
+          ? externalId
+          : item.id;
+      return item.type + ':' + id;
+    }
+
+    void addSeeds(Iterable<AggregatedItem> items, String origin) {
+      for (final item in items) {
+        if (!candidateItemTypes.contains(item.type)) continue;
+        final key = seedKey(item);
+        if (seedOrigins.containsKey(key)) continue;
+        seedOrigins[key] = origin;
+        baseItems.add(item);
+      }
+    }
+
     if (sourceItemType == SinceYouWatchedSourceItem.recentlyWatched) {
-      final rawBaseItems = await _searchVisibleLibraryItems(
+      final rawHistory = await _searchVisibleLibraryItems(
         serverId,
-        queryItemTypes,
+        historyItemTypes,
         (parentId) => _getItemsWithFallback(
           parentId: parentId,
           sortBy: 'DatePlayed',
           sortOrder: 'Descending',
           filters: const ['IsPlayed'],
           recursive: true,
-          includeItemTypes: queryItemTypes,
-          limit: 30, // Query more items to ensure we get enough unique shows
+          includeItemTypes: historyItemTypes,
+          limit: 30,
           fields: '$_fields,Tags,People,SeriesId',
         ),
         merge: _byLastPlayed,
       );
-      
-      // Resolve Episode items to their parent Series (Show) items
-      final resolvedBaseItems = <AggregatedItem>[];
-      final seenSeriesIds = <String>{};
-      final episodeToSeriesMap = <String, String>{}; // Episode ID -> Series ID
-      final seriesIdsToFetch = <String>[];
-      
-      for (final item in rawBaseItems) {
-        if (item.type == 'Movie') {
-          resolvedBaseItems.add(item);
+
+      final resolved = <AggregatedItem>[];
+      final seriesIds = <String>{};
+      for (final item in rawHistory) {
+        if (item.type == 'Movie' || item.type == 'Series') {
+          resolved.add(item);
         } else if (item.type == 'Episode') {
-          final sId = item.rawData['SeriesId']?.toString();
-          if (sId != null && sId.isNotEmpty) {
-            episodeToSeriesMap[item.id] = sId;
-            if (!seenSeriesIds.contains(sId)) {
-              seenSeriesIds.add(sId);
-              seriesIdsToFetch.add(sId);
-            }
-          }
-        } else if (item.type == 'Series') {
-          resolvedBaseItems.add(item);
+          final seriesId = item.rawData['SeriesId']?.toString();
+          if (seriesId != null && seriesId.isNotEmpty) seriesIds.add(seriesId);
         }
       }
-      
-      if (seriesIdsToFetch.isNotEmpty) {
+
+      if (seriesIds.isNotEmpty) {
         try {
-          final seriesRes = await _client.itemsApi.getItems(
-            ids: seriesIdsToFetch,
+          final response = await _client.itemsApi.getItems(
+            ids: seriesIds.toList(growable: false),
             fields: '$_fields,Tags,People',
           );
-          final fetchedSeries = _parseItems(seriesRes, serverId);
-          final seriesMap = {for (final s in fetchedSeries) s.id: s};
-          
-          final finalItems = <AggregatedItem>[];
-          final addedSeriesIds = <String>{};
-          
-          for (final item in rawBaseItems) {
-            if (item.type == 'Movie') {
-              finalItems.add(item);
-            } else if (item.type == 'Episode') {
-              final sId = episodeToSeriesMap[item.id];
-              if (sId != null) {
-                final seriesItem = seriesMap[sId];
-                if (seriesItem != null && !addedSeriesIds.contains(sId)) {
-                  addedSeriesIds.add(sId);
-                  finalItems.add(seriesItem);
-                }
-              }
-            } else if (item.type == 'Series') {
-              if (!addedSeriesIds.contains(item.id)) {
-                addedSeriesIds.add(item.id);
-                finalItems.add(item);
-              }
-            }
-          }
-          baseItems = finalItems;
-        } catch (_) {
-          baseItems = rawBaseItems;
-        }
-      } else {
-        baseItems = resolvedBaseItems;
+          resolved.addAll(_parseItems(response, serverId));
+        } catch (_) {}
       }
+      addSeeds(resolved, 'history');
     } else if (sourceItemType == SinceYouWatchedSourceItem.favorites) {
-      final res = await _getItemsWithFallback(
-        isFavorite: true,
-        filters: const ['IsPlayed'],
-        recursive: true,
-        includeItemTypes: queryItemTypes,
-        limit: 30,
-        fields: '$_fields,Tags,People',
-      );
-      baseItems = _parseItems(res, serverId);
+      try {
+        final response = await _getItemsWithFallback(
+          isFavorite: true,
+          recursive: true,
+          includeItemTypes: candidateItemTypes,
+          limit: 30,
+          fields: '$_fields,Tags,People',
+        );
+        addSeeds(_parseItems(response, serverId), 'favourite');
+      } catch (_) {}
     } else {
-      // Random
-      final res = await _getItemsWithFallback(
-        sortBy: 'Random',
-        filters: const ['IsPlayed'],
-        recursive: true,
-        includeItemTypes: queryItemTypes,
-        limit: 30,
-        fields: '$_fields,Tags,People',
-      );
-      baseItems = _parseItems(res, serverId);
+      try {
+        final response = await _getItemsWithFallback(
+          sortBy: 'Random',
+          recursive: true,
+          includeItemTypes: candidateItemTypes,
+          limit: 30,
+          fields: '$_fields,Tags,People',
+        );
+        addSeeds(_parseItems(response, serverId), 'library');
+      } catch (_) {}
     }
 
-    final sourceIdx = rowIndex - 1;
-    if (sourceIdx >= baseItems.length) {
+    // Cold-start sources are ordered by user intent. None require played
+    // history, so new or lightly-used Jellyfin profiles still get useful rows.
+    if (baseItems.length < 8) {
+      try {
+        final response = await _getItemsWithFallback(
+          isFavorite: true,
+          recursive: true,
+          includeItemTypes: candidateItemTypes,
+          limit: 30,
+          fields: '$_fields,Tags,People',
+        );
+        addSeeds(_parseItems(response, serverId), 'favourite');
+      } catch (_) {}
+    }
+
+    if (baseItems.length < 8) {
+      try {
+        final response = await _getItemsWithFallback(
+          filters: const ['Likes'],
+          recursive: true,
+          includeItemTypes: candidateItemTypes,
+          limit: 30,
+          fields: '$_fields,Tags,People',
+        );
+        addSeeds(_parseItems(response, serverId), 'rating');
+      } catch (_) {}
+    }
+
+    if (baseItems.length < 8) {
+      try {
+        final repo = await GetIt.instance.getAsync<SeerrRepository>();
+        await repo.ensureInitialized();
+        if (repo.isAvailable) {
+          final watchlist = await repo.getWatchlist(page: 1);
+          final seeds = watchlist.results.map((item) {
+            final mediaType = item.mediaType == 'tv' ? 'Series' : 'Movie';
+            final date = item.releaseDate ?? item.firstAirDate;
+            return AggregatedItem(
+              id: item.id.toString(),
+              serverId: 'seerr',
+              rawData: {
+                'Name': item.displayTitle,
+                'Type': mediaType,
+                'Overview': item.overview ?? '',
+                'ProviderIds': {'Tmdb': item.id.toString()},
+                'PosterPath': item.posterPath ?? '',
+                'BackdropPath': item.backdropPath ?? '',
+                'ProductionYear': _extractYear(date),
+                'CommunityRating': item.voteAverage,
+                'SeerrMediaType': item.mediaType,
+                'OriginalLanguage': item.originalLanguage,
+                'GenreIds': item.genreIds,
+                'Adult': item.adult,
+                'IsBlacklisted': item.isBlacklisted,
+              },
+            );
+          });
+          addSeeds(seeds, 'watchlist');
+        }
+      } catch (_) {}
+    }
+
+    if (baseItems.length < 8) {
+      try {
+        final response = await _getItemsWithFallback(
+          sortBy: 'CommunityRating',
+          sortOrder: 'Descending',
+          recursive: true,
+          includeItemTypes: candidateItemTypes,
+          limit: 30,
+          fields: '$_fields,Tags,People',
+        );
+        addSeeds(_parseItems(response, serverId), 'library');
+      } catch (_) {}
+    }
+
+    if (baseItems.length < 8) {
+      try {
+        final response = await _getItemsWithFallback(
+          sortBy: 'DateCreated',
+          sortOrder: 'Descending',
+          recursive: true,
+          includeItemTypes: candidateItemTypes,
+          limit: 30,
+          fields: '$_fields,Tags,People',
+        );
+        addSeeds(_parseItems(response, serverId), 'recent');
+      } catch (_) {}
+    }
+
+    if (baseItems.isEmpty) {
       return HomeRow(
         id: 'sinceYouWatched$rowIndex',
-        title: 'Since you watched',
+        title: 'Recommended For You',
         rowType: HomeRowType.latestMedia,
         items: const [],
       );
     }
 
-    final baseItem = baseItems[sourceIdx];
-    final baseItemName = baseItem.name;
-
-    final recommendedItems = await getRecommendations(
-      serverId: serverId,
-      baseItem: baseItem,
-      isLocal: isLocal,
-      candidateItemTypes: candidateItemTypes,
-      limit: 100,
-    );
+    final startIndex = (rowIndex - 1) % baseItems.length;
+    AggregatedItem? selected;
+    List<AggregatedItem> recommendedItems = const [];
+    final attempts = baseItems.length < 8 ? baseItems.length : 8;
+    for (var offset = 0; offset < attempts; offset++) {
+      final candidate = baseItems[(startIndex + offset) % baseItems.length];
+      final recommendations = await getRecommendations(
+        serverId: serverId,
+        baseItem: candidate,
+        isLocal: isLocal,
+        candidateItemTypes: candidateItemTypes,
+        limit: 100,
+      );
+      if (recommendations.isNotEmpty) {
+        selected = candidate;
+        recommendedItems = recommendations;
+        break;
+      }
+    }
 
     final rowId = 'sinceYouWatched$rowIndex';
     _scoredRecommendationsCache[rowId] = recommendedItems;
+    if (selected == null) {
+      return HomeRow(
+        id: rowId,
+        title: 'Recommended For You',
+        rowType: HomeRowType.latestMedia,
+        items: const [],
+      );
+    }
+
+    final origin = seedOrigins[seedKey(selected)] ?? 'library';
+    final name = selected.name;
+    final title = switch (origin) {
+      'history' => 'Because You Watched "' + name + '"',
+      'watchlist' => 'Inspired by "' + name + '" on Your Watchlist',
+      'favourite' => 'More Like Favourite "' + name + '"',
+      'rating' => 'Because You Liked "' + name + '"',
+      'recent' => 'Fresh Picks Inspired by "' + name + '"',
+      _ => rowIndex == 1
+          ? 'Recommended For You'
+          : 'Inspired by Your Library: "' + name + '"',
+    };
 
     return HomeRow(
       id: rowId,
-      title: 'Since you watched "$baseItemName"',
+      title: title,
       rowType: HomeRowType.latestMedia,
       items: recommendedItems.take(15).toList(),
       totalCount: recommendedItems.length,
@@ -2610,7 +2701,13 @@ class RowDataSource {
                     'PosterPath': item.posterPath ?? '',
                     'BackdropPath': item.backdropPath ?? '',
                     'ProductionYear': _extractYear(item.releaseDate ?? item.firstAirDate),
+                    'CommunityRating': item.voteAverage,
+                    'ProviderIds': {'Tmdb': item.id.toString()},
                     'SeerrMediaType': item.mediaType,
+                    'OriginalLanguage': item.originalLanguage,
+                    'GenreIds': item.genreIds,
+                    'Adult': item.adult,
+                    'IsBlacklisted': item.isBlacklisted,
                   },
                 );
               }).take(limit).toList();
@@ -2670,7 +2767,13 @@ class RowDataSource {
                       'PosterPath': posterPath,
                       'BackdropPath': backdropPath,
                       'ProductionYear': year,
+                      'CommunityRating': (res['vote_average'] as num?)?.toDouble(),
+                      'ProviderIds': {'Tmdb': id},
                       'SeerrMediaType': type == 'Series' ? 'tv' : 'movie',
+                      'OriginalLanguage': res['original_language'],
+                      'GenreIds': res['genre_ids'] ?? const [],
+                      'Adult': res['adult'] ?? false,
+                      'IsBlacklisted': false,
                     },
                   );
                 }).take(limit).toList();
@@ -3116,3 +3219,4 @@ class _ParsedStableId {
     required this.additionalData,
   });
 }
+
