@@ -84,11 +84,27 @@ echo '=== 1. VERIFY ALREADY-SUCCESSFUL BUILD ==='
   fail 'Source tree is dirty. No changes made.'
 }
 
-CURRENT="$(git rev-parse HEAD)"
-[[ "$CURRENT" == "$BUILD_COMMIT" ]] || \
-  fail "Local source is $CURRENT; expected already-built commit $BUILD_COMMIT."
-
 git cat-file -e "$BUILD_COMMIT^{commit}" || fail 'Built commit is missing locally.'
+CURRENT="$(git rev-parse HEAD)"
+
+if [[ "$CURRENT" != "$BUILD_COMMIT" ]]; then
+  git merge-base --is-ancestor "$BUILD_COMMIT" "$CURRENT" || \
+    fail "Local source $CURRENT does not descend from already-built commit $BUILD_COMMIT."
+
+  mapfile -t POST_BUILD_DIFF < <(git diff --name-only "$BUILD_COMMIT..$CURRENT")
+  for path in "${POST_BUILD_DIFF[@]}"; do
+    case "$path" in
+      tooling/resume_web_desktop_v2_postbuild.sh)
+        ;;
+      *)
+        echo 'Post-build differences:'
+        printf '  %s\n' "${POST_BUILD_DIFF[@]}"
+        fail "Local source contains product/config changes after the built commit; refusing to reuse the bundle."
+        ;;
+    esac
+  done
+  echo "Local HEAD $CURRENT is newer only by post-build recovery tooling; bundle source remains $BUILD_COMMIT."
+fi
 
 BUNDLE="$(cat "$DEV/state/web-desktop-v2-latest-bundle" 2>/dev/null || true)"
 [[ -n "$BUNDLE" && -f "$BUNDLE" && -f "$BUNDLE.sha256" ]] || \
@@ -106,7 +122,7 @@ echo "Bundle: $BUNDLE"
 echo
 echo '=== 2. VERIFY SUDO SESSION ==='
 if ! sudo -n true 2>/dev/null; then
-  fail 'sudo is not pre-authorised. Run this resume with `sudo -v && ...` as supplied.'
+  fail 'sudo is not non-interactive. Configure passwordless sudo or run sudo -v before starting.'
 fi
 
 (
@@ -116,7 +132,7 @@ fi
 ) &
 SUDO_KEEPALIVE_PID=$!
 
-echo 'sudo: cached and keepalive active.'
+echo 'sudo: non-interactive access confirmed.'
 
 echo
 echo '=== 3. LOCATE LIVE PLUGIN + CREATE ROLLBACK ==='
@@ -200,8 +216,6 @@ grep -Fq '"theme": "home_lab_streaming"' <<<"$LIVE" || fail 'Live theme marker m
 echo "$LIVE"
 echo 'LIVE V2 MANIFEST PASS'
 
-# Product validation is complete. Do not roll back a working deployment merely
-# because the final Git branch update encounters a transient network problem.
 CONFIG_APPLIED=0
 DEPLOYED=0
 
