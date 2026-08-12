@@ -41,6 +41,7 @@ set +e
     set -Eeuo pipefail
     flutter pub get
     $FORMAT_CMD \\
+      lib/data/services/row_data_source.dart \\
       lib/ui/screens/home/home_screen.dart \\
       lib/ui/screens/home/home_view_model.dart \\
       lib/ui/screens/home/homelab_home_composer.dart \\
@@ -49,6 +50,7 @@ set +e
       lib/ui/widgets/media_bar.dart
     git diff --check
     flutter analyze --no-fatal-warnings --no-fatal-infos \\
+      lib/data/services/row_data_source.dart \\
       lib/ui/screens/home \\
       lib/ui/screens/hubs \\
       lib/ui/widgets/media_bar.dart

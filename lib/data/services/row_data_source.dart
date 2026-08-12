@@ -2146,7 +2146,8 @@ class RowDataSource {
       final id = externalId != null && externalId.isNotEmpty
           ? externalId
           : item.id;
-      return item.type + ':' + id;
+      final itemType = item.type ?? 'Unknown';
+      return '$itemType:$id';
     }
 
     void addSeeds(Iterable<AggregatedItem> items, String origin) {
