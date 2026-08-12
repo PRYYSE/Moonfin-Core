@@ -362,7 +362,11 @@ class _HomelabWebHubScreenV2CandidateState
 
   Future<List<_Shelf>> _loadMovies(SeerrRepository repo) async {
     final tasks = <Future<_Shelf?>>[
-      _loadShelf('Trending Movies', 'movie', () => repo.getTrendingMovies(limit: 30)),
+      _loadShelf(
+        'Trending Movies',
+        'movie',
+        () => repo.getTrendingMovies(limit: 30),
+      ),
       _loadShelf(
         'Your Watchlist',
         'movie',
@@ -375,91 +379,135 @@ class _HomelabWebHubScreenV2CandidateState
         'movie',
         () => repo.discoverMovies(page: 1, sortBy: 'vote_average.desc'),
       ),
-      _loadShelf('New & Upcoming', 'movie', () => repo.getUpcomingMovies(page: 1)),
+      _loadShelf(
+        'New & Upcoming',
+        'movie',
+        () => repo.getUpcomingMovies(page: 1),
+      ),
       _loadShelf(
         'Action',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 28),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 28),
       ),
       _loadShelf(
         'Adventure',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 12),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 12),
       ),
       _loadShelf(
         'Science Fiction',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 878),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 878),
       ),
       _loadShelf(
         'Fantasy',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 14),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 14),
       ),
       _loadShelf(
         'Thrillers',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 53),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 53),
       ),
       _loadShelf(
         'Crime',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 80),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 80),
       ),
       _loadShelf(
         'Comedy',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 35),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 35),
       ),
       _loadShelf(
         'Horror',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 27),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 27),
       ),
       _loadShelf(
         'Animation',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 16),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 16),
       ),
       _loadShelf(
         'Family Night',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 10751),
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'popularity.desc',
+          genre: 10751,
+        ),
       ),
       _loadShelf(
         'Romance',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 10749),
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'popularity.desc',
+          genre: 10749,
+        ),
       ),
       _loadShelf(
         'Documentaries',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 99),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 99),
       ),
       _loadShelf(
         'History',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 36),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 36),
       ),
       _loadShelf(
         'Music',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 10402),
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'popularity.desc',
+          genre: 10402,
+        ),
       ),
       _loadShelf(
         'War',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 10752),
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'popularity.desc',
+          genre: 10752,
+        ),
       ),
       _loadShelf(
         'Westerns',
         'movie',
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 37),
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 37),
       ),
       _loadMergedShelf('Studio Spotlight', 'movie', [
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', studio: 41077),
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', studio: 420),
-        () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', studio: 174),
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'popularity.desc',
+          studio: 41077,
+        ),
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'popularity.desc',
+          studio: 420,
+        ),
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'popularity.desc',
+          studio: 174,
+        ),
       ]),
     ];
     return (await Future.wait(tasks)).whereType<_Shelf>().toList();
@@ -548,7 +596,8 @@ class _HomelabWebHubScreenV2CandidateState
       ),
       _loadMergedShelf('Network Spotlight', 'tv', [
         () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', network: 49),
-        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', network: 2552),
+        () =>
+            repo.discoverTv(page: 1, sortBy: 'popularity.desc', network: 2552),
         () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', network: 213),
       ]),
     ];
@@ -557,177 +606,88 @@ class _HomelabWebHubScreenV2CandidateState
 
   Future<List<_Shelf>> _loadAnime(SeerrRepository repo) async {
     final tasks = <Future<_Shelf?>>[
-      _loadAnimeShelf(
-        repo,
-        'Trending Anime',
-        'tv',
-        [
-          () => repo.getTrending(limit: 60, offset: 0),
-          () => repo.getTrending(limit: 60, offset: 60),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Popular Anime',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 16),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 16),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Your Anime Watchlist',
-        'tv',
-        [
-          () => repo.getWatchlist(page: 1),
-        ],
-        isWatchlist: true,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Top Rated Anime',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'vote_average.desc', genre: 16),
-          () => repo.discoverTv(page: 2, sortBy: 'vote_average.desc', genre: 16),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'New This Season',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'first_air_date.desc', genre: 16),
-          () => repo.getUpcomingTv(page: 1),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Fresh Discoveries',
-        'tv',
-        [
-          () => repo.discoverTv(page: 3, sortBy: 'popularity.desc', genre: 16),
-          () => repo.discoverTv(page: 4, sortBy: 'popularity.desc', genre: 16),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Hidden Gems',
-        'tv',
-        [
-          () => repo.discoverTv(page: 3, sortBy: 'vote_average.desc', genre: 16),
-          () => repo.discoverTv(page: 4, sortBy: 'vote_average.desc', genre: 16),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Anime Movies',
-        'movie',
-        [
-          () => repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 16),
-          () => repo.discoverMovies(page: 2, sortBy: 'popularity.desc', genre: 16),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Critically Acclaimed Anime Films',
-        'movie',
-        [
-          () => repo.discoverMovies(page: 1, sortBy: 'vote_average.desc', genre: 16),
-          () => repo.discoverMovies(page: 2, sortBy: 'vote_average.desc', genre: 16),
-        ],
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Action & Adventure',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10759),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10759),
-        ],
-        secondaryGenre: 10759,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Sci-Fi & Fantasy',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10765),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10765),
-        ],
-        secondaryGenre: 10765,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Comedy',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 35),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 35),
-        ],
-        secondaryGenre: 35,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Drama',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 18),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 18),
-        ],
-        secondaryGenre: 18,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Mystery & Suspense',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 9648),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 9648),
-        ],
-        secondaryGenre: 9648,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Crime Stories',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 80),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 80),
-        ],
-        secondaryGenre: 80,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Family Anime',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10751),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10751),
-        ],
-        secondaryGenre: 10751,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'Anime for Younger Viewers',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10762),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10762),
-        ],
-        secondaryGenre: 10762,
-      ),
-      _loadAnimeShelf(
-        repo,
-        'War & Politics',
-        'tv',
-        [
-          () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10768),
-          () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10768),
-        ],
-        secondaryGenre: 10768,
-      ),
+      _loadAnimeShelf(repo, 'Trending Anime', 'tv', [
+        () => repo.getTrending(limit: 60, offset: 0),
+        () => repo.getTrending(limit: 60, offset: 60),
+      ]),
+      _loadAnimeShelf(repo, 'Popular Anime', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 16),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 16),
+      ]),
+      _loadAnimeShelf(repo, 'Your Anime Watchlist', 'tv', [
+        () => repo.getWatchlist(page: 1),
+      ], isWatchlist: true),
+      _loadAnimeShelf(repo, 'Top Rated Anime', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'vote_average.desc', genre: 16),
+        () => repo.discoverTv(page: 2, sortBy: 'vote_average.desc', genre: 16),
+      ]),
+      _loadAnimeShelf(repo, 'New This Season', 'tv', [
+        () =>
+            repo.discoverTv(page: 1, sortBy: 'first_air_date.desc', genre: 16),
+        () => repo.getUpcomingTv(page: 1),
+      ]),
+      _loadAnimeShelf(repo, 'Fresh Discoveries', 'tv', [
+        () => repo.discoverTv(page: 3, sortBy: 'popularity.desc', genre: 16),
+        () => repo.discoverTv(page: 4, sortBy: 'popularity.desc', genre: 16),
+      ]),
+      _loadAnimeShelf(repo, 'Hidden Gems', 'tv', [
+        () => repo.discoverTv(page: 3, sortBy: 'vote_average.desc', genre: 16),
+        () => repo.discoverTv(page: 4, sortBy: 'vote_average.desc', genre: 16),
+      ]),
+      _loadAnimeShelf(repo, 'Anime Movies', 'movie', [
+        () =>
+            repo.discoverMovies(page: 1, sortBy: 'popularity.desc', genre: 16),
+        () =>
+            repo.discoverMovies(page: 2, sortBy: 'popularity.desc', genre: 16),
+      ]),
+      _loadAnimeShelf(repo, 'Critically Acclaimed Anime Films', 'movie', [
+        () => repo.discoverMovies(
+          page: 1,
+          sortBy: 'vote_average.desc',
+          genre: 16,
+        ),
+        () => repo.discoverMovies(
+          page: 2,
+          sortBy: 'vote_average.desc',
+          genre: 16,
+        ),
+      ]),
+      _loadAnimeShelf(repo, 'Action & Adventure', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10759),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10759),
+      ], secondaryGenre: 10759),
+      _loadAnimeShelf(repo, 'Sci-Fi & Fantasy', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10765),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10765),
+      ], secondaryGenre: 10765),
+      _loadAnimeShelf(repo, 'Comedy', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 35),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 35),
+      ], secondaryGenre: 35),
+      _loadAnimeShelf(repo, 'Drama', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 18),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 18),
+      ], secondaryGenre: 18),
+      _loadAnimeShelf(repo, 'Mystery & Suspense', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 9648),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 9648),
+      ], secondaryGenre: 9648),
+      _loadAnimeShelf(repo, 'Crime Stories', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 80),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 80),
+      ], secondaryGenre: 80),
+      _loadAnimeShelf(repo, 'Family Anime', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10751),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10751),
+      ], secondaryGenre: 10751),
+      _loadAnimeShelf(repo, 'Anime for Younger Viewers', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10762),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10762),
+      ], secondaryGenre: 10762),
+      _loadAnimeShelf(repo, 'War & Politics', 'tv', [
+        () => repo.discoverTv(page: 1, sortBy: 'popularity.desc', genre: 10768),
+        () => repo.discoverTv(page: 2, sortBy: 'popularity.desc', genre: 10768),
+      ], secondaryGenre: 10768),
     ];
     return (await Future.wait(tasks)).whereType<_Shelf>().toList();
   }
@@ -1755,9 +1715,7 @@ class _HubItem {
     );
   }
 
-  static ImdbExternalListItem? recommendationAsExternal(
-    AggregatedItem item,
-  ) {
+  static ImdbExternalListItem? recommendationAsExternal(AggregatedItem item) {
     final mapped = fromRecommendation(item);
     if (mapped == null) return null;
     return ImdbExternalListItem(
