@@ -65,6 +65,8 @@ def validate_discovery(token):
     verified_total = 0
     checked = 0
     detail_failures = 0
+    rejected_explicit = 0
+    rejected_blacklisted = 0
 
     for fallback_type, path in anime_queries:
         candidates = [
@@ -89,6 +91,7 @@ def validate_discovery(token):
 
             media = detail.get('mediaInfo') or detail.get('media') or {}
             if isinstance(media, dict) and media.get('status') == 6:
+                rejected_blacklisted += 1
                 continue
 
             keywords_raw = detail.get('keywords') or []
@@ -120,11 +123,14 @@ def validate_discovery(token):
                 ' '.join(genre_names),
             ])
             checked += 1
+
+            # Upstream discovery is allowed to contain explicit/blacklisted anime.
+            # The product requirement is that those titles are rejected before they
+            # enter ordinary Anime shelves. This mirrors the Dart detail verifier.
             if any(pattern.search(text) for pattern in gate.EXPLICIT_RE):
-                raise RuntimeError(
-                    'Anime safety gate found an explicit candidate in ordinary '
-                    f'discovery: {gate.title_of(item)}'
-                )
+                rejected_explicit += 1
+                continue
+
             verified += 1
 
         if verified >= 2:
@@ -133,9 +139,11 @@ def validate_discovery(token):
 
     if viable_shelves < 5 or verified_total < 12:
         raise RuntimeError(
-            'Anime discovery gate failed: '
+            'Anime discovery gate failed after safety filtering: '
             f'{viable_shelves}/7 shelves viable, '
             f'{verified_total} safe verified titles, '
+            f'{rejected_explicit} explicit titles rejected, '
+            f'{rejected_blacklisted} blacklisted titles rejected, '
             f'{detail_failures} detail lookups unavailable.'
         )
 
@@ -145,6 +153,8 @@ def validate_discovery(token):
         'animeShelves': viable_shelves,
         'animeVerified': verified_total,
         'animeChecked': checked,
+        'animeExplicitRejected': rejected_explicit,
+        'animeBlacklistedRejected': rejected_blacklisted,
         'detailFailures': detail_failures,
         'warnings': len(warnings),
     }
