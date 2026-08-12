@@ -94,7 +94,7 @@ if [[ "$CURRENT" != "$BUILD_COMMIT" ]]; then
   mapfile -t POST_BUILD_DIFF < <(git diff --name-only "$BUILD_COMMIT..$CURRENT")
   for path in "${POST_BUILD_DIFF[@]}"; do
     case "$path" in
-      tooling/resume_web_desktop_v2_postbuild.sh)
+      tooling/resume_web_desktop_v2_postbuild.sh|tooling/home_lab_v2_runtime_gate.py)
         ;;
       *)
         echo 'Post-build differences:'
@@ -103,7 +103,7 @@ if [[ "$CURRENT" != "$BUILD_COMMIT" ]]; then
         ;;
     esac
   done
-  echo "Local HEAD $CURRENT is newer only by post-build recovery tooling; bundle source remains $BUILD_COMMIT."
+  echo "Local HEAD $CURRENT is newer only by post-build validation/recovery tooling; bundle source remains $BUILD_COMMIT."
 fi
 
 BUNDLE="$(cat "$DEV/state/web-desktop-v2-latest-bundle" 2>/dev/null || true)"
