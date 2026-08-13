@@ -5,6 +5,7 @@ import urllib.parse
 
 import home_lab_v2_moonbase as gate
 from home_lab_safe_auth import jellyfin_token
+from home_lab_seerr_auth import seerr_get as direct_seerr_get
 
 
 EXPLICIT_RE = [
@@ -199,7 +200,7 @@ def validate_custom_rows(token, desktops):
 
 def safe_results(token, path, warnings):
     try:
-        return gate.results(gate.seerr_get(token, path))
+        return gate.results(direct_seerr_get(token, path, gate.request_json))
     except Exception as exc:
         warnings.append(f'{path}: {exc}')
         print(f'RUNTIME WARN: shelf unavailable: {path}: {exc}')
@@ -208,7 +209,7 @@ def safe_results(token, path, warnings):
 
 def safe_detail(token, path, warnings):
     try:
-        detail = gate.seerr_get(token, path)
+        detail = direct_seerr_get(token, path, gate.request_json)
         return detail if isinstance(detail, dict) else None
     except Exception as exc:
         warnings.append(f'{path}: {exc}')
