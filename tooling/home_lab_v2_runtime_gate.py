@@ -145,58 +145,63 @@ def validate_custom_rows(token, desktops):
                 and bool(row.get('enabled', True))
                 and str(row.get('pluginSource') or '').lower() == 'custom'
             ):
-                identity = (
-                    str(row.get('pluginSection') or ''),
-                    str(row.get('pluginAdditionalData') or ''),
-                )
-                rows_by_identity.setdefault(identity, row)
+                identity = str(row.get('pluginSection') or '').strip().lower()
+                if identity:
+                    rows_by_identity.setdefault(identity, row)
 
-    rows = list(rows_by_identity.values())
-    if not rows:
+    required = {
+        section_id: chart_type
+        for section_id, _title, chart_type in gate.EDITORIAL_ROWS
+    }
+    missing = sorted(set(required) - set(rows_by_identity))
+    if missing:
         raise RuntimeError(
-            'No enabled Moonbase custom/pluginDynamic editorial rows are '
-            'stored for any Jellyfin user.'
+            'Moonbase is missing required Home Lab editorial rows: '
+            + ', '.join(missing)
         )
 
-    nonempty = 0
-    item_count = 0
-    for row in rows:
+    invalid = []
+    for section_id, chart_type in required.items():
+        row = rows_by_identity[section_id]
         try:
             config = json.loads(row.get('pluginAdditionalData') or '{}')
-            source = str(config.get('source') or '')
-            row_type = str(config.get('type') or '')
-            params = config.get('params') or {}
-            if not source or not row_type:
-                continue
-            query = urllib.parse.urlencode({
-                'source': source,
-                'type': row_type,
-                'params': json.dumps(params, separators=(',', ':')),
-            })
-            payload = gate.request_json(
-                'GET', f'/Moonfin/CustomRows/Items?{query}', token
-            ) or {}
-            items = payload.get('items') or payload.get('Items') or []
-            if items:
-                nonempty += 1
-                item_count += len(items)
-        except Exception as exc:
-            print(
-                'RUNTIME WARN: custom editorial row unavailable: '
-                f'{row.get("pluginDisplayText") or row.get("pluginSection")}: {exc}'
-            )
+        except json.JSONDecodeError:
+            invalid.append(section_id)
+            continue
+        if (
+            not isinstance(config, dict)
+            or str(config.get('source') or '').lower() != 'tmdb_chart'
+            or str(config.get('type') or '') != chart_type
+            or not isinstance(config.get('params'), dict)
+        ):
+            invalid.append(section_id)
 
-    if nonempty == 0:
+    if invalid:
         raise RuntimeError(
-            'All configured Moonbase custom/pluginDynamic editorial rows '
-            'returned empty results.'
+            'Moonbase editorial row definitions are invalid: '
+            + ', '.join(sorted(invalid))
         )
-    return {
-        'customRowsConfigured': len(rows),
-        'customRowsNonempty': nonempty,
-        'customRowItems': item_count,
-    }
 
+    ping = gate.request_json('GET', '/Moonfin/Ping', token) or {}
+    tmdb_available = bool(
+        ping.get('tmdbAvailable')
+        if 'tmdbAvailable' in ping
+        else ping.get('TmdbAvailable')
+    )
+    if not tmdb_available:
+        raise RuntimeError(
+            'Moonbase reports that the existing TMDb integration is unavailable.'
+        )
+
+    print(
+        'MOONBASE EDITORIAL ROWS PASS: '
+        f'{len(required)} required, {len(rows_by_identity)} configured'
+    )
+    return {
+        'customRowsConfigured': len(rows_by_identity),
+        'customRowsRequired': len(required),
+        'tmdbAvailable': True,
+    }
 
 def safe_results(token, path, warnings):
     try:
