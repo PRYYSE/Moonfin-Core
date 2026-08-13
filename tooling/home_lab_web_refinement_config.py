@@ -345,13 +345,13 @@ def patch_desktop(settings, defaults):
 
 
 def save_user_desktop(token, user_id, desktop):
-    """Replace the desktop section without losing any other saved settings.
+    """Replace desktop while normalising managed rows in every saved profile.
 
-    Moonbase's merge mode merges homeSections positionally, which can retain
-    stale plugin rows when a larger managed row set replaces an older one.
-    Fetching the complete settings document and replacing that complete
-    document makes homeSections authoritative while preserving global/mobile
-    profiles and every unrelated user preference.
+    Moonbase propagates custom-row definitions across profiles after a whole
+    settings save. For that API, global is considered before desktop, so an old
+    global definition can overwrite a newer desktop definition. Updating the
+    definition fields on every existing copy first keeps each profile's own
+    enabled state and order while making the managed metadata authoritative.
     """
     settings = base.request_json(
         'GET',
@@ -366,6 +366,46 @@ def save_user_desktop(token, user_id, desktop):
     settings['schemaVersion'] = max(int(settings.get('schemaVersion') or 0), 2)
     settings['desktop'] = desktop
     settings.pop('Desktop', None)
+
+    managed = {
+        str(row['pluginSection']).strip().lower(): row
+        for row in editorial_custom_rows()
+    }
+    for lower_name, title_name in (
+        ('global', 'Global'),
+        ('desktop', 'Desktop'),
+        ('mobile', 'Mobile'),
+        ('tv', 'Tv'),
+    ):
+        profile = settings.get(lower_name)
+        if not isinstance(profile, dict):
+            profile = settings.get(title_name)
+        if not isinstance(profile, dict):
+            continue
+        sections = profile.get('homeSections')
+        if not isinstance(sections, list):
+            sections = profile.get('HomeSections')
+        if not isinstance(sections, list):
+            continue
+        for row in sections:
+            if not isinstance(row, dict):
+                continue
+            identity = str(
+                row.get('pluginSection') or row.get('PluginSection') or ''
+            ).strip().lower()
+            replacement = managed.get(identity)
+            if replacement is None:
+                continue
+            for key in (
+                'kind',
+                'type',
+                'serverId',
+                'pluginSource',
+                'pluginSection',
+                'pluginAdditionalData',
+                'pluginDisplayText',
+            ):
+                row[key] = replacement[key]
     base.request_json(
         'POST',
         f'/Moonfin/Settings/{urllib.parse.quote(user_id)}',
@@ -376,6 +416,81 @@ def save_user_desktop(token, user_id, desktop):
             'mergeMode': 'replace',
         },
     )
+
+    stored = base.request_json(
+        'GET',
+        f'/Moonfin/Settings/{urllib.parse.quote(user_id)}',
+        token,
+    )
+    if not isinstance(stored, dict):
+        raise RuntimeError(
+            f'Moonbase did not return stored settings for user {user_id}.'
+        )
+
+    expected_fields = (
+        'serverId',
+        'pluginSource',
+        'pluginSection',
+        'pluginAdditionalData',
+        'pluginDisplayText',
+    )
+    checked_profiles = 0
+    for lower_name, title_name in (
+        ('global', 'Global'),
+        ('desktop', 'Desktop'),
+        ('mobile', 'Mobile'),
+        ('tv', 'Tv'),
+    ):
+        profile = stored.get(lower_name)
+        if not isinstance(profile, dict):
+            profile = stored.get(title_name)
+        if not isinstance(profile, dict):
+            continue
+        sections = profile.get('homeSections')
+        if not isinstance(sections, list):
+            sections = profile.get('HomeSections')
+        if not isinstance(sections, list):
+            continue
+        checked_profiles += 1
+        found = {}
+        duplicates = set()
+        for row in sections:
+            if not isinstance(row, dict):
+                continue
+            identity = str(
+                row.get('pluginSection') or row.get('PluginSection') or ''
+            ).strip().lower()
+            if identity not in managed:
+                continue
+            if identity in found:
+                duplicates.add(identity)
+            found[identity] = row
+        if duplicates:
+            raise RuntimeError(
+                f'Moonbase retained duplicate managed rows in {lower_name}: '
+                + ', '.join(sorted(duplicates))
+            )
+        missing = sorted(set(managed) - set(found))
+        if missing:
+            raise RuntimeError(
+                f'Moonbase did not propagate managed rows to {lower_name}: '
+                + ', '.join(missing)
+            )
+        invalid = []
+        for identity, expected in managed.items():
+            actual = found[identity]
+            if any(actual.get(key) != expected.get(key) for key in expected_fields):
+                invalid.append(identity)
+        if invalid:
+            raise RuntimeError(
+                f'Moonbase stored stale managed-row metadata in {lower_name}: '
+                + ', '.join(sorted(invalid))
+            )
+
+    if checked_profiles == 0:
+        raise RuntimeError(
+            f'Moonbase returned no saved layouts for user {user_id}.'
+        )
 
 
 base.EDITORIAL_ROWS = EDITORIAL_ROWS
