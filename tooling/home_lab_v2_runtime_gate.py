@@ -42,6 +42,95 @@ def anime_basic(item):
     )
 
 
+
+def validate_stored_user_settings(token):
+    """Validate all user desktop profiles with an admin API key.
+
+    The resolved-settings endpoint is intentionally claim-scoped by Moonbase,
+    so a server API key must not be used to assert a particular user's resolved
+    profile. The preceding Moonbase apply command already performs a real-user
+    resolved check. This gate verifies that every saved user profile contains
+    the expected desktop settings before deployment.
+    """
+    themes = gate.request_json('GET', '/Moonfin/Themes', token)
+    if not isinstance(themes, list) or not any(
+        isinstance(theme, dict) and theme.get('id') == gate.THEME_ID
+        for theme in themes
+    ):
+        raise RuntimeError(
+            'Home Lab custom theme is not available through Moonbase.'
+        )
+
+    users = gate.request_json('GET', '/Users', token) or []
+    users = [user for user in users if isinstance(user, dict)]
+    if not users:
+        raise RuntimeError('No Jellyfin users were available for settings validation.')
+
+    required = {
+        'customThemeId': gate.THEME_ID,
+        'fullScreenRows': False,
+        'homeRowsStyle': 'v2',
+        'mediaBarMode': 'makd',
+        'displaySinceYouWatchedRows': True,
+        'sinceYouWatchedNumRows': 3,
+        'seerrBlockNsfw': True,
+    }
+    required_sections = {
+        'resume',
+        'nextup',
+        'sinceyouwatched1',
+        'sinceyouwatched2',
+        'sinceyouwatched3',
+        'rewatch',
+        'seerr_watchlist',
+        'seerr_trending',
+        'recentlyreleased',
+        'latestmedia',
+        'smalllibrarytiles',
+    }
+
+    checked = 0
+    for user in users:
+        user_id = str(user.get('Id') or user.get('id') or '').strip()
+        if not user_id:
+            continue
+        settings = gate.request_json(
+            'GET',
+            f'/Moonfin/Settings/{urllib.parse.quote(user_id)}',
+            token,
+        ) or {}
+        desktop = settings.get('desktop') or settings.get('Desktop') or {}
+        if not isinstance(desktop, dict):
+            raise RuntimeError(
+                f'User {user_id} has no stored Moonbase desktop profile.'
+            )
+
+        for key, expected in required.items():
+            if desktop.get(key) != expected:
+                raise RuntimeError(
+                    f'User {user_id} stored desktop setting {key} '
+                    'did not apply as expected.'
+                )
+
+        sections = desktop.get('homeSections') or []
+        section_types = {
+            str(section.get('type') or '').lower()
+            for section in sections
+            if isinstance(section, dict)
+        }
+        missing = sorted(required_sections - section_types)
+        if missing:
+            raise RuntimeError(
+                f'User {user_id} is missing required Home sections: '
+                + ', '.join(missing)
+            )
+        checked += 1
+
+    if checked == 0:
+        raise RuntimeError('No Jellyfin user settings profiles were validated.')
+    print(f'MOONBASE STORED USER SETTINGS PASS: {checked} user(s)')
+
+
 def validate_custom_rows(token):
     resolved = gate.request_json(
         'GET', '/Moonfin/Settings/Resolved/desktop', token
@@ -257,7 +346,7 @@ def validate_discovery(token):
 
 def main():
     token = jellyfin_token()
-    gate.validate_theme_and_settings(token)
+    validate_stored_user_settings(token)
     summary = validate_discovery(token)
     summary.update(validate_custom_rows(token))
     print('RUNTIME DATA GATE PASS')
