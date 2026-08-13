@@ -1,4 +1,4 @@
-name: Home Lab Android Beta
+name: Home Lab Android CI
 
 on:
   push:
@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -45,7 +45,7 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Build separate Home Lab Android app
+      - name: Build Android phone/tablet CI APK
         run: |
           flutter build apk --release \
             --flavor mobile-beta \
@@ -61,35 +61,7 @@ jobs:
           cp "$APK" Moonfin_HomeLab_Android.apk
           sha256sum Moonfin_HomeLab_Android.apk > Moonfin_HomeLab_Android.apk.sha256
 
-      - name: Upload Home Lab Android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Moonfin-HomeLab-Android
-          path: |
-            Moonfin_HomeLab_Android.apk
-            Moonfin_HomeLab_Android.apk.sha256
-          if-no-files-found: error
-
-      - name: Publish stable Home Lab Android test download
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Record CI checksum
         run: |
-          TAG="homelab-android-beta-latest"
-          TITLE="Moonfin Home Lab Android Beta"
-          NOTES="Latest Home Lab Android beta built from commit ${GITHUB_SHA}. The APK asset on this stable release is replaced on each successful beta build."
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" \
-              Moonfin_HomeLab_Android.apk \
-              Moonfin_HomeLab_Android.apk.sha256 \
-              --clobber
-            gh release edit "$TAG" \
-              --title "$TITLE" \
-              --notes "$NOTES"
-          else
-            gh release create "$TAG" \
-              Moonfin_HomeLab_Android.apk \
-              Moonfin_HomeLab_Android.apk.sha256 \
-              --target homelab/hubs-v1 \
-              --title "$TITLE" \
-              --notes "$NOTES"
-          fi
+          sha256sum Moonfin_HomeLab_Android.apk
+          echo "CI only: release APKs are built with the durable ServerBox signing identity."
