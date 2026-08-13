@@ -136,8 +136,16 @@ def validate_stored_user_settings(token):
 
 
 def validate_custom_rows(token, desktops):
-    rows_by_identity = {}
-    for desktop in desktops:
+    required = {
+        section_id: chart_type
+        for section_id, _title, chart_type, _destinations, _show_on_home
+        in gate.EDITORIAL_ROWS
+    }
+    configs = {}
+    unique_custom_ids = set()
+
+    for profile_number, desktop in enumerate(desktops, start=1):
+        rows_by_identity = {}
         sections = desktop.get('homeSections') or []
         for row in sections:
             if (
@@ -148,55 +156,50 @@ def validate_custom_rows(token, desktops):
                 identity = str(row.get('pluginSection') or '').strip().lower()
                 if identity:
                     rows_by_identity.setdefault(identity, []).append(row)
+        unique_custom_ids.update(rows_by_identity)
 
-    required = {
-        section_id: chart_type
-        for section_id, _title, chart_type, _destinations, _show_on_home
-        in gate.EDITORIAL_ROWS
-    }
-    missing = sorted(set(required) - set(rows_by_identity))
-    if missing:
-        raise RuntimeError(
-            'Moonbase is missing required Home Lab editorial rows: '
-            + ', '.join(missing)
+        missing = sorted(set(required) - set(rows_by_identity))
+        if missing:
+            raise RuntimeError(
+                f'Moonbase profile {profile_number} is missing required '
+                'Home Lab editorial rows: ' + ', '.join(missing)
+            )
+
+        duplicated = sorted(
+            section_id
+            for section_id in required
+            if len(rows_by_identity[section_id]) != 1
         )
+        if duplicated:
+            raise RuntimeError(
+                f'Moonbase profile {profile_number} retained duplicate '
+                'Home Lab editorial rows: ' + ', '.join(duplicated)
+            )
 
-    duplicated = sorted(
-        section_id
-        for section_id in required
-        if len(rows_by_identity[section_id]) != 1
-    )
-    if duplicated:
-        raise RuntimeError(
-            'Moonbase retained duplicate Home Lab editorial rows: '
-            + ', '.join(duplicated)
-        )
+        invalid = []
+        for section_id, chart_type in required.items():
+            row = rows_by_identity[section_id][0]
+            try:
+                config = json.loads(row.get('pluginAdditionalData') or '{}')
+            except json.JSONDecodeError:
+                invalid.append(section_id)
+                continue
+            if (
+                not isinstance(config, dict)
+                or str(config.get('source') or '').lower() != 'tmdb_chart'
+                or str(config.get('type') or '') != chart_type
+                or not isinstance(config.get('params'), dict)
+                or not isinstance(config.get('homelab_destinations'), list)
+            ):
+                invalid.append(section_id)
+            else:
+                configs.setdefault(section_id, config)
 
-    invalid = []
-    configs = {}
-    for section_id, chart_type in required.items():
-        row = rows_by_identity[section_id][0]
-        try:
-            config = json.loads(row.get('pluginAdditionalData') or '{}')
-        except json.JSONDecodeError:
-            invalid.append(section_id)
-            continue
-        if (
-            not isinstance(config, dict)
-            or str(config.get('source') or '').lower() != 'tmdb_chart'
-            or str(config.get('type') or '') != chart_type
-            or not isinstance(config.get('params'), dict)
-            or not isinstance(config.get('homelab_destinations'), list)
-        ):
-            invalid.append(section_id)
-        else:
-            configs[section_id] = config
-
-    if invalid:
-        raise RuntimeError(
-            'Moonbase editorial row definitions are invalid: '
-            + ', '.join(sorted(invalid))
-        )
+        if invalid:
+            raise RuntimeError(
+                f'Moonbase profile {profile_number} editorial row '
+                'definitions are invalid: ' + ', '.join(sorted(invalid))
+            )
 
     ping = gate.request_json('GET', '/Moonfin/Ping', token) or {}
     tmdb_available = bool(
@@ -251,7 +254,8 @@ def validate_custom_rows(token, desktops):
 
     print(
         'MOONBASE EDITORIAL ROWS PASS: '
-        f'{len(required)} required, {len(rows_by_identity)} unique configured'
+        f'{len(required)} required in each of {len(desktops)} user profiles; '
+        f'{len(unique_custom_ids)} unique IDs configured'
     )
     print(
         'MOONBASE EDITORIAL DENSITY PASS: '
@@ -261,7 +265,7 @@ def validate_custom_rows(token, desktops):
         )
     )
     return {
-        'customRowsConfigured': len(rows_by_identity),
+        'customRowsConfigured': len(unique_custom_ids),
         'customRowsRequired': len(required),
         'customRowsDense': dense_by_destination,
         'customRowWarnings': len(row_warnings),
