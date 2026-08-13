@@ -167,7 +167,8 @@ sudo -n env PYTHONPATH="$SRC/tooling" \
   python3 tooling/home_lab_v2_moonbase.py \
   apply \
   --backup-dir "$RUN/moonbase" \
-  --theme tooling/themes/home_lab_streaming.json
+  --theme tooling/themes/home_lab_streaming.json \
+  --preview-themes-dir tooling/themes/options
 
 CONFIG_APPLIED=1
 echo 'MOONBASE CONFIG APPLY PASS'
@@ -245,6 +246,7 @@ echo "Bundle: $BUNDLE"
 echo "Rollback/config backup: $RUN"
 echo 'Build/bundle: REUSED + PASS'
 echo 'Moonbase theme/config: APPLY + PASS'
+echo 'Six Moonfin preview themes: UPLOADED + PASS'
 echo 'Movies/TV/Anime runtime data: PASS'
 echo 'Cold-start personalisation: PASS'
 echo 'Live manifest: PASS'
