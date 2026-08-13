@@ -10,6 +10,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from home_lab_safe_auth import jellyfin_token
+
 BASE = 'http://127.0.0.1:8096'
 THEME_ID = 'home_lab_streaming'
 CLIENT_ID = 'HomeLab-web-desktop-v2'
@@ -369,13 +371,28 @@ def apply(token, backup_dir, theme_path):
 
 
 def validate_theme_and_settings(token):
+    """Validate the saved desktop profile for every Jellyfin user.
+
+    Moonbase's resolved endpoint is scoped to the authenticated user's claims.
+    Admin API keys therefore validate users through the supported
+    /Moonfin/Settings/{userId} route instead.
+    """
     themes = request_json('GET', '/Moonfin/Themes', token)
     if not isinstance(themes, list) or not any(
-        isinstance(t, dict) and t.get('id') == THEME_ID for t in themes
+        isinstance(theme, dict) and theme.get('id') == THEME_ID
+        for theme in themes
     ):
-        raise RuntimeError('Home Lab custom theme is not available through Moonbase.')
+        raise RuntimeError(
+            'Home Lab custom theme is not available through Moonbase.'
+        )
 
-    resolved = request_json('GET', '/Moonfin/Settings/Resolved/desktop', token)
+    users = request_json('GET', '/Users', token) or []
+    users = [user for user in users if isinstance(user, dict)]
+    if not users:
+        raise RuntimeError(
+            'No Jellyfin users were available for Moonbase validation.'
+        )
+
     required = {
         'customThemeId': THEME_ID,
         'fullScreenRows': False,
@@ -385,19 +402,60 @@ def validate_theme_and_settings(token):
         'sinceYouWatchedNumRows': 3,
         'seerrBlockNsfw': True,
     }
-    for key, expected in required.items():
-        if resolved.get(key) != expected:
-            raise RuntimeError(f'Resolved desktop setting {key} did not apply as expected.')
+    required_sections = {
+        'resume',
+        'nextup',
+        'sinceyouwatched1',
+        'sinceyouwatched2',
+        'sinceyouwatched3',
+        'rewatch',
+        'seerr_watchlist',
+        'seerr_trending',
+        'recentlyreleased',
+        'latestmedia',
+        'smalllibrarytiles',
+    }
 
-    sections = resolved.get('homeSections') or []
-    types = [str(s.get('type', '')).lower() for s in sections if isinstance(s, dict)]
-    for required_type in (
-        'resume', 'nextup', 'sinceyouwatched1', 'sinceyouwatched2',
-        'sinceyouwatched3', 'rewatch', 'seerr_watchlist', 'seerr_trending',
-        'recentlyreleased', 'latestmedia', 'smalllibrarytiles',
-    ):
-        if required_type not in types:
-            raise RuntimeError(f'Required Home section missing after Moonbase save: {required_type}')
+    checked = 0
+    for user in users:
+        user_id = str(user.get('Id') or user.get('id') or '').strip()
+        if not user_id:
+            continue
+        settings = request_json(
+            'GET',
+            f'/Moonfin/Settings/{urllib.parse.quote(user_id)}',
+            token,
+        ) or {}
+        desktop = settings.get('desktop') or settings.get('Desktop') or {}
+        if not isinstance(desktop, dict):
+            raise RuntimeError(
+                f'User {user_id} has no stored Moonbase desktop profile.'
+            )
+
+        for key, expected in required.items():
+            if desktop.get(key) != expected:
+                raise RuntimeError(
+                    f'User {user_id} stored desktop setting {key} '
+                    'did not apply as expected.'
+                )
+
+        sections = desktop.get('homeSections') or []
+        section_types = {
+            str(section.get('type') or '').lower()
+            for section in sections
+            if isinstance(section, dict)
+        }
+        missing = sorted(required_sections - section_types)
+        if missing:
+            raise RuntimeError(
+                f'User {user_id} is missing required Home sections: '
+                + ', '.join(missing)
+            )
+        checked += 1
+
+    if checked == 0:
+        raise RuntimeError('No Jellyfin user settings profiles were validated.')
+    print(f'MOONBASE USER SETTINGS PASS: {checked} user(s)')
 
 
 def seerr_get(token, path):
@@ -520,7 +578,7 @@ def main():
     p_validate = sub.add_parser('validate')
     args = parser.parse_args()
 
-    token = discover_admin_token()
+    token = jellyfin_token()
     if args.command == 'apply':
         apply(token, args.backup_dir, args.theme)
         validate_theme_and_settings(token)
