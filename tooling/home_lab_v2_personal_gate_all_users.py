@@ -4,6 +4,7 @@ import urllib.parse
 
 import home_lab_v2_moonbase as gate
 from home_lab_safe_auth import jellyfin_token
+from home_lab_seerr_auth import seerr_get as direct_seerr_get
 
 
 def jellyfin_items(token, user_id, *, filters='', sort_by='DateCreated', limit=30):
@@ -28,7 +29,13 @@ def jellyfin_items(token, user_id, *, filters='', sort_by='DateCreated', limit=3
 
 def watchlist_items(token):
     try:
-        return gate.results(gate.seerr_get(token, 'discover/watchlist?page=1'))
+        return gate.results(
+            direct_seerr_get(
+                token,
+                'discover/watchlist?page=1',
+                gate.request_json,
+            )
+        )
     except Exception as exc:
         print(f'PERSONAL WARN: watchlist unavailable: {exc}')
         return []
@@ -71,7 +78,11 @@ def recommendation_summary(token, seeds):
         tested += 1
         try:
             recs = gate.results(
-                gate.seerr_get(token, f'{media_type}/{tmdb}/recommendations?page=1')
+                direct_seerr_get(
+                    token,
+                    f'{media_type}/{tmdb}/recommendations?page=1',
+                    gate.request_json,
+                )
             )
         except Exception as exc:
             print(
