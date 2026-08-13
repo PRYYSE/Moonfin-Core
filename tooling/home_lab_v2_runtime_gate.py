@@ -147,7 +147,7 @@ def validate_custom_rows(token, desktops):
             ):
                 identity = str(row.get('pluginSection') or '').strip().lower()
                 if identity:
-                    rows_by_identity.setdefault(identity, row)
+                    rows_by_identity.setdefault(identity, []).append(row)
 
     required = {
         section_id: chart_type
@@ -161,10 +161,21 @@ def validate_custom_rows(token, desktops):
             + ', '.join(missing)
         )
 
+    duplicated = sorted(
+        section_id
+        for section_id in required
+        if len(rows_by_identity[section_id]) != 1
+    )
+    if duplicated:
+        raise RuntimeError(
+            'Moonbase retained duplicate Home Lab editorial rows: '
+            + ', '.join(duplicated)
+        )
+
     invalid = []
     configs = {}
     for section_id, chart_type in required.items():
-        row = rows_by_identity[section_id]
+        row = rows_by_identity[section_id][0]
         try:
             config = json.loads(row.get('pluginAdditionalData') or '{}')
         except json.JSONDecodeError:
@@ -240,7 +251,7 @@ def validate_custom_rows(token, desktops):
 
     print(
         'MOONBASE EDITORIAL ROWS PASS: '
-        f'{len(required)} required, {len(rows_by_identity)} configured'
+        f'{len(required)} required, {len(rows_by_identity)} unique configured'
     )
     print(
         'MOONBASE EDITORIAL DENSITY PASS: '
