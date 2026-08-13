@@ -185,8 +185,8 @@ fi
 
 printf '\n=== 4. DEPENDENCIES, CONTROLLED FORMAT COMMIT AND ANALYSIS ===\n'
 cat >"$DEV/android-builder-home/.gradle/gradle.properties" <<'GRADLE_PROPERTIES'
-org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
-org.gradle.workers.max=2
+org.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=384m -Dfile.encoding=UTF-8
+org.gradle.workers.max=1
 org.gradle.parallel=false
 org.gradle.daemon=false
 kotlin.compiler.execution.strategy=in-process
@@ -278,6 +278,7 @@ timeout --signal=TERM --kill-after=30s 45m \
   "${D[@]}" run "${COMMON_DOCKER[@]}" "$IMAGE" \
     -c 'exec "$@"' android-builder flutter build apk \
     --release --flavor mobile-beta \
+    --target-platform android-arm64 \
     --dart-define=DISTRIBUTION_CHANNEL=apk
 
 sudo chown -R "$HOST_UID:$HOST_GID" \
@@ -289,6 +290,21 @@ SOURCE_APK="$SRC/build/app/outputs/flutter-apk/app-mobile-beta-release.apk"
 OUT="$DEV/output/Moonfin_HomeLab_Android_v1-$COMMIT.apk"
 install -m 644 "$SOURCE_APK" "$OUT"
 (cd "$(dirname "$OUT")" && sha256sum "$(basename "$OUT")") >"$OUT.sha256"
+
+python3 - "$OUT" <<'PY'
+import sys
+import zipfile
+
+with zipfile.ZipFile(sys.argv[1]) as apk:
+    native = {name.split('/')[1] for name in apk.namelist() if name.startswith('lib/')}
+
+if 'arm64-v8a' not in native:
+    raise SystemExit('APK ARCHITECTURE FAILED: arm64-v8a payload is missing.')
+unexpected = native - {'arm64-v8a'}
+if unexpected:
+    raise SystemExit(f'APK ARCHITECTURE FAILED: unexpected native ABIs: {sorted(unexpected)}')
+print('APK ARCHITECTURE PASS: arm64-v8a only')
+PY
 
 "${D[@]}" run --rm \
   -v "$OUT:/candidate.apk:ro" \
