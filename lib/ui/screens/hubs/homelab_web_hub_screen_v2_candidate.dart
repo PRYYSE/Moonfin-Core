@@ -792,8 +792,7 @@ class _HomelabWebHubScreenV2CandidateState
   Widget build(BuildContext context) {
     final nav = _prefs.get(UserPreferences.navbarPosition);
     final size = MediaQuery.sizeOf(context);
-    final compact =
-        PlatformDetection.useMobileUi || size.width < 720;
+    final compact = PlatformDetection.useMobileUi || size.width < 720;
     final safeTop = MediaQuery.paddingOf(context).top;
     final topInset = nav == NavbarPosition.top
         ? safeTop + TopToolbar.baseHeightFor(context)
@@ -1151,29 +1150,31 @@ class _DestinationHeroState extends State<_DestinationHero> {
                     children: [
                       Text(
                         widget.kind.kicker,
-                        style: (widget.compact
-                                ? Theme.of(context).textTheme.labelMedium
-                                : Theme.of(context).textTheme.labelLarge)
-                            ?.copyWith(
-                              color: AppColorScheme.accent,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: widget.compact ? 1.7 : 2.3,
-                            ),
+                        style:
+                            (widget.compact
+                                    ? Theme.of(context).textTheme.labelMedium
+                                    : Theme.of(context).textTheme.labelLarge)
+                                ?.copyWith(
+                                  color: AppColorScheme.accent,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: widget.compact ? 1.7 : 2.3,
+                                ),
                       ),
                       const SizedBox(height: 9),
                       Text(
                         item.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: (widget.compact
-                                ? Theme.of(context).textTheme.headlineMedium
-                                : Theme.of(context).textTheme.displaySmall)
-                            ?.copyWith(
-                              color: AppColorScheme.onSurface,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: widget.compact ? -0.4 : -1.0,
-                              height: 0.98,
-                            ),
+                        style:
+                            (widget.compact
+                                    ? Theme.of(context).textTheme.headlineMedium
+                                    : Theme.of(context).textTheme.displaySmall)
+                                ?.copyWith(
+                                  color: AppColorScheme.onSurface,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: widget.compact ? -0.4 : -1.0,
+                                  height: 0.98,
+                                ),
                       ),
                       const SizedBox(height: 12),
                       Wrap(
@@ -1193,15 +1194,16 @@ class _DestinationHeroState extends State<_DestinationHero> {
                           item.overview!,
                           maxLines: widget.compact ? 2 : 3,
                           overflow: TextOverflow.ellipsis,
-                          style: (widget.compact
-                                  ? Theme.of(context).textTheme.bodyMedium
-                                  : Theme.of(context).textTheme.bodyLarge)
-                              ?.copyWith(
-                                color: AppColorScheme.onSurface.withValues(
-                                  alpha: 0.86,
-                                ),
-                                height: 1.38,
-                              ),
+                          style:
+                              (widget.compact
+                                      ? Theme.of(context).textTheme.bodyMedium
+                                      : Theme.of(context).textTheme.bodyLarge)
+                                  ?.copyWith(
+                                    color: AppColorScheme.onSurface.withValues(
+                                      alpha: 0.86,
+                                    ),
+                                    height: 1.38,
+                                  ),
                         ),
                       ],
                       const SizedBox(height: 18),
