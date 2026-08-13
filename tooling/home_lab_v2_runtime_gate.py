@@ -42,7 +42,6 @@ def anime_basic(item):
     )
 
 
-
 def validate_stored_user_settings(token):
     """Validate all user desktop profiles with an admin API key.
 
@@ -90,6 +89,7 @@ def validate_stored_user_settings(token):
     }
 
     checked = 0
+    desktops = []
     for user in users:
         user_id = str(user.get('Id') or user.get('id') or '').strip()
         if not user_id:
@@ -124,26 +124,39 @@ def validate_stored_user_settings(token):
                 f'User {user_id} is missing required Home sections: '
                 + ', '.join(missing)
             )
+        desktops.append(desktop)
         checked += 1
 
     if checked == 0:
         raise RuntimeError('No Jellyfin user settings profiles were validated.')
     print(f'MOONBASE STORED USER SETTINGS PASS: {checked} user(s)')
+    return desktops
 
 
-def validate_custom_rows(token):
-    resolved = gate.request_json(
-        'GET', '/Moonfin/Settings/Resolved/desktop', token
-    ) or {}
-    sections = resolved.get('homeSections') or []
-    rows = [
-        row
-        for row in sections
-        if isinstance(row, dict)
-        and str(row.get('kind') or '').lower() == 'plugindynamic'
-        and bool(row.get('enabled', True))
-        and str(row.get('pluginSource') or '').lower() == 'custom'
-    ]
+def validate_custom_rows(token, desktops):
+    rows_by_identity = {}
+    for desktop in desktops:
+        sections = desktop.get('homeSections') or []
+        for row in sections:
+            if (
+                isinstance(row, dict)
+                and str(row.get('kind') or '').lower() == 'plugindynamic'
+                and bool(row.get('enabled', True))
+                and str(row.get('pluginSource') or '').lower() == 'custom'
+            ):
+                identity = (
+                    str(row.get('pluginSection') or ''),
+                    str(row.get('pluginAdditionalData') or ''),
+                )
+                rows_by_identity.setdefault(identity, row)
+
+    rows = list(rows_by_identity.values())
+    if not rows:
+        raise RuntimeError(
+            'No enabled Moonbase custom/pluginDynamic editorial rows are '
+            'stored for any Jellyfin user.'
+        )
+
     nonempty = 0
     item_count = 0
     for row in rows:
@@ -171,7 +184,8 @@ def validate_custom_rows(token):
                 'RUNTIME WARN: custom editorial row unavailable: '
                 f'{row.get("pluginDisplayText") or row.get("pluginSection")}: {exc}'
             )
-    if rows and nonempty == 0:
+
+    if nonempty == 0:
         raise RuntimeError(
             'All configured Moonbase custom/pluginDynamic editorial rows '
             'returned empty results.'
@@ -346,9 +360,9 @@ def validate_discovery(token):
 
 def main():
     token = jellyfin_token()
-    validate_stored_user_settings(token)
+    desktops = validate_stored_user_settings(token)
     summary = validate_discovery(token)
-    summary.update(validate_custom_rows(token))
+    summary.update(validate_custom_rows(token, desktops))
     print('RUNTIME DATA GATE PASS')
     print(json.dumps(summary, sort_keys=True))
 
