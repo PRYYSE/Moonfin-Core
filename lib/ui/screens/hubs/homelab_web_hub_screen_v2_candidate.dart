@@ -791,6 +791,9 @@ class _HomelabWebHubScreenV2CandidateState
   @override
   Widget build(BuildContext context) {
     final nav = _prefs.get(UserPreferences.navbarPosition);
+    final size = MediaQuery.sizeOf(context);
+    final compact =
+        PlatformDetection.useMobileUi || size.width < 720;
     final safeTop = MediaQuery.paddingOf(context).top;
     final topInset = nav == NavbarPosition.top
         ? safeTop + TopToolbar.baseHeightFor(context)
@@ -799,8 +802,8 @@ class _HomelabWebHubScreenV2CandidateState
         nav == NavbarPosition.left &&
         (PlatformDetection.isDesktop ||
             (PlatformDetection.isWeb && !PlatformDetection.useMobileUi));
-    final rowInset = leftRail ? 78.0 : 0.0;
-    final heroInset = leftRail ? 126.0 : 54.0;
+    final rowInset = compact ? 0.0 : (leftRail ? 78.0 : 0.0);
+    final heroInset = compact ? 20.0 : (leftRail ? 126.0 : 54.0);
 
     return Scaffold(
       backgroundColor: AppColorScheme.background,
@@ -819,6 +822,7 @@ class _HomelabWebHubScreenV2CandidateState
                     title: _kind.title,
                     topInset: topInset,
                     leftInset: rowInset,
+                    compact: compact,
                   );
                 }
                 if (snapshot.hasError || snapshot.data == null) {
@@ -835,8 +839,9 @@ class _HomelabWebHubScreenV2CandidateState
                       _DestinationHero(
                         kind: _kind,
                         items: data.heroItems,
-                        topInset: topInset + 16,
+                        topInset: topInset + (compact ? 4 : 16),
                         leftInset: heroInset,
+                        compact: compact,
                       ),
                       const SizedBox(height: 4),
                       for (final shelf in data.shelves)
@@ -886,7 +891,7 @@ class _HomelabWebHubScreenV2CandidateState
                                 ),
                           ),
                         ),
-                      const SizedBox(height: 64),
+                      SizedBox(height: compact ? 112 : 64),
                     ],
                   ),
                 );
@@ -898,10 +903,14 @@ class _HomelabWebHubScreenV2CandidateState
     );
   }
 
+  bool _compactLayout() =>
+      PlatformDetection.useMobileUi || MediaQuery.sizeOf(context).width < 720;
+
   Widget _discoveryRow(_Shelf shelf) {
+    final compact = _compactLayout();
     return LibraryRow(
       title: shelf.title,
-      rowHeight: 258,
+      rowHeight: compact ? 224 : 258,
       children: shelf.items.map(_discoveryCard).toList(growable: false),
     );
   }
@@ -916,7 +925,7 @@ class _HomelabWebHubScreenV2CandidateState
       title: item.title,
       subtitle: metadata.isEmpty ? null : metadata.join('  •  '),
       imageUrl: item.posterUrl,
-      width: 150,
+      width: _compactLayout() ? 124 : 150,
       aspectRatio: 2 / 3,
       seerrMediaType: item.mediaType,
       seerrStatus: item.seerrStatus,
@@ -933,7 +942,7 @@ class _HomelabWebHubScreenV2CandidateState
   Widget _localRow(_LocalShelf local) {
     return LibraryRow(
       title: local.row.title,
-      rowHeight: 258,
+      rowHeight: _compactLayout() ? 224 : 258,
       onSeeAll: () => context.push(
         Destinations.library(
           local.library.id,
@@ -950,7 +959,9 @@ class _HomelabWebHubScreenV2CandidateState
       title: item.name,
       subtitle: item.subtitle,
       imageUrl: _localImage(item),
-      width: aspect == 16 / 9 ? 242 : 150,
+      width: _compactLayout()
+          ? (aspect == 16 / 9 ? 204 : 124)
+          : (aspect == 16 / 9 ? 242 : 150),
       aspectRatio: aspect,
       itemType: item.type,
       isFavorite: item.isFavorite,
@@ -1021,12 +1032,14 @@ class _DestinationHero extends StatefulWidget {
   final List<_HubItem> items;
   final double topInset;
   final double leftInset;
+  final bool compact;
 
   const _DestinationHero({
     required this.kind,
     required this.items,
     required this.topInset,
     required this.leftInset,
+    required this.compact,
   });
 
   @override
@@ -1080,13 +1093,18 @@ class _DestinationHeroState extends State<_DestinationHero> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final height = (size.height * 0.57).clamp(450.0, 650.0).toDouble();
+    final height = widget.compact
+        ? (size.height * (size.width > size.height ? 0.72 : 0.48))
+              .clamp(330.0, 460.0)
+              .toDouble()
+        : (size.height * 0.57).clamp(450.0, 650.0).toDouble();
     if (widget.items.isEmpty) {
       return _HeroFallback(
         kind: widget.kind,
         height: height,
         topInset: widget.topInset,
         leftInset: widget.leftInset,
+        compact: widget.compact,
       );
     }
 
@@ -1118,35 +1136,42 @@ class _DestinationHeroState extends State<_DestinationHero> {
             const _HeroScrim(),
             Positioned(
               left: widget.leftInset,
-              right: 110,
+              right: widget.compact ? 20 : 110,
               top: widget.topInset,
-              bottom: 48,
+              bottom: widget.compact ? 28 : 48,
               child: Align(
                 alignment: Alignment.bottomLeft,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
+                  constraints: BoxConstraints(
+                    maxWidth: widget.compact ? 520 : 720,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         widget.kind.kicker,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppColorScheme.accent,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2.3,
-                        ),
+                        style: (widget.compact
+                                ? Theme.of(context).textTheme.labelMedium
+                                : Theme.of(context).textTheme.labelLarge)
+                            ?.copyWith(
+                              color: AppColorScheme.accent,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: widget.compact ? 1.7 : 2.3,
+                            ),
                       ),
                       const SizedBox(height: 9),
                       Text(
                         item.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.displaySmall
+                        style: (widget.compact
+                                ? Theme.of(context).textTheme.headlineMedium
+                                : Theme.of(context).textTheme.displaySmall)
                             ?.copyWith(
                               color: AppColorScheme.onSurface,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: -1.0,
+                              letterSpacing: widget.compact ? -0.4 : -1.0,
                               height: 0.98,
                             ),
                       ),
@@ -1166,9 +1191,11 @@ class _DestinationHeroState extends State<_DestinationHero> {
                         const SizedBox(height: 13),
                         Text(
                           item.overview!,
-                          maxLines: 3,
+                          maxLines: widget.compact ? 2 : 3,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyLarge
+                          style: (widget.compact
+                                  ? Theme.of(context).textTheme.bodyMedium
+                                  : Theme.of(context).textTheme.bodyLarge)
                               ?.copyWith(
                                 color: AppColorScheme.onSurface.withValues(
                                   alpha: 0.86,
@@ -1202,20 +1229,30 @@ class _DestinationHeroState extends State<_DestinationHero> {
             ),
             if (widget.items.length > 1)
               Positioned(
-                right: 24,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: IconButton.filledTonal(
-                    onPressed: _next,
-                    icon: const Icon(Icons.chevron_right_rounded),
-                    style: IconButton.styleFrom(
-                      backgroundColor: ThemeRegistry.active.colors.surface
-                          .withValues(alpha: 0.72),
-                      foregroundColor: AppColorScheme.onSurface,
-                    ),
-                  ),
-                ),
+                right: widget.compact ? 12 : 24,
+                top: widget.compact ? null : 0,
+                bottom: widget.compact ? 12 : 0,
+                child: widget.compact
+                    ? IconButton.filledTonal(
+                        onPressed: _next,
+                        icon: const Icon(Icons.chevron_right_rounded),
+                        style: IconButton.styleFrom(
+                          backgroundColor: ThemeRegistry.active.colors.surface
+                              .withValues(alpha: 0.72),
+                          foregroundColor: AppColorScheme.onSurface,
+                        ),
+                      )
+                    : Center(
+                        child: IconButton.filledTonal(
+                          onPressed: _next,
+                          icon: const Icon(Icons.chevron_right_rounded),
+                          style: IconButton.styleFrom(
+                            backgroundColor: ThemeRegistry.active.colors.surface
+                                .withValues(alpha: 0.72),
+                            foregroundColor: AppColorScheme.onSurface,
+                          ),
+                        ),
+                      ),
               ),
           ],
         ),
@@ -1272,12 +1309,14 @@ class _HeroFallback extends StatelessWidget {
   final double height;
   final double topInset;
   final double leftInset;
+  final bool compact;
 
   const _HeroFallback({
     required this.kind,
     required this.height,
     required this.topInset,
     required this.leftInset,
+    required this.compact,
   });
 
   @override
@@ -1297,11 +1336,16 @@ class _HeroFallback extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.fromLTRB(leftInset, topInset + 70, 56, 62),
+          padding: EdgeInsets.fromLTRB(
+            leftInset,
+            topInset + (compact ? 38 : 70),
+            compact ? 20 : 56,
+            compact ? 34 : 62,
+          ),
           child: Align(
             alignment: Alignment.bottomLeft,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 700),
+              constraints: BoxConstraints(maxWidth: compact ? 520 : 700),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1376,11 +1420,13 @@ class _DestinationLoading extends StatelessWidget {
   final String title;
   final double topInset;
   final double leftInset;
+  final bool compact;
 
   const _DestinationLoading({
     required this.title,
     required this.topInset,
     required this.leftInset,
+    required this.compact,
   });
 
   @override
@@ -1394,13 +1440,13 @@ class _DestinationLoading extends StatelessWidget {
       padding: EdgeInsets.zero,
       children: [
         SizedBox(
-          height: topInset + 390,
+          height: topInset + (compact ? 330 : 390),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
-              leftInset + 34,
-              topInset + 110,
-              56,
-              40,
+              leftInset + (compact ? 20 : 34),
+              topInset + (compact ? 72 : 110),
+              compact ? 20 : 56,
+              compact ? 28 : 40,
             ),
             child: Align(
               alignment: Alignment.bottomLeft,
@@ -1439,7 +1485,12 @@ class _DestinationLoading extends StatelessWidget {
         ),
         for (var row = 0; row < 3; row++)
           Padding(
-            padding: EdgeInsets.fromLTRB(leftInset + 34, 8, 28, 24),
+            padding: EdgeInsets.fromLTRB(
+              leftInset + (compact ? 20 : 34),
+              8,
+              compact ? 16 : 28,
+              24,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
