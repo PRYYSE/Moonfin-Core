@@ -113,6 +113,7 @@ python3 -m py_compile \
   tooling/home_lab_v2_personal_gate_all_users.py
 
 PYTHONPATH="$SRC/tooling" python3 - <<'PY'
+import copy
 import json
 import home_lab_web_refinement_config as moonbase
 import home_lab_v2_runtime_gate as runtime_gate
@@ -123,16 +124,64 @@ assert len(rows) == 33 and len(ids) == len(set(ids))
 
 calls = []
 original = moonbase.base.request_json
+legacy = dict(rows[0])
+legacy['enabled'] = False
+legacy['order'] = 99
+legacy_metadata = json.loads(legacy['pluginAdditionalData'])
+legacy_metadata.pop('homelab_destinations')
+legacy_metadata.pop('homelab_destination_only')
+legacy['pluginAdditionalData'] = json.dumps(legacy_metadata)
+
+stored_settings = {
+    'schemaVersion': 2,
+    'global': {
+        'untouched': True,
+        'homeSections': [dict(legacy)],
+    },
+    'mobile': {
+        'untouched': True,
+        'homeSections': [dict(legacy)],
+    },
+    'tv': {
+        'untouched': True,
+        'homeSections': [dict(legacy)],
+    },
+    'desktop': {'homeSections': [{'pluginSection': 'stale'}]},
+}
 
 def fake(method, path, token, body=None, allow=()):
+    global stored_settings
     if method == 'GET':
-        return {
-            'schemaVersion': 2,
-            'global': {'untouched': True},
-            'mobile': {'untouched': True},
-            'desktop': {'homeSections': [{'pluginSection': 'stale'}]},
-        }
+        return copy.deepcopy(stored_settings)
     calls.append((method, path, body))
+    stored_settings = copy.deepcopy(body['settings'])
+
+    # Mirror Moonbase 2.0.3 propagation: profiles with a layout receive every
+    # known custom row, retaining each profile's own enabled state and order.
+    managed = {
+        row['pluginSection'].lower(): row
+        for row in rows
+    }
+    for profile_name in ('global', 'desktop', 'mobile', 'tv'):
+        profile = stored_settings.get(profile_name)
+        if not isinstance(profile, dict):
+            continue
+        sections = profile.get('homeSections')
+        if not isinstance(sections, list):
+            continue
+        present = {
+            str(row.get('pluginSection') or '').lower(): row
+            for row in sections
+            if isinstance(row, dict)
+        }
+        for identity, expected in managed.items():
+            if identity in present:
+                continue
+            added = dict(expected)
+            added['enabled'] = False
+            added['order'] = len(sections)
+            sections.append(added)
+            present[identity] = added
 
 moonbase.base.request_json = fake
 try:
@@ -143,9 +192,16 @@ finally:
 
 body = calls[0][2]
 assert body['mergeMode'] == 'replace'
-assert body['settings']['global'] == {'untouched': True}
-assert body['settings']['mobile'] == {'untouched': True}
 assert body['settings']['desktop'] == desktop
+expected_metadata = rows[0]['pluginAdditionalData']
+for profile_name in ('global', 'mobile', 'tv'):
+    profile = body['settings'][profile_name]
+    assert profile['untouched'] is True
+    stored = profile['homeSections'][0]
+    assert stored['pluginAdditionalData'] == expected_metadata
+    assert stored['pluginDisplayText'] == rows[0]['pluginDisplayText']
+    assert stored['enabled'] is False
+    assert stored['order'] == 99
 
 original_runtime_request = runtime_gate.gate.request_json
 
