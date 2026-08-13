@@ -38,7 +38,7 @@ def _docker(args):
 def _seerr_container():
     names = [
         name.strip()
-        for name in _docker(['ps', '-a', '--format', '{{.Names}}']).splitlines()
+        for name in _docker(['ps', '--format', '{{.Names}}']).splitlines()
         if name.strip()
     ]
     matches = [
