@@ -28,6 +28,21 @@ def _source_sections(settings, defaults):
     return []
 
 
+def _desired_mobile_sections(settings, defaults):
+    output = []
+    seen_plugins = set()
+    for row in web.desired_sections(_source_sections(settings, defaults)):
+        section = dict(row)
+        identity = str(section.get('pluginSection') or '').strip().lower()
+        if identity:
+            if identity in seen_plugins:
+                continue
+            seen_plugins.add(identity)
+        section['order'] = len(output)
+        output.append(section)
+    return output
+
+
 def patch_mobile(settings, defaults):
     mobile = dict(settings.get(PROFILE) or {})
     mobile.update({
@@ -82,7 +97,7 @@ def patch_mobile(settings, defaults):
         'recommendationSystemSource': 'online',
         'recommendationsApplyParentalRatingCap': True,
         'seerrBlockNsfw': True,
-        'homeSections': web.desired_sections(_source_sections(settings, defaults)),
+        'homeSections': _desired_mobile_sections(settings, defaults),
     })
     return mobile
 
