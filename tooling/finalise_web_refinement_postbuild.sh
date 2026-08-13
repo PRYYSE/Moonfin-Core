@@ -115,6 +115,7 @@ python3 -m py_compile \
 PYTHONPATH="$SRC/tooling" python3 - <<'PY'
 import json
 import home_lab_web_refinement_config as moonbase
+import home_lab_v2_runtime_gate as runtime_gate
 
 rows = moonbase.editorial_custom_rows()
 ids = [row['pluginSection'] for row in rows]
@@ -145,7 +146,40 @@ assert body['mergeMode'] == 'replace'
 assert body['settings']['global'] == {'untouched': True}
 assert body['settings']['mobile'] == {'untouched': True}
 assert body['settings']['desktop'] == desktop
-print('AUTHORITATIVE SETTINGS PREFLIGHT PASS: 33 unique rows; other profiles preserved')
+
+original_runtime_request = runtime_gate.gate.request_json
+
+def fake_runtime_request(method, path, token, body=None, allow=()):
+    if path == '/Moonfin/Ping':
+        return {'tmdbAvailable': True}
+    if path.startswith('/Moonfin/CustomRows/Items?'):
+        return {'items': [{}] * 6}
+    raise AssertionError(path)
+
+runtime_gate.gate.request_json = fake_runtime_request
+try:
+    summary = runtime_gate.validate_custom_rows(
+        'token',
+        [{'homeSections': rows} for _ in range(3)],
+    )
+    assert summary['customRowsConfigured'] == 33
+    duplicate_rows = list(rows) + [dict(rows[0])]
+    try:
+        runtime_gate.validate_custom_rows(
+            'token',
+            [{'homeSections': duplicate_rows}],
+        )
+    except RuntimeError as exc:
+        assert 'profile 1 retained duplicate' in str(exc)
+    else:
+        raise AssertionError('Per-profile duplicate gate did not reject a duplicate')
+finally:
+    runtime_gate.gate.request_json = original_runtime_request
+
+print(
+    'AUTHORITATIVE SETTINGS PREFLIGHT PASS: '
+    '33 unique rows across 3 users; other profiles preserved'
+)
 PY
 
 [[ -f "$BUNDLE" && -f "$BUNDLE.sha256" ]] || fail 'Passed bundle/checksum is missing.'
