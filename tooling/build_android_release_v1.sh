@@ -179,7 +179,7 @@ else
   echo 'DURABLE SIGNING: CREATED'
 fi
 
-printf '\n=== 4. DEPENDENCIES, FORMAT AND ANALYSIS ===\n'
+printf '\n=== 4. DEPENDENCIES, CONTROLLED FORMAT COMMIT AND ANALYSIS ===\n'
 COMMON_DOCKER=(
   --rm
   --user 0:0
@@ -202,12 +202,45 @@ run_android() {
     -c 'exec "$@"' android-builder "$@"
 }
 
+FORMAT_PATHS=(
+  lib/ui/screens/hubs/homelab_hub_screen.dart
+  lib/ui/screens/hubs/homelab_web_hub_screen_v2_candidate.dart
+  lib/ui/screens/home/homelab_home_composer.dart
+)
+
 run_android flutter pub get
+run_android dart format "${FORMAT_PATHS[@]}"
+sudo chown -R "$HOST_UID:$HOST_GID" \
+  "$DEV/android-builder-home" \
+  "$SRC/.dart_tool" "$SRC/build" 2>/dev/null || true
+sudo chown "$HOST_UID:$HOST_GID" "$SRC/pubspec.lock" 2>/dev/null || true
+
+git diff --check
+mapfile -t FORMAT_CHANGED < <(git diff --name-only)
+if (( ${#FORMAT_CHANGED[@]} )); then
+  for path in "${FORMAT_CHANGED[@]}"; do
+    allowed=0
+    for expected in "${FORMAT_PATHS[@]}"; do
+      [[ "$path" == "$expected" ]] && allowed=1 && break
+    done
+    [[ "$allowed" == 1 ]] || fail "Formatter changed an unauthorised path: $path"
+  done
+
+  echo 'Controlled formatter changes:'
+  printf '  %s\n' "${FORMAT_CHANGED[@]}"
+  git add -- "${FORMAT_CHANGED[@]}"
+  git commit -m 'Format Android release source'
+  git push origin HEAD:"$BRANCH"
+  COMMIT="$(git rev-parse HEAD)"
+  echo "FORMATTING COMMIT PASS: $COMMIT"
+else
+  echo 'Source already formatted.'
+fi
+
+[[ -z "$(git status --porcelain)" ]] || fail 'Source is dirty after the controlled format commit.'
 run_android dart format \
   --output=none --set-exit-if-changed \
-  lib/ui/screens/hubs/homelab_hub_screen.dart \
-  lib/ui/screens/hubs/homelab_web_hub_screen_v2_candidate.dart \
-  lib/ui/screens/home/homelab_home_composer.dart
+  "${FORMAT_PATHS[@]}"
 run_android flutter analyze \
   --no-fatal-infos --no-fatal-warnings \
   lib/ui/screens/hubs/homelab_hub_screen.dart \
@@ -217,7 +250,7 @@ sudo chown -R "$HOST_UID:$HOST_GID" \
   "$DEV/android-builder-home" \
   "$SRC/.dart_tool" "$SRC/build" 2>/dev/null || true
 sudo chown "$HOST_UID:$HOST_GID" "$SRC/pubspec.lock" 2>/dev/null || true
-[[ -z "$(git status --porcelain)" ]] || fail 'Validation changed committed source.'
+[[ -z "$(git status --porcelain)" ]] || fail 'Analysis changed committed source.'
 echo 'FORMAT/ANALYSIS PASS'
 
 printf '\n=== 5. BUILD SIGNED ANDROID PHONE/TABLET APK ===\n'
