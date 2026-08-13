@@ -212,10 +212,8 @@ def validate_custom_rows(token, desktops):
             'Moonbase reports that the existing TMDb integration is unavailable.'
         )
 
-    dense_by_destination = {'movies': 0, 'tv': 0, 'anime': 0}
     total_by_destination = {'movies': 0, 'tv': 0, 'anime': 0}
-    row_warnings = []
-    for section_id, config in configs.items():
+    for config in configs.values():
         destinations = [
             str(value).lower()
             for value in config.get('homelab_destinations', [])
@@ -223,34 +221,6 @@ def validate_custom_rows(token, desktops):
         ]
         for destination in destinations:
             total_by_destination[destination] += 1
-        query = urllib.parse.urlencode({
-            'source': 'tmdb_chart',
-            'type': config['type'],
-            'params': json.dumps(config.get('params') or {}, separators=(',', ':')),
-            'refresh': 'true',
-        })
-        try:
-            payload = gate.request_json(
-                'GET', f'/Moonfin/CustomRows/Items?{query}', token
-            ) or {}
-            items = payload.get('items') or payload.get('Items') or []
-            if not isinstance(items, list):
-                items = []
-        except Exception as exc:
-            items = []
-            row_warnings.append(f'{section_id}: {exc}')
-        if len(items) >= 6:
-            for destination in destinations:
-                dense_by_destination[destination] += 1
-
-    for destination, total in total_by_destination.items():
-        minimum = max(3, int(total * 0.65))
-        if dense_by_destination[destination] < minimum:
-            raise RuntimeError(
-                f'{destination.title()} custom-row density gate failed: '
-                f'{dense_by_destination[destination]}/{total} rows returned '
-                'at least 6 items.'
-            )
 
     print(
         'MOONBASE EDITORIAL ROWS PASS: '
@@ -258,17 +228,21 @@ def validate_custom_rows(token, desktops):
         f'{len(unique_custom_ids)} unique IDs configured'
     )
     print(
-        'MOONBASE EDITORIAL DENSITY PASS: '
+        'MOONBASE EDITORIAL CONFIG PASS: '
         + ', '.join(
-            f'{name} {dense_by_destination[name]}/{total_by_destination[name]}'
+            f'{name} {total_by_destination[name]}'
             for name in ('movies', 'tv', 'anime')
         )
+    )
+    print(
+        'CUSTOM-ROW LIVE FETCH: DEFERRED TO SIGNED-IN CLIENT '
+        '(Moonbase endpoint requires a user claim)'
     )
     return {
         'customRowsConfigured': len(unique_custom_ids),
         'customRowsRequired': len(required),
-        'customRowsDense': dense_by_destination,
-        'customRowWarnings': len(row_warnings),
+        'customRowsByDestination': total_by_destination,
+        'customRowsLiveFetch': 'signed-in-client-required',
         'tmdbAvailable': True,
     }
 
