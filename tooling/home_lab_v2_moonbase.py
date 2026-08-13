@@ -25,6 +25,51 @@ EXPLICIT = [
 ]
 EXPLICIT_RE = [re.compile(x, re.I) for x in EXPLICIT]
 
+EDITORIAL_ROWS = (
+    ('homelab_movies_popular', 'Popular Movies', 'movie/popular'),
+    ('homelab_movies_top_rated', 'Top Rated Movies', 'movie/top_rated'),
+    ('homelab_movies_upcoming', 'Coming Soon to Movies', 'movie/upcoming'),
+    ('homelab_tv_popular', 'Popular Series', 'tv/popular'),
+    ('homelab_tv_top_rated', 'Top Rated Series', 'tv/top_rated'),
+    ('homelab_tv_on_air', 'New and Returning Series', 'tv/on_the_air'),
+    (
+        'homelab_anime_popular',
+        'Anime Spotlight',
+        'discover/tv?with_genres=16&with_original_language=ja'
+        '&sort_by=popularity.desc',
+    ),
+    (
+        'homelab_anime_top_rated',
+        'Top Rated Anime',
+        'discover/tv?with_genres=16&with_original_language=ja'
+        '&sort_by=vote_average.desc&vote_count.gte=100',
+    ),
+    (
+        'homelab_anime_new',
+        'New Season Anime',
+        'discover/tv?with_genres=16&with_original_language=ja'
+        '&sort_by=first_air_date.desc&vote_count.gte=5',
+    ),
+    (
+        'homelab_anime_movies',
+        'Anime Movies',
+        'discover/movie?with_genres=16&with_original_language=ja'
+        '&sort_by=popularity.desc',
+    ),
+    (
+        'homelab_anime_action',
+        'Action Anime',
+        'discover/tv?with_genres=16,10759&with_original_language=ja'
+        '&sort_by=popularity.desc',
+    ),
+    (
+        'homelab_anime_comedy',
+        'Comedy Anime',
+        'discover/tv?with_genres=16,35&with_original_language=ja'
+        '&sort_by=popularity.desc',
+    ),
+)
+
 class ApiError(RuntimeError):
     def __init__(self, method, path, status, detail=''):
         super().__init__(f'{method} {path}: HTTP {status}{": " + detail if detail else ""}')
@@ -175,6 +220,32 @@ def builtin(section_type, order, enabled=True):
     }
 
 
+def editorial_custom_rows():
+    rows = []
+    for section_id, title, chart_type in EDITORIAL_ROWS:
+        rows.append({
+            'kind': 'pluginDynamic',
+            'type': 'none',
+            'enabled': True,
+            'order': 0,
+            'serverId': 'custom',
+            'pluginSource': 'custom',
+            'pluginSection': section_id,
+            'pluginAdditionalData': json.dumps(
+                {
+                    'source': 'tmdb_chart',
+                    'type': chart_type,
+                    'params': {},
+                    'sort_by': 'none',
+                    'sort_order': 'desc',
+                },
+                separators=(',', ':'),
+            ),
+            'pluginDisplayText': title,
+        })
+    return rows
+
+
 def section_source(settings, defaults):
     for profile in (settings.get('desktop'), settings.get('global'), defaults):
         if isinstance(profile, dict):
@@ -185,7 +256,21 @@ def section_source(settings, defaults):
 
 
 def desired_sections(existing):
-    dynamics = [dict(s) for s in existing if str(s.get('kind', '')).lower() == 'plugindynamic']
+    dynamics = [
+        dict(s)
+        for s in existing
+        if str(s.get('kind', '')).lower() == 'plugindynamic'
+    ]
+    existing_ids = {
+        str(row.get('pluginSection') or '').strip().lower()
+        for row in dynamics
+    }
+    for row in editorial_custom_rows():
+        identity = str(row.get('pluginSection') or '').strip().lower()
+        if identity not in existing_ids:
+            dynamics.append(row)
+            existing_ids.add(identity)
+
     result = []
     order = 0
 
