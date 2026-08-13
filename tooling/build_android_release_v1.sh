@@ -296,14 +296,15 @@ import sys
 import zipfile
 
 with zipfile.ZipFile(sys.argv[1]) as apk:
-    native = {name.split('/')[1] for name in apk.namelist() if name.startswith('lib/')}
+    app_abis = {
+        name.split('/')[1]
+        for name in apk.namelist()
+        if name.startswith('lib/') and name.endswith('/libapp.so')
+    }
 
-if 'arm64-v8a' not in native:
-    raise SystemExit('APK ARCHITECTURE FAILED: arm64-v8a payload is missing.')
-unexpected = native - {'arm64-v8a'}
-if unexpected:
-    raise SystemExit(f'APK ARCHITECTURE FAILED: unexpected native ABIs: {sorted(unexpected)}')
-print('APK ARCHITECTURE PASS: arm64-v8a only')
+if app_abis != {'arm64-v8a'}:
+    raise SystemExit(f'APK ARCHITECTURE FAILED: Flutter app ABIs are {sorted(app_abis)}')
+print('APK ARCHITECTURE PASS: Flutter AOT is arm64-v8a only')
 PY
 
 "${D[@]}" run --rm \
