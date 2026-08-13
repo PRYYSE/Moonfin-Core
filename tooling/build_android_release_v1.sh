@@ -52,6 +52,8 @@ DOWNLOAD_PUBLISHED=0
 PLUGIN_DIR=''
 DOWNLOAD_DIR=''
 
+sudo chown -R "$HOST_UID:$HOST_GID" \
+  "$DEV/android-builder-home" "$NDK_CACHE" 2>/dev/null || true
 sudo mkdir -p "$RUN" "$SIGN_ROOT"
 sudo chown "$HOST_UID:$HOST_GID" "$RUN" "$SIGN_ROOT"
 chmod 700 "$RUN" "$SIGN_ROOT"
@@ -77,7 +79,7 @@ restore_after_failure() {
   rm -f "$SIGN_ROOT/release.keystore.tmp" \
     "$SIGN_ROOT/keystore.properties.tmp" 2>/dev/null || true
   sudo chown -R "$HOST_UID:$HOST_GID" \
-    "$DEV/android-builder-home" \
+    "$DEV/android-builder-home" "$NDK_CACHE" \
     "$SRC/.dart_tool" "$SRC/build" 2>/dev/null || true
   sudo chown "$HOST_UID:$HOST_GID" "$SRC/pubspec.lock" 2>/dev/null || true
   if [[ $rc -ne 0 ]]; then
