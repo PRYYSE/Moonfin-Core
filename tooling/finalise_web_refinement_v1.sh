@@ -120,11 +120,14 @@ echo
 echo '=== 2. FORMAT CANDIDATE SOURCE (NO BUILD) ==='
 HOST_UID="$(id -u)"
 HOST_GID="$(id -g)"
+mkdir -p "$DEV/pub-cache"
 "${D[@]}" run --rm \
   --user "$HOST_UID:$HOST_GID" \
   -e HOME=/home/builder \
+  -e PUB_CACHE=/home/builder/.pub-cache \
   -e PATH=/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
   -v "$SRC:/workspace" \
+  -v "$DEV/pub-cache:/home/builder/.pub-cache" \
   -w /workspace \
   homelab-flutter:3.44.1 dart format \
     lib/data/services/row_data_source.dart \
