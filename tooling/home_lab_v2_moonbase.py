@@ -14,6 +14,14 @@ from home_lab_safe_auth import jellyfin_token
 
 BASE = 'http://127.0.0.1:8096'
 THEME_ID = 'home_lab_streaming'
+PREVIEW_THEME_IDS = (
+    'home_lab_lunar_glass',
+    'home_lab_neon_arcade',
+    'home_lab_velvet_cinema',
+    'home_lab_arctic_minimal',
+    'home_lab_kyoto_night',
+    'home_lab_forest_signal',
+)
 CLIENT_ID = 'HomeLab-web-desktop-v2'
 EXPLICIT = [
     r'\bsex\b', r'sexual', r'\bporn\b', r'erotic', r'\bnude\b', r'nudity',
@@ -410,10 +418,62 @@ def restore_settings(token, backup_dir):
         except Exception:
             pass
     elif theme_path.exists():
-        request_json('POST', '/Moonfin/Admin/Themes', token, json.loads(theme_path.read_text()))
+        request_json(
+            'POST',
+            '/Moonfin/Admin/Themes',
+            token,
+            json.loads(theme_path.read_text()),
+        )
+
+    for entry in manifest.get('previewThemes', []):
+        theme_id = str(entry.get('id') or '').strip()
+        if not theme_id:
+            continue
+        if bool(entry.get('absent')):
+            request_json(
+                'DELETE',
+                f'/Moonfin/Admin/Themes/{urllib.parse.quote(theme_id)}',
+                token,
+                allow=(404,),
+            )
+            continue
+        backup_name = str(entry.get('backup') or '').strip()
+        before_path = backup / 'preview-themes' / backup_name
+        if before_path.exists():
+            request_json(
+                'POST',
+                '/Moonfin/Admin/Themes',
+                token,
+                json.loads(before_path.read_text()),
+            )
 
 
-def apply(token, backup_dir, theme_path):
+def load_preview_themes(directory):
+    if not directory:
+        return []
+    root = Path(directory)
+    if not root.is_dir():
+        raise RuntimeError(f'Preview theme directory is missing: {root}')
+    themes = []
+    seen = set()
+    for path in sorted(root.glob('*.json')):
+        theme = json.loads(path.read_text())
+        theme_id = str(theme.get('id') or '').strip()
+        if not theme_id or theme_id == THEME_ID or theme_id in seen:
+            raise RuntimeError(f'Invalid or duplicate preview theme ID in {path}.')
+        seen.add(theme_id)
+        themes.append((path, theme))
+    if seen != set(PREVIEW_THEME_IDS):
+        missing = sorted(set(PREVIEW_THEME_IDS) - seen)
+        extra = sorted(seen - set(PREVIEW_THEME_IDS))
+        raise RuntimeError(
+            'Preview theme set mismatch. '
+            f'Missing={missing}; extra={extra}'
+        )
+    return themes
+
+
+def apply(token, backup_dir, theme_path, preview_themes_dir=None):
     backup = Path(backup_dir)
     backup.mkdir(parents=True, exist_ok=True)
     os.chmod(backup, 0o700)
@@ -428,9 +488,40 @@ def apply(token, backup_dir, theme_path):
 
     users = request_json('GET', '/Users', token)
     defaults = request_json('GET', '/Moonfin/Defaults', token) or {}
-    manifest = {'themeAbsent': theme_absent, 'users': []}
+    manifest = {
+        'themeAbsent': theme_absent,
+        'users': [],
+        'previewThemes': [],
+    }
+    preview_themes = load_preview_themes(preview_themes_dir)
 
     try:
+        for path, preview_theme in preview_themes:
+            preview_id = str(preview_theme['id'])
+            before = request_json(
+                'GET',
+                f'/Moonfin/Themes/{urllib.parse.quote(preview_id)}',
+                token,
+                allow=(404,),
+            )
+            entry = {
+                'id': preview_id,
+                'absent': before is None,
+                'backup': path.name,
+            }
+            manifest['previewThemes'].append(entry)
+            if before is not None:
+                atomic_json(
+                    backup / 'preview-themes' / path.name,
+                    before,
+                )
+            request_json(
+                'POST',
+                '/Moonfin/Admin/Themes',
+                token,
+                preview_theme,
+            )
+
         for user in users:
             user_id = str(user.get('Id') or user.get('id') or '').strip()
             if not user_id:
@@ -463,12 +554,17 @@ def validate_theme_and_settings(token):
     /Moonfin/Settings/{userId} route instead.
     """
     themes = request_json('GET', '/Moonfin/Themes', token)
-    if not isinstance(themes, list) or not any(
-        isinstance(theme, dict) and theme.get('id') == THEME_ID
+    available_theme_ids = {
+        str(theme.get('id') or '')
         for theme in themes
-    ):
+        if isinstance(theme, dict)
+    } if isinstance(themes, list) else set()
+    required_theme_ids = {THEME_ID, *PREVIEW_THEME_IDS}
+    missing_theme_ids = sorted(required_theme_ids - available_theme_ids)
+    if missing_theme_ids:
         raise RuntimeError(
-            'Home Lab custom theme is not available through Moonbase.'
+            'Required Home Lab themes are unavailable through Moonbase: '
+            + ', '.join(missing_theme_ids)
         )
 
     users = request_json('GET', '/Users', token) or []
@@ -658,6 +754,7 @@ def main():
     p_apply = sub.add_parser('apply')
     p_apply.add_argument('--backup-dir', required=True)
     p_apply.add_argument('--theme', required=True)
+    p_apply.add_argument('--preview-themes-dir')
     p_restore = sub.add_parser('restore')
     p_restore.add_argument('--backup-dir', required=True)
     p_validate = sub.add_parser('validate')
@@ -665,7 +762,12 @@ def main():
 
     token = jellyfin_token()
     if args.command == 'apply':
-        apply(token, args.backup_dir, args.theme)
+        apply(
+            token,
+            args.backup_dir,
+            args.theme,
+            preview_themes_dir=args.preview_themes_dir,
+        )
         validate_theme_and_settings(token)
         print('MOONBASE CONFIG PASS')
     elif args.command == 'restore':
