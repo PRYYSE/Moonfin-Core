@@ -208,8 +208,6 @@ original_runtime_request = runtime_gate.gate.request_json
 def fake_runtime_request(method, path, token, body=None, allow=()):
     if path == '/Moonfin/Ping':
         return {'tmdbAvailable': True}
-    if path.startswith('/Moonfin/CustomRows/Items?'):
-        return {'items': [{}] * 6}
     raise AssertionError(path)
 
 runtime_gate.gate.request_json = fake_runtime_request
@@ -219,6 +217,12 @@ try:
         [{'homeSections': rows} for _ in range(3)],
     )
     assert summary['customRowsConfigured'] == 33
+    assert summary['customRowsByDestination'] == {
+        'movies': 9,
+        'tv': 10,
+        'anime': 14,
+    }
+    assert summary['customRowsLiveFetch'] == 'signed-in-client-required'
     duplicate_rows = list(rows) + [dict(rows[0])]
     try:
         runtime_gate.validate_custom_rows(
@@ -338,9 +342,9 @@ echo "Rollback/config backup: $RUN"
 echo 'Build/bundle: REUSED + PASS'
 echo 'Moonbase rows: 33 UNIQUE + PASS'
 echo 'Home Movie/Series recommendation mix: PASS'
-echo 'Movies low-duplication editorial mix: PASS'
-echo 'TV destination isolation and density: PASS'
-echo 'Anime Crunchyroll-style density and safety: PASS'
+echo 'Movies low-duplication editorial config: PASS'
+echo 'TV destination isolation and discovery: PASS'
+echo 'Anime Crunchyroll-style config/discovery and safety: PASS'
 echo 'Backdrop blur and hero transition: PASS'
 echo 'Live manifest: PASS'
 echo 'Git promotion: PASS'
