@@ -3,6 +3,7 @@
 
 import json
 import re
+import urllib.parse
 
 import home_lab_v2_moonbase as base
 
@@ -343,12 +344,47 @@ def patch_desktop(settings, defaults):
     return desktop
 
 
+def save_user_desktop(token, user_id, desktop):
+    """Replace the desktop section without losing any other saved settings.
+
+    Moonbase's merge mode merges homeSections positionally, which can retain
+    stale plugin rows when a larger managed row set replaces an older one.
+    Fetching the complete settings document and replacing that complete
+    document makes homeSections authoritative while preserving global/mobile
+    profiles and every unrelated user preference.
+    """
+    settings = base.request_json(
+        'GET',
+        f'/Moonfin/Settings/{urllib.parse.quote(user_id)}',
+        token,
+        allow=(404,),
+    )
+    if not isinstance(settings, dict):
+        settings = {'schemaVersion': 2, 'syncEnabled': True}
+    else:
+        settings = dict(settings)
+    settings['schemaVersion'] = max(int(settings.get('schemaVersion') or 0), 2)
+    settings['desktop'] = desktop
+    settings.pop('Desktop', None)
+    base.request_json(
+        'POST',
+        f'/Moonfin/Settings/{urllib.parse.quote(user_id)}',
+        token,
+        {
+            'settings': settings,
+            'clientId': base.CLIENT_ID,
+            'mergeMode': 'replace',
+        },
+    )
+
+
 base.EDITORIAL_ROWS = EDITORIAL_ROWS
 base.EXPLICIT = EXPLICIT
 base.EXPLICIT_RE = EXPLICIT_RE
 base.editorial_custom_rows = editorial_custom_rows
 base.desired_sections = desired_sections
 base.patch_desktop = patch_desktop
+base.save_user_desktop = save_user_desktop
 
 
 def __getattr__(name):
@@ -357,4 +393,3 @@ def __getattr__(name):
 
 if __name__ == '__main__':
     base.main()
-
