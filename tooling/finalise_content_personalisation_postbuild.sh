@@ -158,6 +158,7 @@ echo
 echo '=== 4. BACK UP AND APPLY APPROVED MOONBASE CONFIG ==='
 python3 -m py_compile \
   tooling/home_lab_safe_auth.py \
+  tooling/home_lab_seerr_auth.py \
   tooling/home_lab_v2_moonbase.py \
   tooling/home_lab_v2_runtime_gate.py \
   tooling/home_lab_v2_personal_gate_all_users.py
