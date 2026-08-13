@@ -3,7 +3,7 @@ import json
 import re
 import urllib.parse
 
-import home_lab_v2_moonbase as gate
+import home_lab_web_refinement_config as gate
 from home_lab_safe_auth import jellyfin_token
 from home_lab_seerr_auth import seerr_get as direct_seerr_get
 
@@ -71,6 +71,7 @@ def validate_stored_user_settings(token):
         'fullScreenRows': False,
         'homeRowsStyle': 'v2',
         'mediaBarMode': 'makd',
+        'browsingBlur': '8',
         'displaySinceYouWatchedRows': True,
         'sinceYouWatchedNumRows': 3,
         'seerrBlockNsfw': True,
@@ -142,7 +143,6 @@ def validate_custom_rows(token, desktops):
             if (
                 isinstance(row, dict)
                 and str(row.get('kind') or '').lower() == 'plugindynamic'
-                and bool(row.get('enabled', True))
                 and str(row.get('pluginSource') or '').lower() == 'custom'
             ):
                 identity = str(row.get('pluginSection') or '').strip().lower()
@@ -151,7 +151,8 @@ def validate_custom_rows(token, desktops):
 
     required = {
         section_id: chart_type
-        for section_id, _title, chart_type in gate.EDITORIAL_ROWS
+        for section_id, _title, chart_type, _destinations, _show_on_home
+        in gate.EDITORIAL_ROWS
     }
     missing = sorted(set(required) - set(rows_by_identity))
     if missing:
@@ -161,6 +162,7 @@ def validate_custom_rows(token, desktops):
         )
 
     invalid = []
+    configs = {}
     for section_id, chart_type in required.items():
         row = rows_by_identity[section_id]
         try:
@@ -173,8 +175,11 @@ def validate_custom_rows(token, desktops):
             or str(config.get('source') or '').lower() != 'tmdb_chart'
             or str(config.get('type') or '') != chart_type
             or not isinstance(config.get('params'), dict)
+            or not isinstance(config.get('homelab_destinations'), list)
         ):
             invalid.append(section_id)
+        else:
+            configs[section_id] = config
 
     if invalid:
         raise RuntimeError(
@@ -193,13 +198,62 @@ def validate_custom_rows(token, desktops):
             'Moonbase reports that the existing TMDb integration is unavailable.'
         )
 
+    dense_by_destination = {'movies': 0, 'tv': 0, 'anime': 0}
+    total_by_destination = {'movies': 0, 'tv': 0, 'anime': 0}
+    row_warnings = []
+    for section_id, config in configs.items():
+        destinations = [
+            str(value).lower()
+            for value in config.get('homelab_destinations', [])
+            if str(value).lower() in total_by_destination
+        ]
+        for destination in destinations:
+            total_by_destination[destination] += 1
+        query = urllib.parse.urlencode({
+            'source': 'tmdb_chart',
+            'type': config['type'],
+            'params': json.dumps(config.get('params') or {}, separators=(',', ':')),
+            'refresh': 'true',
+        })
+        try:
+            payload = gate.request_json(
+                'GET', f'/Moonfin/CustomRows/Items?{query}', token
+            ) or {}
+            items = payload.get('items') or payload.get('Items') or []
+            if not isinstance(items, list):
+                items = []
+        except Exception as exc:
+            items = []
+            row_warnings.append(f'{section_id}: {exc}')
+        if len(items) >= 6:
+            for destination in destinations:
+                dense_by_destination[destination] += 1
+
+    for destination, total in total_by_destination.items():
+        minimum = max(3, int(total * 0.65))
+        if dense_by_destination[destination] < minimum:
+            raise RuntimeError(
+                f'{destination.title()} custom-row density gate failed: '
+                f'{dense_by_destination[destination]}/{total} rows returned '
+                'at least 6 items.'
+            )
+
     print(
         'MOONBASE EDITORIAL ROWS PASS: '
         f'{len(required)} required, {len(rows_by_identity)} configured'
     )
+    print(
+        'MOONBASE EDITORIAL DENSITY PASS: '
+        + ', '.join(
+            f'{name} {dense_by_destination[name]}/{total_by_destination[name]}'
+            for name in ('movies', 'tv', 'anime')
+        )
+    )
     return {
         'customRowsConfigured': len(rows_by_identity),
         'customRowsRequired': len(required),
+        'customRowsDense': dense_by_destination,
+        'customRowWarnings': len(row_warnings),
         'tmdbAvailable': True,
     }
 

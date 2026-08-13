@@ -2115,7 +2115,12 @@ class RowDataSource {
     return 3; // Default intermediate severity level
   }
 
-  Future<HomeRow> loadSinceYouWatchedRow(String serverId, int rowIndex) async {
+  Future<HomeRow> loadSinceYouWatchedRow(
+    String serverId,
+    int rowIndex, {
+    List<String>? preferredItemTypes,
+    bool animeOnly = false,
+  }) async {
     final prefs = GetIt.instance<UserPreferences>();
     final sourceType = prefs.get(UserPreferences.sinceYouWatchedSourceType);
     final sourceItemType = prefs.get(UserPreferences.sinceYouWatchedSourceItem);
@@ -2132,11 +2137,13 @@ class RowDataSource {
       historyItemTypes = const ['Movie', 'Episode'];
     }
 
-    final List<String> candidateItemTypes = switch (sourceType) {
-      SinceYouWatchedSourceType.movies => const ['Movie'],
-      SinceYouWatchedSourceType.shows => const ['Series'],
-      SinceYouWatchedSourceType.both => const ['Movie', 'Series'],
-    };
+    final List<String> candidateItemTypes =
+        preferredItemTypes ??
+        switch (sourceType) {
+          SinceYouWatchedSourceType.movies => const ['Movie'],
+          SinceYouWatchedSourceType.shows => const ['Series'],
+          SinceYouWatchedSourceType.both => const ['Movie', 'Series'],
+        };
 
     final baseItems = <AggregatedItem>[];
     final seedOrigins = <String, String>{};
@@ -2150,9 +2157,26 @@ class RowDataSource {
       return '$itemType:$id';
     }
 
+    bool isAnimeSeed(AggregatedItem item) {
+      final raw = item.rawData;
+      final language = raw['OriginalLanguage']?.toString().toLowerCase();
+      final rawTags = raw['Tags'];
+      final genreIds = raw['GenreIds'];
+      final tags = rawTags is List
+          ? rawTags.map((entry) => entry?.toString() ?? '').join(' ')
+          : '';
+      final text = '${item.genres.join(' ')} $tags'.toLowerCase();
+      return text.contains('anime') ||
+          (genreIds is List &&
+              genreIds.any((entry) => entry.toString() == '16') &&
+              language == 'ja') ||
+          (language == 'ja' && text.contains('animation'));
+    }
+
     void addSeeds(Iterable<AggregatedItem> items, String origin) {
       for (final item in items) {
         if (!candidateItemTypes.contains(item.type)) continue;
+        if (animeOnly && !isAnimeSeed(item)) continue;
         final key = seedKey(item);
         if (seedOrigins.containsKey(key)) continue;
         seedOrigins[key] = origin;
@@ -2321,12 +2345,27 @@ class RowDataSource {
       );
     }
 
-    final startIndex = (rowIndex - 1) % baseItems.length;
+    final preferredSeedType = preferredItemTypes == null &&
+            sourceType == SinceYouWatchedSourceType.both
+        ? (rowIndex == 1 ? 'Movie' : 'Series')
+        : candidateItemTypes.length == 1
+        ? candidateItemTypes.first
+        : null;
+    final orderedBaseItems = preferredSeedType == null
+        ? baseItems
+        : <AggregatedItem>[
+            ...baseItems.where((item) => item.type == preferredSeedType),
+            ...baseItems.where((item) => item.type != preferredSeedType),
+          ];
+    final startIndex = (rowIndex - 1) % orderedBaseItems.length;
     AggregatedItem? selected;
     List<AggregatedItem> recommendedItems = const [];
-    final attempts = baseItems.length < 8 ? baseItems.length : 8;
+    final attempts = orderedBaseItems.length < 10
+        ? orderedBaseItems.length
+        : 10;
     for (var offset = 0; offset < attempts; offset++) {
-      final candidate = baseItems[(startIndex + offset) % baseItems.length];
+      final candidate =
+          orderedBaseItems[(startIndex + offset) % orderedBaseItems.length];
       final recommendations = await getRecommendations(
         serverId: serverId,
         baseItem: candidate,
@@ -2356,14 +2395,11 @@ class RowDataSource {
     final name = selected.name;
     final title = switch (origin) {
       'history' => 'Because You Watched "' + name + '"',
-      'watchlist' => 'Inspired by "' + name + '" on Your Watchlist',
+      'watchlist' => 'Recommended from Your Watchlist',
       'favourite' => 'More Like Favourite "' + name + '"',
       'rating' => 'Because You Liked "' + name + '"',
-      'recent' => 'Fresh Picks Inspired by "' + name + '"',
-      _ =>
-        rowIndex == 1
-            ? 'Recommended For You'
-            : 'Inspired by Your Library: "' + name + '"',
+      'recent' => 'Fresh Picks For You',
+      _ => rowIndex == 1 ? 'Recommended For You' : 'Top Picks For You',
     };
 
     return HomeRow(

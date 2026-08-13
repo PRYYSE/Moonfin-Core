@@ -66,6 +66,7 @@ def recommendation_summary(token, seeds):
     rows = 0
     recommendation_items = 0
     seen = set()
+    recommendation_types = set()
 
     for origin, item in seeds:
         if not isinstance(item, dict):
@@ -100,11 +101,12 @@ def recommendation_summary(token, seeds):
         if safe:
             rows += 1
             recommendation_items += len(safe)
+            recommendation_types.add(media_type)
             print(f'PERSONAL SEED PASS: {origin} {key} -> {len(safe)} items')
-        if rows >= 3 or tested >= 10:
+        if (rows >= 3 and recommendation_types == {'movie', 'tv'}) or tested >= 15:
             break
 
-    return tested, rows, recommendation_items
+    return tested, rows, recommendation_items, sorted(recommendation_types)
 
 
 def main():
@@ -156,12 +158,15 @@ def main():
         except Exception as exc:
             print(f'PERSONAL WARN: library seeds unavailable: {exc}')
 
-        tested, rows, recommendation_items = recommendation_summary(token, seeds)
+        tested, rows, recommendation_items, recommendation_types = (
+            recommendation_summary(token, seeds)
+        )
         candidate = {
             'userId': user_id,
             'seedsTested': tested,
             'seedsWithRecommendations': rows,
             'recommendationItems': recommendation_items,
+            'recommendationTypes': recommendation_types,
             'coldStartSources': [
                 'history',
                 'favourites',
@@ -172,15 +177,20 @@ def main():
         }
         if best is None or rows > best['seedsWithRecommendations']:
             best = candidate
-        if rows >= 2 and recommendation_items >= 10:
+        if (
+            rows >= 2
+            and recommendation_items >= 10
+            and 'movie' in recommendation_types
+            and 'tv' in recommendation_types
+        ):
             print('PERSONAL RECOMMENDATION GATE PASS')
             print(json.dumps(candidate, sort_keys=True))
             return
 
     raise RuntimeError(
         'Personalisation cold-start gate failed: no user produced at least '
-        'two useful recommendation rows from history, favourites, likes, '
-        'watchlist or owned-library seeds. Best=' + json.dumps(best)
+        'useful Movie and Series recommendation rows from history, favourites, '
+        'likes, watchlist or owned-library seeds. Best=' + json.dumps(best)
     )
 
 

@@ -2223,6 +2223,31 @@ class _MediaBarState extends State<MediaBar>
                         ),
                       ),
                     ),
+                  if (!isMobile && !_isTrailerPlaying)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 150,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                AppColorScheme.background.withValues(
+                                  alpha: 0.48,
+                                ),
+                                AppColorScheme.background,
+                              ],
+                              stops: const [0.0, 0.68, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   if (currentItem != null)
                     Builder(
                       builder: (context) {
