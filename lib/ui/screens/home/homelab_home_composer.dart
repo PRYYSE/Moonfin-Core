@@ -13,7 +13,9 @@ import '../../../util/platform_detection.dart';
 class HomelabHomeComposer {
   const HomelabHomeComposer._();
 
-  static bool get enabled => kIsWeb && !PlatformDetection.useMobileUi;
+  static bool get enabled =>
+      (kIsWeb && !PlatformDetection.useMobileUi) ||
+      (PlatformDetection.isAndroid && PlatformDetection.useMobileUi);
 
   /// Keep the saved Moonbase/user layout exactly as configured.
   static List<HomeSectionConfig> augmentConfigs(
