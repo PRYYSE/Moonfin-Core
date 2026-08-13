@@ -218,7 +218,10 @@ class _HomelabHubScreenState extends State<HomelabHubScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb && !PlatformDetection.useMobileUi) {
+    final useReleaseDestination =
+        (kIsWeb && !PlatformDetection.useMobileUi) ||
+        (PlatformDetection.isAndroid && PlatformDetection.useMobileUi);
+    if (useReleaseDestination) {
       return HomelabWebHubScreenV2Candidate(kind: widget.kind.name);
     }
 
