@@ -2345,7 +2345,8 @@ class RowDataSource {
       );
     }
 
-    final preferredSeedType = preferredItemTypes == null &&
+    final preferredSeedType =
+        preferredItemTypes == null &&
             sourceType == SinceYouWatchedSourceType.both
         ? (rowIndex == 1 ? 'Movie' : 'Series')
         : candidateItemTypes.length == 1

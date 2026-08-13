@@ -345,9 +345,7 @@ class _HomelabWebHubScreenV2CandidateState
             .toList(growable: false);
         final verified = await _resolveEditorialAnime(repo, candidates);
         if (verified.isNotEmpty) {
-          result.add(
-            _Shelf(row.title, verified, isPersonalised: true),
-          );
+          result.add(_Shelf(row.title, verified, isPersonalised: true));
         }
         continue;
       }
