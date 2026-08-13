@@ -4,7 +4,7 @@ import sqlite3
 from pathlib import Path
 
 
-DEFAULT_DB = Path('/srv/appdata/jellyfin/data/jellyfin.db')
+DEFAULT_DB = Path('/srv/appdata/jellyfin/data/data/jellyfin.db')
 
 
 def jellyfin_token():
