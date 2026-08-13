@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 SRC=/opt/src/moonfin-core
 DEV=/opt/src/moonfin-dev
-IMAGE=homelab-flutter:3.44.1
+IMAGE=ghcr.io/gmeligio/flutter-android:3.44.1
 BRANCH=homelab/android-v1-staging
 WEB_REFERENCE=9be74475d0ff7dfed6a573a5f8a9e5225b8331e6
 SIGN_ROOT=/srv/appdata/moonfin/android-signing
@@ -32,7 +32,6 @@ fi
 
 command -v git >/dev/null 2>&1 || fail 'git is missing.'
 command -v openssl >/dev/null 2>&1 || fail 'openssl is missing.'
-"${D[@]}" image inspect "$IMAGE" >/dev/null 2>&1 || fail "Flutter image missing: $IMAGE"
 [[ "$(git branch --show-current)" == "$BRANCH" ]] || fail "Expected branch $BRANCH."
 git merge-base --is-ancestor "$WEB_REFERENCE" HEAD || fail 'Release-ready Web reference is not an ancestor.'
 [[ -z "$(git status --porcelain)" ]] || {
@@ -70,6 +69,8 @@ restore_after_failure() {
       "$SRC/tooling/home_lab_android_config.py" restore \
       --backup-dir "$RUN/moonbase" >/dev/null 2>&1 || true
   fi
+  rm -f "$SIGN_ROOT/release.keystore.tmp" \
+    "$SIGN_ROOT/keystore.properties.tmp" 2>/dev/null || true
   if [[ $rc -ne 0 ]]; then
     echo
     echo '=== ANDROID RELEASE V1 FAILED: AUTOMATIC RESTORE ===' >&2
@@ -94,36 +95,59 @@ grep -Fq 'PlatformDetection.isAndroid && PlatformDetection.useMobileUi' \
   lib/ui/screens/home/homelab_home_composer.dart || fail 'Android Home composition is missing.'
 echo "SOURCE PREFLIGHT PASS: $COMMIT"
 
-printf '\n=== 2. ESTABLISH OR REUSE DURABLE ANDROID SIGNING ===\n'
+printf '\n=== 2. VERIFY COMPLETE ANDROID BUILD TOOLCHAIN ===\n'
+if ! "${D[@]}" image inspect "$IMAGE" >/dev/null 2>&1; then
+  echo "Pulling pinned Android build image: $IMAGE"
+  "${D[@]}" pull "$IMAGE"
+fi
+"${D[@]}" run --rm --entrypoint /bin/bash "$IMAGE" -lc '
+  set -Eeuo pipefail
+  command -v flutter >/dev/null
+  command -v java >/dev/null
+  command -v keytool >/dev/null
+  command -v sdkmanager >/dev/null
+  [[ -d "${ANDROID_HOME:?ANDROID_HOME is unset}" ]]
+  flutter --version | grep -Fq "Flutter 3.44.1"
+  java -version 2>&1 | grep -Fq "17."
+  printf "ANDROID TOOLCHAIN PASS: Flutter 3.44.1 + Java 17 + SDK + keytool\n"
+'
+
+printf '\n=== 3. ESTABLISH OR REUSE DURABLE ANDROID SIGNING ===\n'
 KEYSTORE="$SIGN_ROOT/release.keystore"
 PROPERTIES="$SIGN_ROOT/keystore.properties"
+if [[ -f "$PROPERTIES" && ! -e "$KEYSTORE" ]]; then
+  echo 'Removing incomplete properties file left by the failed Web-image signing attempt.'
+  rm -f "$PROPERTIES"
+fi
 if [[ -e "$KEYSTORE" || -e "$PROPERTIES" ]]; then
-  [[ -f "$KEYSTORE" && -f "$PROPERTIES" ]] || fail 'Android signing material is incomplete.'
+  [[ -f "$KEYSTORE" && -f "$PROPERTIES" ]] || fail 'Android signing material is incomplete; the existing keystore was preserved.'
   echo 'DURABLE SIGNING: REUSED'
 else
   umask 077
   STORE_PASSWORD="$(openssl rand -hex 32)"
   printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=moonfin-homelab\nstoreFile=release.keystore\n' \
-    "$STORE_PASSWORD" "$STORE_PASSWORD" >"$PROPERTIES"
-  unset STORE_PASSWORD
+    "$STORE_PASSWORD" "$STORE_PASSWORD" >"$SIGN_ROOT/keystore.properties.tmp"
   "${D[@]}" run --rm \
     --user "$HOST_UID:$HOST_GID" \
     -e HOME=/tmp \
     -v "$SIGN_ROOT:/signing" \
-    "$IMAGE" bash -lc \
-    'set -Eeuo pipefail; source /signing/keystore.properties; keytool -genkeypair -v -keystore /signing/release.keystore -storepass "$storePassword" -keypass "$keyPassword" -alias "$keyAlias" -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Moonfin Home Lab, O=Home Lab, C=AU" >/dev/null'
+    --entrypoint /bin/bash \
+    "$IMAGE" -lc \
+    'set -Eeuo pipefail; source /signing/keystore.properties.tmp; keytool -genkeypair -v -keystore /signing/release.keystore.tmp -storepass "$storePassword" -keypass "$keyPassword" -alias "$keyAlias" -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Moonfin Home Lab, O=Home Lab, C=AU" >/dev/null'
+  unset STORE_PASSWORD
+  mv "$SIGN_ROOT/release.keystore.tmp" "$KEYSTORE"
+  mv "$SIGN_ROOT/keystore.properties.tmp" "$PROPERTIES"
   chmod 600 "$KEYSTORE" "$PROPERTIES"
   echo 'DURABLE SIGNING: CREATED'
 fi
 
-printf '\n=== 3. DEPENDENCIES, FORMAT AND ANALYSIS ===\n'
+printf '\n=== 4. DEPENDENCIES, FORMAT AND ANALYSIS ===\n'
 COMMON_DOCKER=(
   --rm
-  --user "$HOST_UID:$HOST_GID"
+  --user 0:0
   -e HOME=/home/builder
   -e PUB_CACHE=/home/builder/.pub-cache
   -e GRADLE_USER_HOME=/home/builder/.gradle
-  -e PATH=/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   -v "$SRC:/workspace"
   -v "$DEV/pub-cache:/home/builder/.pub-cache"
   -v "$DEV/gradle-cache:/home/builder/.gradle"
@@ -143,14 +167,20 @@ COMMON_DOCKER=(
   lib/ui/screens/hubs/homelab_hub_screen.dart \
   lib/ui/screens/hubs/homelab_web_hub_screen_v2_candidate.dart \
   lib/ui/screens/home/homelab_home_composer.dart
+sudo chown -R "$HOST_UID:$HOST_GID" \
+  "$SRC/.dart_tool" "$SRC/build" "$DEV/pub-cache" "$DEV/gradle-cache" 2>/dev/null || true
+sudo chown "$HOST_UID:$HOST_GID" "$SRC/pubspec.lock" 2>/dev/null || true
 [[ -z "$(git status --porcelain)" ]] || fail 'Validation changed committed source.'
 echo 'FORMAT/ANALYSIS PASS'
 
-printf '\n=== 4. BUILD SIGNED ANDROID PHONE/TABLET APK ===\n'
+printf '\n=== 5. BUILD SIGNED ANDROID PHONE/TABLET APK ===\n'
 timeout --signal=TERM --kill-after=30s 45m \
   "${D[@]}" run "${COMMON_DOCKER[@]}" "$IMAGE" flutter build apk \
     --release --flavor mobile-beta \
     --dart-define=DISTRIBUTION_CHANNEL=apk
+
+sudo chown -R "$HOST_UID:$HOST_GID" \
+  "$SRC/.dart_tool" "$SRC/build" "$DEV/pub-cache" "$DEV/gradle-cache" 2>/dev/null || true
 
 SOURCE_APK="$SRC/build/app/outputs/flutter-apk/app-mobile-beta-release.apk"
 [[ -f "$SOURCE_APK" ]] || fail 'Expected Android APK was not produced.'
@@ -160,7 +190,8 @@ install -m 644 "$SOURCE_APK" "$OUT"
 
 "${D[@]}" run --rm \
   -v "$OUT:/candidate.apk:ro" \
-  "$IMAGE" bash -lc \
+  --entrypoint /bin/bash \
+  "$IMAGE" -lc \
   'set -Eeuo pipefail; sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/opt/android-sdk}}"; tool="$(command -v apksigner || find "$sdk" -type f -name apksigner 2>/dev/null | sort -V | tail -n 1)"; [[ -n "$tool" ]]; "$tool" verify --print-certs /candidate.apk' \
   | tee "$RUN/apksigner.txt"
 grep -Fq 'Signer #1 certificate SHA-256 digest:' "$RUN/apksigner.txt" || fail 'APK signing certificate was not verified.'
@@ -173,7 +204,7 @@ else
 fi
 echo "APK BUILD/SIGNING PASS: $OUT"
 
-printf '\n=== 5. APPLY AND VALIDATE SERVER-OWNED MOBILE PROFILE ===\n'
+printf '\n=== 6. APPLY AND VALIDATE SERVER-OWNED MOBILE PROFILE ===\n'
 sudo env PYTHONPATH="$SRC/tooling" python3 \
   "$SRC/tooling/home_lab_android_config.py" apply \
   --backup-dir "$RUN/moonbase"
@@ -181,7 +212,7 @@ CONFIG_APPLIED=1
 sudo env PYTHONPATH="$SRC/tooling" python3 \
   "$SRC/tooling/home_lab_android_config.py" validate
 
-printf '\n=== 6. PUBLISH APK TO THE TAILNET/LAN DOWNLOAD ROUTE ===\n'
+printf '\n=== 7. PUBLISH APK TO THE TAILNET/LAN DOWNLOAD ROUTE ===\n'
 for candidate in "$PLUGIN_ROOT"/Moonbase_* "$PLUGIN_ROOT"/Moonfin*; do
   if [[ -d "$candidate" && -f "$candidate/Moonfin.Server.dll" ]]; then
     PLUGIN_DIR="$candidate"
