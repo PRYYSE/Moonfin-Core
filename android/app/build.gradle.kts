@@ -93,7 +93,7 @@ android {
             versionCode = flutter.versionCode
             versionName = flutter.versionName
             ndk { abiFilters += mobileAbis }
-            manifestPlaceholders["appName"] = "$baseAppName Beta"
+            manifestPlaceholders["appName"] = "$baseAppName Home Lab"
         }
         create("androidTv") {
             dimension = "device"
