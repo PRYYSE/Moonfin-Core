@@ -13,11 +13,13 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 RUN="/srv/appdata/jellyfin/backups/android-release-v1-$STAMP"
 LOG="$DEV/logs/android-release-v1-$STAMP.log"
 PUBLIC_NAME=Moonfin_HomeLab_Android_v1.apk
+NDK_CACHE="$DEV/android-sdk-ndk-27.0.12077973"
 
 mkdir -p "$DEV/logs" "$DEV/state" "$DEV/output" \
   "$DEV/android-builder-home/.pub-cache" \
   "$DEV/android-builder-home/.gradle" \
-  "$DEV/android-builder-home/.android"
+  "$DEV/android-builder-home/.android" \
+  "$NDK_CACHE"
 exec > >(tee -a "$LOG") 2>&1
 
 fail() {
@@ -180,9 +182,20 @@ else
 fi
 
 printf '\n=== 4. DEPENDENCIES, CONTROLLED FORMAT COMMIT AND ANALYSIS ===\n'
+cat >"$DEV/android-builder-home/.gradle/gradle.properties" <<'GRADLE_PROPERTIES'
+org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
+org.gradle.workers.max=2
+org.gradle.parallel=false
+org.gradle.daemon=false
+kotlin.compiler.execution.strategy=in-process
+GRADLE_PROPERTIES
+
 COMMON_DOCKER=(
   --rm
   --user 0:0
+  --memory 4g
+  --memory-swap 5g
+  --cpus 3
   --entrypoint /bin/bash
   -e HOME=/home/builder
   -e PUB_CACHE=/home/builder/.pub-cache
@@ -192,6 +205,7 @@ COMMON_DOCKER=(
   -e GIT_CONFIG_VALUE_0=/home/flutter/sdks/flutter
   -v "$SRC:/workspace"
   -v "$DEV/android-builder-home:/home/builder"
+  -v "$NDK_CACHE:/home/flutter/sdks/android-sdk/ndk/27.0.12077973"
   -v "$KEYSTORE:/workspace/android/app/release.keystore:ro"
   -v "$PROPERTIES:/workspace/android/keystore.properties:ro"
   -w /workspace
@@ -207,6 +221,10 @@ FORMAT_PATHS=(
   lib/ui/screens/hubs/homelab_web_hub_screen_v2_candidate.dart
   lib/ui/screens/home/homelab_home_composer.dart
 )
+
+run_android sdkmanager --install 'ndk;27.0.12077973'
+[[ -f "$NDK_CACHE/source.properties" ]] || fail 'Persistent Android NDK 27 installation is incomplete.'
+echo 'PERSISTENT NDK 27 PASS'
 
 run_android flutter pub get
 run_android dart format "${FORMAT_PATHS[@]}"
