@@ -484,8 +484,7 @@ def apply(token, backup_dir, theme_path, preview_themes_dir=None):
         atomic_json(backup / 'theme-before.json', theme_before)
 
     theme = json.loads(Path(theme_path).read_text())
-    request_json('POST', '/Moonfin/Admin/Themes', token, theme)
-
+    preview_themes = load_preview_themes(preview_themes_dir)
     users = request_json('GET', '/Users', token)
     defaults = request_json('GET', '/Moonfin/Defaults', token) or {}
     manifest = {
@@ -493,9 +492,10 @@ def apply(token, backup_dir, theme_path, preview_themes_dir=None):
         'users': [],
         'previewThemes': [],
     }
-    preview_themes = load_preview_themes(preview_themes_dir)
 
     try:
+        request_json('POST', '/Moonfin/Admin/Themes', token, theme)
+
         for path, preview_theme in preview_themes:
             preview_id = str(preview_theme['id'])
             before = request_json(
