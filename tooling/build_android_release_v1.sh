@@ -13,7 +13,7 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 RUN="/srv/appdata/jellyfin/backups/android-release-v1-$STAMP"
 LOG="$DEV/logs/android-release-v1-$STAMP.log"
 PUBLIC_NAME=Moonfin_HomeLab_Android_v1.apk
-NDK_CACHE="$DEV/android-sdk-ndk-27.0.12077973"
+NDK_CACHE="$DEV/android-sdk-ndk-cache"
 
 mkdir -p "$DEV/logs" "$DEV/state" "$DEV/output" \
   "$DEV/android-builder-home/.pub-cache" \
@@ -207,7 +207,7 @@ COMMON_DOCKER=(
   -e GIT_CONFIG_VALUE_0=/home/flutter/sdks/flutter
   -v "$SRC:/workspace"
   -v "$DEV/android-builder-home:/home/builder"
-  -v "$NDK_CACHE:/home/flutter/sdks/android-sdk/ndk/27.0.12077973"
+  -v "$NDK_CACHE:/home/flutter/sdks/android-sdk/ndk"
   -v "$KEYSTORE:/workspace/android/app/release.keystore:ro"
   -v "$PROPERTIES:/workspace/android/keystore.properties:ro"
   -w /workspace
@@ -225,7 +225,7 @@ FORMAT_PATHS=(
 )
 
 run_android sdkmanager --install 'ndk;27.0.12077973'
-[[ -f "$NDK_CACHE/source.properties" ]] || fail 'Persistent Android NDK 27 installation is incomplete.'
+[[ -f "$NDK_CACHE/27.0.12077973/source.properties" ]] || fail 'Persistent Android NDK 27 installation is incomplete.'
 echo 'PERSISTENT NDK 27 PASS'
 
 run_android flutter pub get
