@@ -14,7 +14,10 @@ RUN="/srv/appdata/jellyfin/backups/android-release-v1-$STAMP"
 LOG="$DEV/logs/android-release-v1-$STAMP.log"
 PUBLIC_NAME=Moonfin_HomeLab_Android_v1.apk
 
-mkdir -p "$DEV/logs" "$DEV/state" "$DEV/pub-cache" "$DEV/gradle-cache" "$DEV/output"
+mkdir -p "$DEV/logs" "$DEV/state" "$DEV/output" \
+  "$DEV/android-builder-home/.pub-cache" \
+  "$DEV/android-builder-home/.gradle" \
+  "$DEV/android-builder-home/.android"
 exec > >(tee -a "$LOG") 2>&1
 
 fail() {
@@ -100,15 +103,46 @@ if ! "${D[@]}" image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "Pulling pinned Android build image: $IMAGE"
   "${D[@]}" pull "$IMAGE"
 fi
-"${D[@]}" run --rm --entrypoint /bin/bash "$IMAGE" -lc '
+"${D[@]}" run --rm --entrypoint /bin/bash "$IMAGE" -c '
   set -Eeuo pipefail
-  command -v flutter >/dev/null
-  command -v java >/dev/null
-  command -v keytool >/dev/null
-  command -v sdkmanager >/dev/null
-  [[ -d "${ANDROID_HOME:?ANDROID_HOME is unset}" ]]
-  flutter --version | grep -Fq "Flutter 3.44.1"
-  java -version 2>&1 | grep -Fq "17."
+  for tool in flutter java keytool sdkmanager; do
+    resolved="$(command -v "$tool" || true)"
+    if [[ -z "$resolved" ]]; then
+      echo "ANDROID TOOLCHAIN FAILED: $tool is missing" >&2
+      exit 1
+    fi
+    echo "TOOL PASS: $tool -> $resolved"
+  done
+  [[ -d "${ANDROID_HOME:?ANDROID_HOME is unset}" ]] || {
+    echo "ANDROID TOOLCHAIN FAILED: ANDROID_HOME is unavailable" >&2
+    exit 1
+  }
+  [[ -d "$ANDROID_HOME/platforms/android-36" ]] || {
+    echo "ANDROID TOOLCHAIN FAILED: Android platform 36 is missing" >&2
+    exit 1
+  }
+  [[ -d "$ANDROID_HOME/ndk/28.2.13676358" ]] || {
+    echo "ANDROID TOOLCHAIN FAILED: NDK 28.2.13676358 is missing" >&2
+    exit 1
+  }
+  apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -perm -u+x 2>/dev/null | sort -V | tail -n 1)"
+  [[ -n "$apksigner" ]] || {
+    echo "ANDROID TOOLCHAIN FAILED: apksigner is missing" >&2
+    exit 1
+  }
+  echo "TOOL PASS: apksigner -> $apksigner"
+  flutter --version > /tmp/flutter-version.txt
+  cat /tmp/flutter-version.txt
+  grep -F "Flutter 3.44.1" /tmp/flutter-version.txt >/dev/null || {
+    echo "ANDROID TOOLCHAIN FAILED: wrong Flutter version" >&2
+    exit 1
+  }
+  java -version > /tmp/java-version.txt 2>&1
+  cat /tmp/java-version.txt
+  grep -F "17." /tmp/java-version.txt >/dev/null || {
+    echo "ANDROID TOOLCHAIN FAILED: Java 17 is required" >&2
+    exit 1
+  }
   printf "ANDROID TOOLCHAIN PASS: Flutter 3.44.1 + Java 17 + SDK + keytool\n"
 '
 
@@ -132,7 +166,7 @@ else
     -e HOME=/tmp \
     -v "$SIGN_ROOT:/signing" \
     --entrypoint /bin/bash \
-    "$IMAGE" -lc \
+    "$IMAGE" -c \
     'set -Eeuo pipefail; source /signing/keystore.properties.tmp; keytool -genkeypair -v -keystore /signing/release.keystore.tmp -storepass "$storePassword" -keypass "$keyPassword" -alias "$keyAlias" -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Moonfin Home Lab, O=Home Lab, C=AU" >/dev/null'
   unset STORE_PASSWORD
   mv "$SIGN_ROOT/release.keystore.tmp" "$KEYSTORE"
@@ -144,13 +178,15 @@ fi
 printf '\n=== 4. DEPENDENCIES, FORMAT AND ANALYSIS ===\n'
 COMMON_DOCKER=(
   --rm
-  --user 0:0
+  --user "$HOST_UID:$HOST_GID"
   -e HOME=/home/builder
   -e PUB_CACHE=/home/builder/.pub-cache
   -e GRADLE_USER_HOME=/home/builder/.gradle
+  -e GIT_CONFIG_COUNT=1
+  -e GIT_CONFIG_KEY_0=safe.directory
+  -e GIT_CONFIG_VALUE_0=/home/flutter/sdks/flutter
   -v "$SRC:/workspace"
-  -v "$DEV/pub-cache:/home/builder/.pub-cache"
-  -v "$DEV/gradle-cache:/home/builder/.gradle"
+  -v "$DEV/android-builder-home:/home/builder"
   -v "$KEYSTORE:/workspace/android/app/release.keystore:ro"
   -v "$PROPERTIES:/workspace/android/keystore.properties:ro"
   -w /workspace
@@ -167,9 +203,6 @@ COMMON_DOCKER=(
   lib/ui/screens/hubs/homelab_hub_screen.dart \
   lib/ui/screens/hubs/homelab_web_hub_screen_v2_candidate.dart \
   lib/ui/screens/home/homelab_home_composer.dart
-sudo chown -R "$HOST_UID:$HOST_GID" \
-  "$SRC/.dart_tool" "$SRC/build" "$DEV/pub-cache" "$DEV/gradle-cache" 2>/dev/null || true
-sudo chown "$HOST_UID:$HOST_GID" "$SRC/pubspec.lock" 2>/dev/null || true
 [[ -z "$(git status --porcelain)" ]] || fail 'Validation changed committed source.'
 echo 'FORMAT/ANALYSIS PASS'
 
@@ -178,9 +211,6 @@ timeout --signal=TERM --kill-after=30s 45m \
   "${D[@]}" run "${COMMON_DOCKER[@]}" "$IMAGE" flutter build apk \
     --release --flavor mobile-beta \
     --dart-define=DISTRIBUTION_CHANNEL=apk
-
-sudo chown -R "$HOST_UID:$HOST_GID" \
-  "$SRC/.dart_tool" "$SRC/build" "$DEV/pub-cache" "$DEV/gradle-cache" 2>/dev/null || true
 
 SOURCE_APK="$SRC/build/app/outputs/flutter-apk/app-mobile-beta-release.apk"
 [[ -f "$SOURCE_APK" ]] || fail 'Expected Android APK was not produced.'
@@ -191,7 +221,7 @@ install -m 644 "$SOURCE_APK" "$OUT"
 "${D[@]}" run --rm \
   -v "$OUT:/candidate.apk:ro" \
   --entrypoint /bin/bash \
-  "$IMAGE" -lc \
+  "$IMAGE" -c \
   'set -Eeuo pipefail; sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/opt/android-sdk}}"; tool="$(command -v apksigner || find "$sdk" -type f -name apksigner 2>/dev/null | sort -V | tail -n 1)"; [[ -n "$tool" ]]; "$tool" verify --print-certs /candidate.apk' \
   | tee "$RUN/apksigner.txt"
 grep -Fq 'Signer #1 certificate SHA-256 digest:' "$RUN/apksigner.txt" || fail 'APK signing certificate was not verified.'
