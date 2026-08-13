@@ -74,6 +74,10 @@ restore_after_failure() {
   fi
   rm -f "$SIGN_ROOT/release.keystore.tmp" \
     "$SIGN_ROOT/keystore.properties.tmp" 2>/dev/null || true
+  sudo chown -R "$HOST_UID:$HOST_GID" \
+    "$DEV/android-builder-home" \
+    "$SRC/.dart_tool" "$SRC/build" 2>/dev/null || true
+  sudo chown "$HOST_UID:$HOST_GID" "$SRC/pubspec.lock" 2>/dev/null || true
   if [[ $rc -ne 0 ]]; then
     echo
     echo '=== ANDROID RELEASE V1 FAILED: AUTOMATIC RESTORE ===' >&2
@@ -178,7 +182,8 @@ fi
 printf '\n=== 4. DEPENDENCIES, FORMAT AND ANALYSIS ===\n'
 COMMON_DOCKER=(
   --rm
-  --user "$HOST_UID:$HOST_GID"
+  --user 0:0
+  --entrypoint /bin/bash
   -e HOME=/home/builder
   -e PUB_CACHE=/home/builder/.pub-cache
   -e GRADLE_USER_HOME=/home/builder/.gradle
@@ -192,25 +197,39 @@ COMMON_DOCKER=(
   -w /workspace
 )
 
-"${D[@]}" run "${COMMON_DOCKER[@]}" "$IMAGE" flutter pub get
-"${D[@]}" run "${COMMON_DOCKER[@]}" "$IMAGE" dart format \
+run_android() {
+  "${D[@]}" run "${COMMON_DOCKER[@]}" "$IMAGE" \
+    -c 'exec "$@"' android-builder "$@"
+}
+
+run_android flutter pub get
+run_android dart format \
   --output=none --set-exit-if-changed \
   lib/ui/screens/hubs/homelab_hub_screen.dart \
   lib/ui/screens/hubs/homelab_web_hub_screen_v2_candidate.dart \
   lib/ui/screens/home/homelab_home_composer.dart
-"${D[@]}" run "${COMMON_DOCKER[@]}" "$IMAGE" flutter analyze \
+run_android flutter analyze \
   --no-fatal-infos --no-fatal-warnings \
   lib/ui/screens/hubs/homelab_hub_screen.dart \
   lib/ui/screens/hubs/homelab_web_hub_screen_v2_candidate.dart \
   lib/ui/screens/home/homelab_home_composer.dart
+sudo chown -R "$HOST_UID:$HOST_GID" \
+  "$DEV/android-builder-home" \
+  "$SRC/.dart_tool" "$SRC/build" 2>/dev/null || true
+sudo chown "$HOST_UID:$HOST_GID" "$SRC/pubspec.lock" 2>/dev/null || true
 [[ -z "$(git status --porcelain)" ]] || fail 'Validation changed committed source.'
 echo 'FORMAT/ANALYSIS PASS'
 
 printf '\n=== 5. BUILD SIGNED ANDROID PHONE/TABLET APK ===\n'
 timeout --signal=TERM --kill-after=30s 45m \
-  "${D[@]}" run "${COMMON_DOCKER[@]}" "$IMAGE" flutter build apk \
+  "${D[@]}" run "${COMMON_DOCKER[@]}" "$IMAGE" \
+    -c 'exec "$@"' android-builder flutter build apk \
     --release --flavor mobile-beta \
     --dart-define=DISTRIBUTION_CHANNEL=apk
+
+sudo chown -R "$HOST_UID:$HOST_GID" \
+  "$DEV/android-builder-home" \
+  "$SRC/.dart_tool" "$SRC/build" 2>/dev/null || true
 
 SOURCE_APK="$SRC/build/app/outputs/flutter-apk/app-mobile-beta-release.apk"
 [[ -f "$SOURCE_APK" ]] || fail 'Expected Android APK was not produced.'
