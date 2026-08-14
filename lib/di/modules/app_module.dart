@@ -31,10 +31,13 @@ import '../../data/services/cast/remote_session_cast_provider.dart';
 import '../../data/services/plugin_sync_service.dart';
 import '../../data/services/custom_external_lists_service.dart';
 import '../../data/services/row_data_source.dart';
+import '../../data/services/seerr/seerr_discovery_catalogue_service.dart';
+import '../../data/services/seerr/seerr_discovery_personalisation_service.dart';
 import '../../data/services/socket_handler.dart';
 import '../../data/services/sync_service.dart';
 import '../../data/services/theme_music_service.dart';
 import '../../data/viewmodels/media_bar_view_model.dart';
+import '../../data/viewmodels/seerr_deep_discovery_view_model.dart';
 import '../../data/viewmodels/seerr_discover_view_model.dart';
 import '../../playback/external_player_service.dart';
 import '../../preference/seerr_preferences.dart';
@@ -51,6 +54,9 @@ void resetUserScopedSingletons() {
     }
   }
 
+  unregister<SeerrDeepDiscoveryViewModel>();
+  unregister<SeerrDiscoveryPersonalisationService>();
+  unregister<SeerrDiscoveryCatalogueService>();
   unregister<SeerrDiscoverViewModel>();
   unregister<SeerrRepository>();
   unregister<HomeViewModel>();
@@ -194,11 +200,29 @@ void _registerUserScopedSingletons() {
       _getIt<PlaybackArbiter>(),
     ),
   );
+  _getIt.registerLazySingleton<SeerrDiscoveryCatalogueService>(
+    () => SeerrDiscoveryCatalogueService(),
+  );
+  _getIt.registerLazySingleton<SeerrDiscoveryPersonalisationService>(
+    () => SeerrDiscoveryPersonalisationService(
+      serverId: _getIt<MediaServerClient>().baseUrl,
+      rowDataSource: _getIt<RowDataSource>(),
+    ),
+  );
   _getIt.registerLazySingletonAsync<SeerrRepository>(
     () async => SeerrRepository(
       _getIt<PreferenceStore>(),
       _getIt<SessionRepository>(),
       _getIt<MediaServerClient>(),
+    ),
+  );
+  _getIt.registerLazySingletonAsync<SeerrDeepDiscoveryViewModel>(
+    () async => SeerrDeepDiscoveryViewModel(
+      catalogueService: _getIt<SeerrDiscoveryCatalogueService>(),
+      repository: await _getIt.getAsync<SeerrRepository>(),
+      personalisation: _getIt<SeerrDiscoveryPersonalisationService>(),
+      preferences: _getIt<SeerrPreferences>(),
+      serverId: _getIt<MediaServerClient>().baseUrl,
     ),
   );
   _getIt.registerLazySingletonAsync<SeerrDiscoverViewModel>(
