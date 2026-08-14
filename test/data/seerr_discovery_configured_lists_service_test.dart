@@ -47,16 +47,19 @@ SeerrDiscoveryCatalogue _catalogue() => SeerrDiscoveryCatalogue(
       title: 'Lists',
       initialLaneBudget: 16,
       minimumLaneCount: 8,
+      poolBudgets: const {
+        'smart-collections': 12,
+        'configured-lists': 6,
+      },
       sections: List.generate(
         20,
         (index) => SeerrDiscoverySection(
-          id: 'placeholder-$index',
-          title: 'Placeholder $index',
-          query: SeerrDiscoveryQuery(
-            source: SeerrDiscoverySource.externalList,
-            mediaType: 'all',
-            listProvider: 'server',
-            listId: 'placeholder-$index',
+          id: 'smart-$index',
+          title: 'Smart $index',
+          pool: 'smart-collections',
+          query: const SeerrDiscoveryQuery(
+            source: SeerrDiscoverySource.discoverMovies,
+            mediaType: 'movie',
           ),
         ),
       ),
@@ -77,7 +80,7 @@ void main() {
       _config(
         section: 'letterboxd-row',
         source: 'letterboxd',
-        display: 'Letterboxd Watchlist',
+        display: 'Letterboxd Activity',
       ),
       _config(section: 'editorial-row', source: 'tmdb_chart'),
       _config(section: 'disabled-row', source: 'imdb', enabled: false),
@@ -93,7 +96,7 @@ void main() {
       'IMDb Picks',
       'MDBList Picks',
       'TMDb Collection',
-      'Letterboxd Watchlist',
+      'Letterboxd Activity',
     });
     expect(sections.map((section) => section.query.listProvider).toSet(), {
       'imdb',
@@ -103,7 +106,7 @@ void main() {
     });
   });
 
-  test('replaces placeholder Lists tab with actual configured sources', () {
+  test('prepends configured sources without replacing smart collections', () {
     final config = _config(
       section: 'movie-collection',
       source: 'tmdb',
@@ -118,20 +121,48 @@ void main() {
     final merged = service.mergeIntoCatalogue(_catalogue());
     expect(merged.tabs.map((tab) => tab.id), ['movies', 'lists']);
     final lists = merged.tabs.last;
-    expect(lists.sections.length, 1);
-    expect(lists.sections.single.title, 'Movie Collection');
-    expect(lists.sections.single.query.mediaType, 'movie');
-    expect(lists.sections.single.query.listId, config.stableId);
+    expect(lists.sections.length, 21);
+    expect(lists.sections.first.title, 'Movie Collection');
+    expect(lists.sections.first.query.mediaType, 'movie');
+    expect(lists.sections.first.query.listId, config.stableId);
+    expect(lists.sections.skip(1).map((section) => section.id),
+        List.generate(20, (index) => 'smart-$index'));
+    expect(lists.initialLaneBudget, 16);
+    expect(lists.minimumLaneCount, 8);
+    expect(lists.poolBudgets['smart-collections'], 12);
+    expect(lists.poolBudgets['configured-lists'], 1);
   });
 
-  test('hides Lists destination when no real list source is configured', () {
+  test('keeps smart Lists destination when no external list is configured', () {
     final service = SeerrDiscoveryConfiguredListsService.forTesting(
       readConfigs: () => [_config(section: 'editorial', source: 'tmdb_chart')],
       fetchItems: (_, {forceRefresh = false}) async => const [],
     );
 
     final merged = service.mergeIntoCatalogue(_catalogue());
-    expect(merged.tabs.map((tab) => tab.id), ['movies']);
+    expect(merged.tabs.map((tab) => tab.id), ['movies', 'lists']);
+    expect(merged.tabs.last.sections.length, 20);
+    expect(merged.tabs.last.sections.first.id, 'smart-0');
+  });
+
+  test('configured-list pool is capped so it cannot monopolise a session', () {
+    final configs = List.generate(
+      10,
+      (index) => _config(
+        section: 'list-$index',
+        source: 'mdblist',
+        display: 'List $index',
+      ),
+    );
+    final service = SeerrDiscoveryConfiguredListsService.forTesting(
+      readConfigs: () => configs,
+      fetchItems: (_, {forceRefresh = false}) async => const [],
+    );
+
+    final lists = service.mergeIntoCatalogue(_catalogue()).tabs.last;
+    expect(lists.sections.length, 30);
+    expect(lists.poolBudgets['configured-lists'], 6);
+    expect(lists.poolBudgets['smart-collections'], 12);
   });
 
   test(
