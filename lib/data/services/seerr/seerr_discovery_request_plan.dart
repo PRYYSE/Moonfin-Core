@@ -43,6 +43,15 @@ class SeerrDiscoveryRequestPlan {
     int page = 1,
     DateTime? now,
   }) {
+    // Semantic names exist only in authoring catalogues. Running them without
+    // compilation would silently drop the intended keyword/provider constraint
+    // and return a misleadingly broad result set, so fail closed.
+    if (query.keywordNames.isNotEmpty ||
+        query.excludeKeywordNames.isNotEmpty ||
+        query.providerNames.isNotEmpty) {
+      return null;
+    }
+
     final safePage = page < 1 ? 1 : page;
     final filters = SeerrDiscoveryFilterPolicy.sanitise(
       query.filters,
