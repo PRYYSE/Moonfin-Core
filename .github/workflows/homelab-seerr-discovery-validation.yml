@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -38,10 +38,9 @@ jobs:
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
 
-      - name: Apply networking integration in CI checkout
+      - name: Confirm networking integration is already committed
         run: |
-          python tooling/discovery/apply_discovery_network_patch.py \
-            --backup-dir "$RUNNER_TEMP/moonfin-seerr-network-backup"
+          python tooling/discovery/apply_discovery_network_patch.py --check
 
       - uses: subosito/flutter-action@v2
         with:
@@ -51,9 +50,9 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Format Discovery and patched networking source
+      - name: Check Discovery source formatting
         run: |
-          dart format \
+          dart format --output=none --set-exit-if-changed \
             lib/data/services/seerr/seerr_discovery_*.dart \
             lib/data/viewmodels/seerr_discovery_collection_controller.dart \
             lib/data/services/seerr/seerr_http_client.dart \
@@ -62,24 +61,6 @@ jobs:
 
       - name: Run focused Discovery tests
         run: flutter test test/data/seerr_discovery_*.dart
-
-      - name: Commit validated formatting and network integration
-        if: success()
-        run: |
-          if git diff --quiet; then
-            echo "No validated source changes to commit."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            lib/data/services/seerr/seerr_discovery_*.dart \
-            lib/data/viewmodels/seerr_discovery_collection_controller.dart \
-            lib/data/services/seerr/seerr_http_client.dart \
-            lib/data/repositories/seerr_repository.dart \
-            test/data/seerr_discovery_*.dart
-          git commit -m "chore(discovery): commit validated formatting and network integration [skip ci]"
-          git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
