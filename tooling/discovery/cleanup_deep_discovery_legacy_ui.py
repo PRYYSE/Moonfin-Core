@@ -26,8 +26,13 @@ def remove_between(text: str, start: str, end: str, label: str) -> str:
 
 
 def clean(text: str) -> str:
-    # The old view model is only needed by SeerrDiscoverRow/genre/network/studio
-    # builders. The deep landing page uses SeerrDeepDiscoveryRow exclusively.
+    # The old category cards were the only users of CachedNetworkImage and the
+    # old view model. The deep landing page renders SeerrDeepDiscoveryRow media
+    # cards exclusively, so both imports become obsolete with those builders.
+    text = text.replace(
+        "import 'package:cached_network_image/cached_network_image.dart';\n",
+        "",
+    )
     text = text.replace(
         "import '../../../data/viewmodels/seerr_discover_view_model.dart';\n",
         "",
