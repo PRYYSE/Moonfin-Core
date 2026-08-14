@@ -18,16 +18,14 @@ class SeerrDiscoveryComposer {
     Map<String, int> sessionsSinceSeen = const {},
     bool Function(SeerrDiscoverySection section)? isEligible,
   }) {
-    final budget = tab.initialLaneBudget.clamp(1, tab.sections.length);
-    if (tab.sections.length <= budget && sessionsSinceSeen.isEmpty) {
-      return tab.sections
-          .where((section) => isEligible?.call(section) ?? true)
-          .toList(growable: false);
-    }
+    if (tab.sections.isEmpty) return const [];
 
+    final budget = tab.initialLaneBudget.clamp(1, tab.sections.length).toInt();
     final eligible = tab.sections
         .where((section) => isEligible?.call(section) ?? true)
         .toList(growable: false);
+    if (eligible.isEmpty) return const [];
+
     final anchors = eligible.where((section) => section.isAnchor).toList();
     final optional = eligible.where((section) => !section.isAnchor).toList();
 
