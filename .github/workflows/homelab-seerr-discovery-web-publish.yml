@@ -15,7 +15,8 @@ permissions:
 env:
   SOURCE_SHA: '0079647902b54b78d71b048a4a7572c51cba49f2'
   SOURCE_RUN_ID: '31790516737'
-  RELEASE_TAG: 'homelab-seerr-discovery-web-candidate-0079647902b5'
+  ARTIFACT_BRANCH: 'homelab-artifacts'
+  ARTIFACT_DIR: 'seerr-discovery/0079647902b5'
   ASSET_NAME: 'Moonfin_HomeLab_Seerr_Discovery_Web_0079647902b5.tar.gz'
 
 jobs:
@@ -32,7 +33,7 @@ jobs:
           name: homelab-seerr-discovery-web-0079647902b5
           path: candidate
 
-      - name: Verify exact downloaded candidate before publication
+      - name: Verify exact downloaded candidate
         run: |
           set -Eeuo pipefail
           cd candidate
@@ -53,49 +54,77 @@ jobs:
              .authoringLaneCount == 486' \
             "$MANIFEST" >/dev/null
 
-      - name: Refuse to replace an existing immutable candidate
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Prepare public immutable artifact files
         run: |
           set -Eeuo pipefail
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release $RELEASE_TAG already exists; refusing replacement." >&2
-            exit 1
+          OUT="$RUNNER_TEMP/public/$ARTIFACT_DIR"
+          mkdir -p "$OUT"
+          cp "candidate/$ASSET_NAME.sha256" "$OUT/"
+          cp candidate/build/web/build-manifest.json "$OUT/"
+          cp candidate/build/web/homelab-build-manifest.json "$OUT/"
+          cp candidate/build/web/config.json "$OUT/"
+
+          # Preserve the exact candidate tar bytes while keeping individual git
+          # objects comfortably below GitHub's hard 100 MB file limit.
+          split -b 25M -d -a 2 \
+            "candidate/$ASSET_NAME" \
+            "$OUT/$ASSET_NAME.part-"
+          (cd "$OUT" && sha256sum "$ASSET_NAME".part-* > "$ASSET_NAME.parts.sha256")
+          printf '%s\n' "$SOURCE_SHA" > "$OUT/source-sha.txt"
+
+          cat > "$RUNNER_TEMP/public/README.md" <<'EOF'
+          # Home Lab immutable build artifacts
+
+          This branch contains split public build artifacts used by the Home Lab deployment tooling.
+          Source/product development remains on normal source branches.
+          EOF
+
+      - name: Publish exact bytes to dedicated public artifact branch
+        env:
+          GH_PUSH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          REPO="$RUNNER_TEMP/artifact-repo"
+          mkdir -p "$REPO"
+          cd "$REPO"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git ls-remote --exit-code --heads origin "$ARTIFACT_BRANCH" >/dev/null 2>&1; then
+            git fetch -q --depth 1 origin "$ARTIFACT_BRANCH"
+            git checkout -q -B "$ARTIFACT_BRANCH" FETCH_HEAD
+          else
+            git checkout -q --orphan "$ARTIFACT_BRANCH"
           fi
 
-      - name: Create public prerelease from exact artifact
-        uses: softprops/action-gh-release@v2
-        with:
-          token: ${{ github.token }}
-          tag_name: ${{ env.RELEASE_TAG }}
-          target_commitish: ${{ env.SOURCE_SHA }}
-          name: Home Lab Seerr Discovery Web Candidate 0079647902b5
-          prerelease: true
-          body: |
-            Exact Home Lab Web candidate built from validated Discovery source `0079647902b54b78d71b048a4a7572c51cba49f2`.
+          mkdir -p "$ARTIFACT_DIR"
+          if [[ -f "$ARTIFACT_DIR/$ASSET_NAME.sha256" ]]; then
+            cmp -s \
+              "$ARTIFACT_DIR/$ASSET_NAME.sha256" \
+              "$RUNNER_TEMP/public/$ARTIFACT_DIR/$ASSET_NAME.sha256" || {
+                echo "Immutable candidate path already exists with a different checksum." >&2
+                exit 1
+              }
+          fi
 
-            Not promoted to live. Includes schema-v2 Discovery UI, 486-lane authoring-model support, personalised/configured-list See All, rotation persistence, rich browse filters, smart Lists and the full catalogue index.
-          files: |
-            candidate/Moonfin_HomeLab_Seerr_Discovery_Web_0079647902b5.tar.gz
-            candidate/Moonfin_HomeLab_Seerr_Discovery_Web_0079647902b5.tar.gz.sha256
-            candidate/build/web/build-manifest.json
-            candidate/build/web/homelab-build-manifest.json
-            candidate/build/web/config.json
-          fail_on_unmatched_files: true
+          cp -a "$RUNNER_TEMP/public/." .
+          git add README.md "$ARTIFACT_DIR"
+          if git diff --cached --quiet; then
+            echo "Exact artifact is already published."
+          else
+            git commit -q -m "artifact(discovery): publish Web candidate 0079647902b5"
+            git push -q origin "HEAD:$ARTIFACT_BRANCH"
+          fi
 
-      - name: Verify published prerelease and assets
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Verify public raw artifact branch metadata
         run: |
           set -Eeuo pipefail
-          json="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease,tagName,assets)"
-          printf '%s' "$json" | jq -e \
-            --arg tag "$RELEASE_TAG" \
-            --arg asset "$ASSET_NAME" \
-            '.isPrerelease == true and
-             .tagName == $tag and
-             ([.assets[].name] | index($asset) != null) and
-             ([.assets[].name] | index($asset + ".sha256") != null) and
-             ([.assets[].name] | index("homelab-build-manifest.json") != null) and
-             ([.assets[].name] | index("config.json") != null)' >/dev/null
-          echo "published_release_tag=$RELEASE_TAG"
+          BASE="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$ARTIFACT_BRANCH/$ARTIFACT_DIR"
+          curl -fsSL "$BASE/source-sha.txt" | grep -Fx "$SOURCE_SHA"
+          curl -fsSL "$BASE/$ASSET_NAME.sha256" > /tmp/candidate.sha256
+          curl -fsSL "$BASE/$ASSET_NAME.parts.sha256" > /tmp/parts.sha256
+          test -s /tmp/candidate.sha256
+          test -s /tmp/parts.sha256
+          echo "public_artifact_base=$BASE"
