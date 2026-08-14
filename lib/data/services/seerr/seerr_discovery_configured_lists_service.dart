@@ -160,6 +160,38 @@ class SeerrDiscoveryConfiguredListsService {
     );
   }
 
+  Future<SeerrDiscoverPage> loadQuery(
+    SeerrDiscoveryQuery query, {
+    int page = 1,
+    bool forceRefresh = false,
+  }) {
+    if (query.source != SeerrDiscoverySource.externalList) {
+      throw ArgumentError.value(
+        query.source,
+        'query.source',
+        'Configured Lists only execute externalList queries',
+      );
+    }
+    final stableId = query.listId;
+    if (stableId == null || stableId.isEmpty) {
+      throw StateError('Configured external-list query has no listId');
+    }
+    return load(
+      SeerrDiscoverySection(
+        id: 'expanded-configured-list',
+        title: 'Configured List',
+        query: query,
+        minItems: 1,
+        previewLimit: pageSize,
+        pool: 'configured-lists',
+        dedupGroup: 'configured-lists-expanded',
+        sessionDedup: false,
+      ),
+      page: page,
+      forceRefresh: forceRefresh,
+    );
+  }
+
   void clear() => _itemsByStableId.clear();
 
   void _refreshConfigIndexIfNeeded(String stableId) {

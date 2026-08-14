@@ -7,6 +7,7 @@ import 'package:moonfin_design/moonfin_design.dart';
 import '../../../data/repositories/seerr_repository.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../../../data/services/seerr/seerr_discovery_browse_refinements.dart';
+import '../../../data/services/seerr/seerr_discovery_configured_lists_service.dart';
 import '../../../data/services/seerr/seerr_discovery_schema.dart';
 import '../../../data/viewmodels/seerr_browse_view_model.dart';
 import '../../../preference/preference_constants.dart';
@@ -78,6 +79,12 @@ class _SeerrBrowseScreenState extends State<SeerrBrowseScreen> {
       mediaType: widget.baseQuery?.mediaType ?? widget.mediaType ?? 'movie',
       filterType: widget.filterType,
       baseQuery: widget.baseQuery,
+      configuredLists:
+          widget.baseQuery?.source == SeerrDiscoverySource.externalList &&
+              GetIt.instance
+                  .isRegistered<SeerrDiscoveryConfiguredListsService>()
+          ? GetIt.instance<SeerrDiscoveryConfiguredListsService>()
+          : null,
     );
     vm.addListener(_onChanged);
 
@@ -158,6 +165,7 @@ class _SeerrBrowseScreenState extends State<SeerrBrowseScreen> {
             onFilterChanged: (f) => _vm?.setFilter(f),
             onLetterChanged: (l) => _vm?.setLetterFilter(l),
             onHome: () => context.go(Destinations.home),
+            showSort: _vm?.supportsSort ?? true,
             onSort: () => _showSortDialog(context),
             showRefine: _vm?.supportsRichRefinements ?? false,
             refinementCount: _vm?.refinementCount ?? 0,
@@ -391,6 +399,7 @@ class _SeerrBrowseHeader extends StatelessWidget {
   final ValueChanged<SeerrBrowseFilter> onFilterChanged;
   final ValueChanged<String> onLetterChanged;
   final VoidCallback onHome;
+  final bool showSort;
   final VoidCallback onSort;
   final bool showRefine;
   final int refinementCount;
@@ -406,6 +415,7 @@ class _SeerrBrowseHeader extends StatelessWidget {
     required this.onFilterChanged,
     required this.onLetterChanged,
     required this.onHome,
+    required this.showSort,
     required this.onSort,
     required this.showRefine,
     required this.refinementCount,
@@ -458,7 +468,7 @@ class _SeerrBrowseHeader extends StatelessWidget {
             children: [
               _ToolbarButton(icon: Icons.home, onTap: onHome),
               const SizedBox(width: 4),
-              _ToolbarButton(icon: Icons.sort, onTap: onSort),
+              if (showSort) _ToolbarButton(icon: Icons.sort, onTap: onSort),
               if (showRefine) ...[
                 const SizedBox(width: 4),
                 Stack(

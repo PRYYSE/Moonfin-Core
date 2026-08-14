@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../repositories/seerr_repository.dart';
 import '../services/seerr/seerr_api_models.dart';
 import '../services/seerr/seerr_discovery_browse_refinements.dart';
+import '../services/seerr/seerr_discovery_configured_lists_service.dart';
 import '../services/seerr/seerr_discovery_refinement_policy.dart';
 import '../services/seerr/seerr_discovery_schema.dart';
 import '../services/seerr/seerr_discovery_sort_policy.dart';
@@ -94,6 +95,7 @@ class SeerrBrowseViewModel extends ChangeNotifier {
   final String? filterId;
   final String mediaType;
   final String? filterType;
+  final SeerrDiscoveryConfiguredListsService? configuredLists;
 
   /// Exact immutable base query from a deep-Discovery landing lane.
   ///
@@ -112,6 +114,9 @@ class SeerrBrowseViewModel extends ChangeNotifier {
       const SeerrDiscoveryBrowseRefinements();
   SeerrDiscoveryBrowseRefinements get refinements => _refinements;
   int get refinementCount => _refinements.activeCount;
+  bool get isExternalList =>
+      baseQuery?.source == SeerrDiscoverySource.externalList;
+  bool get supportsSort => !isExternalList;
   bool get supportsRichRefinements =>
       baseQuery?.source == SeerrDiscoverySource.discoverMovies ||
       baseQuery?.source == SeerrDiscoverySource.discoverTv;
@@ -124,6 +129,7 @@ class SeerrBrowseViewModel extends ChangeNotifier {
     required this.mediaType,
     this.filterType,
     this.baseQuery,
+    this.configuredLists,
   }) {
     final safeSort = SeerrDiscoverySortPolicy.normalise(
       baseQuery?.sortBy ?? sortOptions.first.value,
@@ -227,6 +233,7 @@ class SeerrBrowseViewModel extends ChangeNotifier {
   }
 
   void setSortBy(SeerrSortOption option) {
+    if (!supportsSort) return;
     final safeValue = SeerrDiscoverySortPolicy.normalise(option.value);
     if (safeValue == _state.sortBy.value) return;
     final safeOption = SeerrSortOption(option.label, safeValue);
@@ -261,6 +268,13 @@ class SeerrBrowseViewModel extends ChangeNotifier {
   Future<SeerrDiscoverPage> _fetchPage(int page) {
     final deepQuery = baseQuery;
     if (deepQuery != null) {
+      if (deepQuery.source == SeerrDiscoverySource.externalList) {
+        final lists = configuredLists;
+        if (lists == null) {
+          throw StateError('Configured external-list service is unavailable');
+        }
+        return lists.loadQuery(deepQuery, page: page);
+      }
       final refined = supportsRichRefinements
           ? SeerrDiscoveryRefinementPolicy.merge(
               deepQuery,

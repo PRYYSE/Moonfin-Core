@@ -469,8 +469,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
   bool _canExpand(SeerrDeepDiscoveryRow row) {
     final source = row.section.query.source;
     return row.section.expandable &&
-        source != SeerrDiscoverySource.personalised &&
-        source != SeerrDiscoverySource.externalList;
+        source != SeerrDiscoverySource.personalised;
   }
 
   void _openExpandedRow(SeerrDeepDiscoveryRow row) {
