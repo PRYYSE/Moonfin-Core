@@ -22,11 +22,33 @@ void main() {
     final encoded = SeerrDiscoveryRouteCodec.encode(
       query,
       title: 'Hidden Sci-Fi Gems',
+      sectionId: 'movies-hidden-scifi-gems',
     );
     final decoded = SeerrDiscoveryRouteCodec.decode(encoded);
 
     expect(decoded.title, 'Hidden Sci-Fi Gems');
+    expect(decoded.sectionId, 'movies-hidden-scifi-gems');
     expect(decoded.query.cacheKey, query.cacheKey);
+  });
+
+  test('personalised section identity survives See All navigation', () {
+    const query = SeerrDiscoveryQuery(
+      source: SeerrDiscoverySource.personalised,
+      mediaType: 'all',
+      seedStrategy: 'recent-history',
+    );
+
+    final decoded = SeerrDiscoveryRouteCodec.decode(
+      SeerrDiscoveryRouteCodec.encode(
+        query,
+        title: 'Because You Watched Dune',
+        sectionId: 'for-you-because-you-watched',
+      ),
+    );
+
+    expect(decoded.query.source, SeerrDiscoverySource.personalised);
+    expect(decoded.query.seedStrategy, 'recent-history');
+    expect(decoded.sectionId, 'for-you-because-you-watched');
   });
 
   test(
