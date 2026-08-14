@@ -28,6 +28,11 @@ jobs:
           python tooling/discovery/test_home_lab_discovery_catalogue.py
           python tooling/discovery/generate_home_lab_discovery_catalogue.py --check
 
+      - name: Apply networking integration in CI checkout
+        run: |
+          python tooling/discovery/apply_discovery_network_patch.py \
+            --backup-dir "$RUNNER_TEMP/moonfin-seerr-network-backup"
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -41,6 +46,8 @@ jobs:
           dart format --output=none --set-exit-if-changed \
             lib/data/services/seerr/seerr_discovery_*.dart \
             lib/data/viewmodels/seerr_discovery_collection_controller.dart \
+            lib/data/services/seerr/seerr_http_client.dart \
+            lib/data/repositories/seerr_repository.dart \
             test/data/seerr_discovery_*.dart
 
       - name: Run focused Discovery tests
