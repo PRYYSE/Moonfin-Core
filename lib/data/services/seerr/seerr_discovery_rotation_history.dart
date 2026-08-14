@@ -37,7 +37,8 @@ class SeerrDiscoveryRotationHistory {
   /// ago, and so on.
   Map<String, int> get sessionsSinceSeen => {
         for (final entry in _lastSeenSession.entries)
-          entry.key: (_sessionNumber - 1 - entry.value).clamp(0, 1 << 30),
+          entry.key:
+              (_sessionNumber - 1 - entry.value).clamp(0, 1 << 30).toInt(),
       };
 
   void commitSession(Iterable<String> selectedSectionIds) {
