@@ -24,8 +24,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Apply rollout self-test cleanup fix in checkout
-        run: python tooling/discovery/apply_rollout_selftest_cleanup_fix.py
+      - name: Apply rollout hardening in checkout
+        run: |
+          python tooling/discovery/apply_rollout_selftest_cleanup_fix.py
+          python tooling/discovery/apply_rollout_rollback_resilience_fix.py
 
       - name: Validate Discovery tooling syntax
         run: |
@@ -42,8 +44,10 @@ jobs:
             tooling/discovery/apply_rotation_persistence_patch.py \
             tooling/discovery/apply_catalogue_index_ui_patch.py \
             tooling/discovery/apply_smart_lists_patch.py \
-            tooling/discovery/apply_rollout_selftest_cleanup_fix.py
+            tooling/discovery/apply_rollout_selftest_cleanup_fix.py \
+            tooling/discovery/apply_rollout_rollback_resilience_fix.py
           python tooling/discovery/apply_rollout_selftest_cleanup_fix.py --check
+          python tooling/discovery/apply_rollout_rollback_resilience_fix.py --check
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
           bash -n tooling/discovery/home_lab_discovery_release_rollout.sh
@@ -122,17 +126,17 @@ jobs:
             test/data/seerr_discovery_*.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
 
-      - name: Commit exact validated rollout cleanup fix
+      - name: Commit exact validated rollout hardening
         if: success()
         run: |
           if git diff --quiet -- tooling/discovery/home_lab_discovery_release_rollout.sh; then
-            echo "Rollout cleanup fix is already committed."
+            echo "Rollout hardening is already committed."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tooling/discovery/home_lab_discovery_release_rollout.sh
-          git commit -m "fix(discovery): make rollout self-test cleanup scope safe [skip ci]"
+          git commit -m "fix(discovery): harden rollout automatic rollback [skip ci]"
           git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
@@ -165,6 +169,8 @@ jobs:
             -p:Version="$MOONBASE_VERSION"
           dotnet run --project "$ROOT/tools/verify-plugin/VerifyPlugin.csproj" \
             -c Release -- "$PUBLISH/Moonfin.Server.dll" "$MOONBASE_VERSION"
+          sha256sum "$PUBLISH/Moonfin.Server.dll" \
+            -c Release -- "$PUBLISH/Moonfin.Server.dll" "$MOONBASE_VERSION" || true
           sha256sum "$PUBLISH/Moonfin.Server.dll" \
             | tee "$PUBLISH/Moonfin.Server.dll.sha256"
 
