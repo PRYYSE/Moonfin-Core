@@ -1,0 +1,47 @@
+name: Home Lab Seerr Discovery Validation
+
+on:
+  push:
+    branches:
+      - homelab/seerr-discovery-v1-staging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.1'
+
+jobs:
+  discovery-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate generated Home Lab catalogue
+        run: |
+          python tooling/discovery/test_home_lab_discovery_catalogue.py
+          python tooling/discovery/generate_home_lab_discovery_catalogue.py --check
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Check Discovery source formatting
+        run: |
+          dart format --output=none --set-exit-if-changed \
+            lib/data/services/seerr/seerr_discovery_*.dart \
+            lib/data/viewmodels/seerr_discovery_collection_controller.dart \
+            test/data/seerr_discovery_*.dart
+
+      - name: Run focused Discovery tests
+        run: flutter test test/data/seerr_discovery_*.dart
