@@ -32,6 +32,7 @@ import '../../data/services/plugin_sync_service.dart';
 import '../../data/services/custom_external_lists_service.dart';
 import '../../data/services/row_data_source.dart';
 import '../../data/services/seerr/seerr_discovery_catalogue_service.dart';
+import '../../data/services/seerr/seerr_discovery_configured_lists_service.dart';
 import '../../data/services/seerr/seerr_discovery_personalisation_service.dart';
 import '../../data/services/socket_handler.dart';
 import '../../data/services/sync_service.dart';
@@ -56,6 +57,7 @@ void resetUserScopedSingletons() {
 
   unregister<SeerrDeepDiscoveryViewModel>();
   unregister<SeerrDiscoveryPersonalisationService>();
+  unregister<SeerrDiscoveryConfiguredListsService>();
   unregister<SeerrDiscoveryCatalogueService>();
   unregister<SeerrDiscoverViewModel>();
   unregister<SeerrRepository>();
@@ -88,7 +90,10 @@ void registerAppModule() {
         AppUpdateService(_getIt<PreferenceStore>(), _getIt<UserPreferences>()),
   );
   _getIt.registerLazySingleton(
-    () => ScreensaverController(_getIt<UserPreferences>(), _getIt<PlaybackManager>()),
+    () => ScreensaverController(
+      _getIt<UserPreferences>(),
+      _getIt<PlaybackManager>(),
+    ),
     dispose: (controller) => controller.dispose(),
   );
   _getIt.registerLazySingleton(() => const NativeCastChannel());
@@ -162,7 +167,10 @@ void _registerUserScopedSingletons() {
     () => RowDataSource(_getIt<MediaServerClient>()),
   );
   _getIt.registerLazySingleton(
-    () => MdbListRepository(_getIt<MediaServerClient>(), _getIt<TmdbRepository>()),
+    () => MdbListRepository(
+      _getIt<MediaServerClient>(),
+      _getIt<TmdbRepository>(),
+    ),
     dispose: (repository) => repository.dispose(),
   );
   _getIt.registerLazySingleton(
@@ -203,6 +211,12 @@ void _registerUserScopedSingletons() {
   _getIt.registerLazySingleton<SeerrDiscoveryCatalogueService>(
     () => SeerrDiscoveryCatalogueService(),
   );
+  _getIt.registerLazySingleton<SeerrDiscoveryConfiguredListsService>(
+    () => SeerrDiscoveryConfiguredListsService(
+      preferences: _getIt<UserPreferences>(),
+      externalLists: _getIt<CustomExternalListsService>(),
+    ),
+  );
   _getIt.registerLazySingleton<SeerrDiscoveryPersonalisationService>(
     () => SeerrDiscoveryPersonalisationService(
       serverId: _getIt<MediaServerClient>().baseUrl,
@@ -221,6 +235,7 @@ void _registerUserScopedSingletons() {
       catalogueService: _getIt<SeerrDiscoveryCatalogueService>(),
       repository: await _getIt.getAsync<SeerrRepository>(),
       personalisation: _getIt<SeerrDiscoveryPersonalisationService>(),
+      configuredLists: _getIt<SeerrDiscoveryConfiguredListsService>(),
       preferences: _getIt<SeerrPreferences>(),
       serverId: _getIt<MediaServerClient>().baseUrl,
     ),

@@ -7,6 +7,7 @@ import '../services/seerr/seerr_discovery_availability_policy.dart';
 import '../services/seerr/seerr_discovery_catalogue_loader.dart';
 import '../services/seerr/seerr_discovery_catalogue_service.dart';
 import '../services/seerr/seerr_discovery_composer.dart';
+import '../services/seerr/seerr_discovery_configured_lists_service.dart';
 import '../services/seerr/seerr_discovery_lane_loader.dart';
 import '../services/seerr/seerr_discovery_personalisation_service.dart';
 import '../services/seerr/seerr_discovery_rotation_history.dart';
@@ -26,6 +27,15 @@ typedef SeerrDeepPersonalFetcher =
     });
 typedef SeerrDeepSeedLoader = Future<String> Function();
 typedef SeerrDeepBlockNsfw = bool Function();
+typedef SeerrDeepCatalogueMerger =
+    SeerrDiscoveryCatalogue Function(SeerrDiscoveryCatalogue catalogue);
+typedef SeerrDeepExternalFetcher =
+    Future<SeerrDiscoverPage> Function(
+      SeerrDiscoverySection section,
+      int page, {
+      bool forceRefresh,
+    });
+typedef SeerrDeepExternalClearer = void Function();
 
 class SeerrDeepDiscoveryRow {
   final SeerrDiscoverySection section;
@@ -107,6 +117,9 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
   final SeerrDeepPersonalFetcher _fetchPersonal;
   final SeerrDeepSeedLoader _loadSessionSeed;
   final SeerrDeepBlockNsfw _blockNsfw;
+  final SeerrDeepCatalogueMerger _mergeCatalogue;
+  final SeerrDeepExternalFetcher _fetchExternal;
+  final SeerrDeepExternalClearer _clearExternal;
   final SeerrDiscoveryComposer _composer;
 
   SeerrDiscoveryCatalogue? _catalogue;
@@ -144,6 +157,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     required SeerrDiscoveryCatalogueService catalogueService,
     required SeerrRepository repository,
     required SeerrDiscoveryPersonalisationService personalisation,
+    required SeerrDiscoveryConfiguredListsService configuredLists,
     required SeerrPreferences preferences,
     required String serverId,
     SeerrDiscoveryComposer composer = const SeerrDiscoveryComposer(),
@@ -165,6 +179,14 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
          }
        }),
        _blockNsfw = (() => preferences.blockNsfw),
+       _mergeCatalogue = configuredLists.mergeIntoCatalogue,
+       _fetchExternal = ((section, page, {forceRefresh = false}) =>
+           configuredLists.load(
+             section,
+             page: page,
+             forceRefresh: forceRefresh,
+           )),
+       _clearExternal = configuredLists.clear,
        _composer = composer;
 
   SeerrDeepDiscoveryViewModel.forTesting({
@@ -173,15 +195,33 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     required SeerrDeepPersonalFetcher fetchPersonal,
     required SeerrDeepSeedLoader loadSessionSeed,
     SeerrDeepBlockNsfw blockNsfw = _neverBlockNsfw,
+    SeerrDeepCatalogueMerger mergeCatalogue = _identityCatalogue,
+    SeerrDeepExternalFetcher fetchExternal = _unsupportedExternal,
+    SeerrDeepExternalClearer clearExternal = _noopExternalClear,
     SeerrDiscoveryComposer composer = const SeerrDiscoveryComposer(),
   }) : _loadCatalogue = loadCatalogue,
        _fetchPage = fetchPage,
        _fetchPersonal = fetchPersonal,
        _loadSessionSeed = loadSessionSeed,
        _blockNsfw = blockNsfw,
+       _mergeCatalogue = mergeCatalogue,
+       _fetchExternal = fetchExternal,
+       _clearExternal = clearExternal,
        _composer = composer;
 
   static bool _neverBlockNsfw() => false;
+
+  static SeerrDiscoveryCatalogue _identityCatalogue(
+    SeerrDiscoveryCatalogue catalogue,
+  ) => catalogue;
+
+  static Future<SeerrDiscoverPage> _unsupportedExternal(
+    SeerrDiscoverySection section,
+    int page, {
+    bool forceRefresh = false,
+  }) async => throw StateError('External Discovery list is not configured');
+
+  static void _noopExternalClear() {}
 
   Future<void> load() async {
     final generation = ++_generation;
@@ -192,7 +232,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     try {
       final result = await _loadCatalogue();
       if (generation != _generation) return;
-      _catalogue = result.catalogue;
+      _catalogue = _mergeCatalogue(result.catalogue);
       _catalogueSource = result.source;
       _sessionSeed = await _loadSessionSeed();
       if (generation != _generation) return;
@@ -239,6 +279,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
 
   Future<void> refresh() async {
     _refreshNonce++;
+    _clearExternal();
     final generation = ++_generation;
     _sessions[_activeTabId]?.reset();
     _error = null;
@@ -247,7 +288,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     try {
       final result = await _loadCatalogue();
       if (generation != _generation) return;
-      _catalogue = result.catalogue;
+      _catalogue = _mergeCatalogue(result.catalogue);
       _catalogueSource = result.source;
       if (!tabs.any((tab) => tab.id == _activeTabId)) {
         _activeTabId = _defaultTabId();
@@ -282,9 +323,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
         page = (await _fetchPersonal(row.section, nextPage)).page;
       } else if (row.section.query.source ==
           SeerrDiscoverySource.externalList) {
-        _rows[rowIndex] = row.copyWith(isLoading: false);
-        notifyListeners();
-        return;
+        page = await _fetchExternal(row.section, nextPage);
       } else {
         page = await _fetchPage(row.section.query, nextPage);
       }
@@ -400,10 +439,26 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     required bool forcePersonalRefresh,
   }) async {
     if (section.query.source == SeerrDiscoverySource.externalList) {
-      // Curated list IDs are server configuration references. Until a matching
-      // configured list exists, fail this optional lane closed rather than
-      // broadening it into unrelated TMDb discovery.
-      return null;
+      try {
+        final page = await _fetchExternal(section, 1);
+        final items = page.results
+            .where((item) => _include(section, item))
+            .toList(growable: false);
+        if (items.length < section.minItems) return null;
+        return SeerrDeepDiscoveryRow(
+          section: section,
+          title: section.title,
+          items: items.take(section.previewLimit).toList(growable: false),
+          page: page.page,
+          totalPages: page.totalPages,
+        );
+      } catch (exception) {
+        return SeerrDeepDiscoveryRow(
+          section: section,
+          title: section.title,
+          error: exception.toString(),
+        );
+      }
     }
 
     if (section.query.source == SeerrDiscoverySource.personalised) {

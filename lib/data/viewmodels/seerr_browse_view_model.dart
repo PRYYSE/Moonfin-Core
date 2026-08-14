@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../repositories/seerr_repository.dart';
 import '../services/seerr/seerr_api_models.dart';
+import '../services/seerr/seerr_discovery_browse_refinements.dart';
+import '../services/seerr/seerr_discovery_refinement_policy.dart';
 import '../services/seerr/seerr_discovery_schema.dart';
 import '../services/seerr/seerr_discovery_sort_policy.dart';
 
@@ -106,6 +108,13 @@ class SeerrBrowseViewModel extends ChangeNotifier {
 
   SeerrBrowseState _state = const SeerrBrowseState();
   SeerrBrowseState get state => _state;
+  SeerrDiscoveryBrowseRefinements _refinements =
+      const SeerrDiscoveryBrowseRefinements();
+  SeerrDiscoveryBrowseRefinements get refinements => _refinements;
+  int get refinementCount => _refinements.activeCount;
+  bool get supportsRichRefinements =>
+      baseQuery?.source == SeerrDiscoverySource.discoverMovies ||
+      baseQuery?.source == SeerrDiscoverySource.discoverTv;
 
   List<SeerrSortOption> get sortOptions => getSortOptionsFor(mediaType);
 
@@ -237,20 +246,38 @@ class SeerrBrowseViewModel extends ChangeNotifier {
     load();
   }
 
+  void setRefinements(SeerrDiscoveryBrowseRefinements refinements) {
+    if (!supportsRichRefinements) return;
+    _refinements = refinements;
+    load();
+  }
+
+  void clearRefinements() {
+    if (_refinements.isEmpty) return;
+    _refinements = const SeerrDiscoveryBrowseRefinements();
+    load();
+  }
+
   Future<SeerrDiscoverPage> _fetchPage(int page) {
     final deepQuery = baseQuery;
     if (deepQuery != null) {
+      final refined = supportsRichRefinements
+          ? SeerrDiscoveryRefinementPolicy.merge(
+              deepQuery,
+              _refinements.toFilters(mediaType),
+            )
+          : deepQuery;
       final query = SeerrDiscoveryQuery(
-        source: deepQuery.source,
-        mediaType: deepQuery.mediaType,
+        source: refined.source,
+        mediaType: refined.mediaType,
         sortBy: _state.sortBy.value,
-        filters: deepQuery.filters,
-        keywordNames: deepQuery.keywordNames,
-        excludeKeywordNames: deepQuery.excludeKeywordNames,
-        providerNames: deepQuery.providerNames,
-        seedStrategy: deepQuery.seedStrategy,
-        listProvider: deepQuery.listProvider,
-        listId: deepQuery.listId,
+        filters: refined.filters,
+        keywordNames: refined.keywordNames,
+        excludeKeywordNames: refined.excludeKeywordNames,
+        providerNames: refined.providerNames,
+        seedStrategy: refined.seedStrategy,
+        listProvider: refined.listProvider,
+        listId: refined.listId,
       );
       return _repo.executeDiscoveryQuery(query, page: page);
     }
@@ -333,8 +360,9 @@ class SeerrBrowseViewModel extends ChangeNotifier {
         return item;
       }
 
-      final byMediaId =
-          mediaInfo.id != null ? _requestsByMediaId[mediaInfo.id!] : null;
+      final byMediaId = mediaInfo.id != null
+          ? _requestsByMediaId[mediaInfo.id!]
+          : null;
       final byTmdbId = mediaInfo.tmdbId != null
           ? _requestsByTmdbId[mediaInfo.tmdbId!]
           : _requestsByTmdbId[item.id];

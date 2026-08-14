@@ -19,15 +19,7 @@ class SeerrDiscoveryBrowseRefinements {
     this.originalLanguage,
   });
 
-  bool get isEmpty =>
-      genreIds.isEmpty &&
-      yearFrom == null &&
-      yearTo == null &&
-      minimumRating == null &&
-      minimumVotes == null &&
-      runtimeMin == null &&
-      runtimeMax == null &&
-      (originalLanguage == null || originalLanguage!.trim().isEmpty);
+  bool get isEmpty => activeCount == 0;
 
   int get activeCount {
     var count = 0;
@@ -35,7 +27,10 @@ class SeerrDiscoveryBrowseRefinements {
     if (yearFrom != null || yearTo != null) count++;
     if (minimumRating != null && minimumRating! > 0) count++;
     if (minimumVotes != null && minimumVotes! > 0) count++;
-    if (runtimeMin != null || runtimeMax != null) count++;
+    if ((runtimeMin != null && runtimeMin! > 0) ||
+        (runtimeMax != null && runtimeMax! > 0)) {
+      count++;
+    }
     if (originalLanguage?.trim().isNotEmpty ?? false) count++;
     return count;
   }
@@ -90,22 +85,22 @@ class SeerrDiscoveryBrowseRefinements {
     bool clearRuntimeMax = false,
     String? originalLanguage,
     bool clearOriginalLanguage = false,
-  }) =>
-      SeerrDiscoveryBrowseRefinements(
-        genreIds: genreIds ?? this.genreIds,
-        yearFrom: clearYearFrom ? null : (yearFrom ?? this.yearFrom),
-        yearTo: clearYearTo ? null : (yearTo ?? this.yearTo),
-        minimumRating: clearMinimumRating
-            ? null
-            : (minimumRating ?? this.minimumRating),
-        minimumVotes:
-            clearMinimumVotes ? null : (minimumVotes ?? this.minimumVotes),
-        runtimeMin: clearRuntimeMin ? null : (runtimeMin ?? this.runtimeMin),
-        runtimeMax: clearRuntimeMax ? null : (runtimeMax ?? this.runtimeMax),
-        originalLanguage: clearOriginalLanguage
-            ? null
-            : (originalLanguage ?? this.originalLanguage),
-      );
+  }) => SeerrDiscoveryBrowseRefinements(
+    genreIds: genreIds ?? this.genreIds,
+    yearFrom: clearYearFrom ? null : (yearFrom ?? this.yearFrom),
+    yearTo: clearYearTo ? null : (yearTo ?? this.yearTo),
+    minimumRating: clearMinimumRating
+        ? null
+        : (minimumRating ?? this.minimumRating),
+    minimumVotes: clearMinimumVotes
+        ? null
+        : (minimumVotes ?? this.minimumVotes),
+    runtimeMin: clearRuntimeMin ? null : (runtimeMin ?? this.runtimeMin),
+    runtimeMax: clearRuntimeMax ? null : (runtimeMax ?? this.runtimeMax),
+    originalLanguage: clearOriginalLanguage
+        ? null
+        : (originalLanguage ?? this.originalLanguage),
+  );
 
   static String _compactDouble(double value) {
     final rounded = value.toStringAsFixed(1);

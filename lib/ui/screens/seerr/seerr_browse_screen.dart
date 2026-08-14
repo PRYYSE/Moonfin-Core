@@ -6,6 +6,7 @@ import 'package:moonfin_design/moonfin_design.dart';
 
 import '../../../data/repositories/seerr_repository.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
+import '../../../data/services/seerr/seerr_discovery_browse_refinements.dart';
 import '../../../data/services/seerr/seerr_discovery_schema.dart';
 import '../../../data/viewmodels/seerr_browse_view_model.dart';
 import '../../../preference/preference_constants.dart';
@@ -14,6 +15,7 @@ import '../../../ui/mixins/focus_state_mixin.dart';
 import '../../../util/focus/dpad_keys.dart';
 import '../../../util/platform_detection.dart';
 import '../../navigation/destinations.dart';
+import 'seerr_discovery_refinement_dialog.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/overlay_sheet.dart';
 import '../../../l10n/app_localizations.dart';
@@ -157,6 +159,9 @@ class _SeerrBrowseScreenState extends State<SeerrBrowseScreen> {
             onLetterChanged: (l) => _vm?.setLetterFilter(l),
             onHome: () => context.go(Destinations.home),
             onSort: () => _showSortDialog(context),
+            showRefine: _vm?.supportsRichRefinements ?? false,
+            refinementCount: _vm?.refinementCount ?? 0,
+            onRefine: () => _showRefinementDialog(context),
             onSettings: () => _showSettingsDialog(context),
           ),
           Expanded(child: _buildBody()),
@@ -355,6 +360,20 @@ class _SeerrBrowseScreenState extends State<SeerrBrowseScreen> {
     );
   }
 
+  Future<void> _showRefinementDialog(BuildContext context) async {
+    final vm = _vm;
+    if (vm == null || !vm.supportsRichRefinements) return;
+    final result =
+        await showFocusRestoringDialog<SeerrDiscoveryBrowseRefinements>(
+          context: context,
+          builder: (_) => SeerrDiscoveryRefinementDialog(
+            mediaType: vm.mediaType,
+            initial: vm.refinements,
+          ),
+        );
+    if (result != null) vm.setRefinements(result);
+  }
+
   void _showSettingsDialog(BuildContext context) {
     showFocusRestoringDialog(
       context: context,
@@ -373,6 +392,9 @@ class _SeerrBrowseHeader extends StatelessWidget {
   final ValueChanged<String> onLetterChanged;
   final VoidCallback onHome;
   final VoidCallback onSort;
+  final bool showRefine;
+  final int refinementCount;
+  final VoidCallback onRefine;
   final VoidCallback onSettings;
 
   const _SeerrBrowseHeader({
@@ -385,6 +407,9 @@ class _SeerrBrowseHeader extends StatelessWidget {
     required this.onLetterChanged,
     required this.onHome,
     required this.onSort,
+    required this.showRefine,
+    required this.refinementCount,
+    required this.onRefine,
     required this.onSettings,
   });
 
@@ -434,6 +459,37 @@ class _SeerrBrowseHeader extends StatelessWidget {
               _ToolbarButton(icon: Icons.home, onTap: onHome),
               const SizedBox(width: 4),
               _ToolbarButton(icon: Icons.sort, onTap: onSort),
+              if (showRefine) ...[
+                const SizedBox(width: 4),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _ToolbarButton(icon: Icons.tune, onTap: onRefine),
+                    if (refinementCount > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _seerrAccent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            refinementCount.toString(),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(width: 4),
               _ToolbarButton(icon: Icons.settings, onTap: onSettings),
               if (showInlineFilters) ...[
