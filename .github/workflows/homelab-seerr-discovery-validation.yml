@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -24,6 +24,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Apply rollout self-test cleanup fix in checkout
+        run: python tooling/discovery/apply_rollout_selftest_cleanup_fix.py
+
       - name: Validate Discovery tooling syntax
         run: |
           python -m py_compile \
@@ -38,7 +41,9 @@ jobs:
             tooling/discovery/apply_personalised_expanded_browse_patch_v3.py \
             tooling/discovery/apply_rotation_persistence_patch.py \
             tooling/discovery/apply_catalogue_index_ui_patch.py \
-            tooling/discovery/apply_smart_lists_patch.py
+            tooling/discovery/apply_smart_lists_patch.py \
+            tooling/discovery/apply_rollout_selftest_cleanup_fix.py
+          python tooling/discovery/apply_rollout_selftest_cleanup_fix.py --check
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
           bash -n tooling/discovery/home_lab_discovery_release_rollout.sh
@@ -116,6 +121,19 @@ jobs:
           flutter test \
             test/data/seerr_discovery_*.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
+
+      - name: Commit exact validated rollout cleanup fix
+        if: success()
+        run: |
+          if git diff --quiet -- tooling/discovery/home_lab_discovery_release_rollout.sh; then
+            echo "Rollout cleanup fix is already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tooling/discovery/home_lab_discovery_release_rollout.sh
+          git commit -m "fix(discovery): make rollout self-test cleanup scope safe [skip ci]"
+          git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
