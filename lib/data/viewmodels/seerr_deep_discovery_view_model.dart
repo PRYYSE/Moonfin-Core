@@ -14,17 +14,16 @@ import '../services/seerr/seerr_discovery_schema.dart';
 import '../services/seerr/seerr_discovery_session.dart';
 import '../utils/bounded_concurrency.dart';
 
-typedef SeerrDeepCatalogueLoader = Future<SeerrDiscoveryCatalogueLoadResult>
-    Function();
-typedef SeerrDeepPageFetcher = Future<SeerrDiscoverPage> Function(
-  SeerrDiscoveryQuery query,
-  int page,
-);
-typedef SeerrDeepPersonalFetcher = Future<SeerrDiscoveryPersonalPage> Function(
-  SeerrDiscoverySection section,
-  int page, {
-  bool forceRefresh,
-});
+typedef SeerrDeepCatalogueLoader =
+    Future<SeerrDiscoveryCatalogueLoadResult> Function();
+typedef SeerrDeepPageFetcher =
+    Future<SeerrDiscoverPage> Function(SeerrDiscoveryQuery query, int page);
+typedef SeerrDeepPersonalFetcher =
+    Future<SeerrDiscoveryPersonalPage> Function(
+      SeerrDiscoverySection section,
+      int page, {
+      bool forceRefresh,
+    });
 typedef SeerrDeepSeedLoader = Future<String> Function();
 typedef SeerrDeepBlockNsfw = bool Function();
 
@@ -50,7 +49,8 @@ class SeerrDeepDiscoveryRow {
   bool get hasMore => page < totalPages;
   bool get isPersonalised =>
       section.query.source == SeerrDiscoverySource.personalised;
-  bool get canExpand => section.expandable &&
+  bool get canExpand =>
+      section.expandable &&
       section.query.source != SeerrDiscoverySource.externalList;
 
   SeerrDeepDiscoveryRow copyWith({
@@ -61,16 +61,15 @@ class SeerrDeepDiscoveryRow {
     bool clearError = false,
     int? page,
     int? totalPages,
-  }) =>
-      SeerrDeepDiscoveryRow(
-        section: section,
-        title: title ?? this.title,
-        items: items ?? this.items,
-        isLoading: isLoading ?? this.isLoading,
-        error: clearError ? null : (error ?? this.error),
-        page: page ?? this.page,
-        totalPages: totalPages ?? this.totalPages,
-      );
+  }) => SeerrDeepDiscoveryRow(
+    section: section,
+    title: title ?? this.title,
+    items: items ?? this.items,
+    isLoading: isLoading ?? this.isLoading,
+    error: clearError ? null : (error ?? this.error),
+    page: page ?? this.page,
+    totalPages: totalPages ?? this.totalPages,
+  );
 }
 
 /// Shared deep-Discovery product state for Web, Android phone/tablet and
@@ -148,25 +147,25 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     required SeerrPreferences preferences,
     required String serverId,
     SeerrDiscoveryComposer composer = const SeerrDiscoveryComposer(),
-  })  : _loadCatalogue = catalogueService.load,
-        _fetchPage = ((query, page) =>
-            repository.executeDiscoveryQuery(query, page: page)),
-        _fetchPersonal = ((section, page, {forceRefresh = false}) =>
-            personalisation.load(
-              section,
-              page: page,
-              forceRefresh: forceRefresh,
-            )),
-        _loadSessionSeed = (() async {
-          try {
-            final user = await repository.getCurrentUser();
-            return '$serverId|seerr:${user.id}';
-          } catch (_) {
-            return serverId;
-          }
-        }),
-        _blockNsfw = (() => preferences.blockNsfw),
-        _composer = composer;
+  }) : _loadCatalogue = catalogueService.load,
+       _fetchPage = ((query, page) =>
+           repository.executeDiscoveryQuery(query, page: page)),
+       _fetchPersonal = ((section, page, {forceRefresh = false}) =>
+           personalisation.load(
+             section,
+             page: page,
+             forceRefresh: forceRefresh,
+           )),
+       _loadSessionSeed = (() async {
+         try {
+           final user = await repository.getCurrentUser();
+           return '$serverId|seerr:${user.id}';
+         } catch (_) {
+           return serverId;
+         }
+       }),
+       _blockNsfw = (() => preferences.blockNsfw),
+       _composer = composer;
 
   SeerrDeepDiscoveryViewModel.forTesting({
     required SeerrDeepCatalogueLoader loadCatalogue,
@@ -175,12 +174,12 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     required SeerrDeepSeedLoader loadSessionSeed,
     SeerrDeepBlockNsfw blockNsfw = _neverBlockNsfw,
     SeerrDiscoveryComposer composer = const SeerrDiscoveryComposer(),
-  })  : _loadCatalogue = loadCatalogue,
-        _fetchPage = fetchPage,
-        _fetchPersonal = fetchPersonal,
-        _loadSessionSeed = loadSessionSeed,
-        _blockNsfw = blockNsfw,
-        _composer = composer;
+  }) : _loadCatalogue = loadCatalogue,
+       _fetchPage = fetchPage,
+       _fetchPersonal = fetchPersonal,
+       _loadSessionSeed = loadSessionSeed,
+       _blockNsfw = blockNsfw,
+       _composer = composer;
 
   static bool _neverBlockNsfw() => false;
 
@@ -253,10 +252,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
       if (!tabs.any((tab) => tab.id == _activeTabId)) {
         _activeTabId = _defaultTabId();
       }
-      await _loadActiveTab(
-        generation: generation,
-        forcePersonalRefresh: true,
-      );
+      await _loadActiveTab(generation: generation, forcePersonalRefresh: true);
     } catch (exception) {
       if (generation != _generation) return;
       _error = exception.toString();
@@ -284,7 +280,8 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
       final SeerrDiscoverPage page;
       if (row.isPersonalised) {
         page = (await _fetchPersonal(row.section, nextPage)).page;
-      } else if (row.section.query.source == SeerrDiscoverySource.externalList) {
+      } else if (row.section.query.source ==
+          SeerrDiscoverySource.externalList) {
         _rows[rowIndex] = row.copyWith(isLoading: false);
         notifyListeners();
         return;
@@ -361,16 +358,13 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
         .toList(growable: false);
     notifyListeners();
 
-    final loaded = await mapBounded<
-        SeerrDiscoverySection,
-        SeerrDeepDiscoveryRow?>(
-      sections,
-      _laneConcurrency,
-      (section) => _loadSection(
-        section,
-        forcePersonalRefresh: forcePersonalRefresh,
-      ),
-    );
+    final loaded =
+        await mapBounded<SeerrDiscoverySection, SeerrDeepDiscoveryRow?>(
+          sections,
+          _laneConcurrency,
+          (section) =>
+              _loadSection(section, forcePersonalRefresh: forcePersonalRefresh),
+        );
     if (generation != _generation) return;
 
     final session = _sessions.putIfAbsent(tab.id, SeerrDiscoverySession.new);
@@ -462,10 +456,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     );
   }
 
-  bool _include(
-    SeerrDiscoverySection section,
-    SeerrDiscoverItem item,
-  ) {
+  bool _include(SeerrDiscoverySection section, SeerrDiscoverItem item) {
     if (!SeerrDiscoveryAvailabilityPolicy.include(
       item,
       section.availabilityMode,
@@ -482,10 +473,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     return _nsfwPatterns.any((pattern) => pattern.hasMatch(text));
   }
 
-  String _identity(
-    SeerrDiscoverySection section,
-    SeerrDiscoverItem item,
-  ) {
+  String _identity(SeerrDiscoverySection section, SeerrDiscoverItem item) {
     final type = item.mediaType?.isNotEmpty == true
         ? item.mediaType!
         : section.query.mediaType;

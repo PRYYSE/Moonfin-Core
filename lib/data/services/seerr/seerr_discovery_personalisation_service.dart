@@ -4,19 +4,20 @@ import '../row_data_source.dart';
 import 'seerr_api_models.dart';
 import 'seerr_discovery_schema.dart';
 
-typedef SeerrDiscoveryPersonalRowLoader = Future<HomeRow> Function(
-  String serverId,
-  int rowIndex, {
-  List<String>? preferredItemTypes,
-  bool animeOnly,
-});
+typedef SeerrDiscoveryPersonalRowLoader =
+    Future<HomeRow> Function(
+      String serverId,
+      int rowIndex, {
+      List<String>? preferredItemTypes,
+      bool animeOnly,
+    });
 
 typedef SeerrDiscoveryPersonalLoadMore =
     Future<(List<AggregatedItem>, int)> Function({
-  required HomeRow row,
-  required String serverId,
-  int? offset,
-});
+      required HomeRow row,
+      required String serverId,
+      int? offset,
+    });
 
 class SeerrDiscoveryPersonalPage {
   final String title;
@@ -43,15 +44,15 @@ class SeerrDiscoveryPersonalisationService {
   SeerrDiscoveryPersonalisationService({
     required this.serverId,
     required RowDataSource rowDataSource,
-  })  : _loadRow = rowDataSource.loadSinceYouWatchedRow,
-        _loadMore = rowDataSource.loadMore;
+  }) : _loadRow = rowDataSource.loadSinceYouWatchedRow,
+       _loadMore = rowDataSource.loadMore;
 
   SeerrDiscoveryPersonalisationService.forTesting({
     required this.serverId,
     required SeerrDiscoveryPersonalRowLoader loadRow,
     required SeerrDiscoveryPersonalLoadMore loadMore,
-  })  : _loadRow = loadRow,
-        _loadMore = loadMore;
+  }) : _loadRow = loadRow,
+       _loadMore = loadMore;
 
   Future<SeerrDiscoveryPersonalPage> load(
     SeerrDiscoverySection section, {
@@ -107,14 +108,16 @@ class SeerrDiscoveryPersonalisationService {
     final items = start < available.length
         ? available.sublist(start, end)
         : const <AggregatedItem>[];
-    final converted = items.map(_toSeerrItem).whereType<SeerrDiscoverItem>().toList(
-          growable: false,
-        );
+    final converted = items
+        .map(_toSeerrItem)
+        .whereType<SeerrDiscoverItem>()
+        .toList(growable: false);
     final finalTotal = row.totalCount > row.items.length
         ? row.totalCount
         : row.items.length;
-    final finalPages =
-        finalTotal == 0 ? 0 : (finalTotal + pageSize - 1) ~/ pageSize;
+    final finalPages = finalTotal == 0
+        ? 0
+        : (finalTotal + pageSize - 1) ~/ pageSize;
 
     return SeerrDiscoveryPersonalPage(
       title: _effectiveTitle(section, row),
@@ -191,12 +194,19 @@ class SeerrDiscoveryPersonalisationService {
     if (tmdb == null || tmdb <= 0) return null;
 
     final raw = item.rawData;
-    final mediaType = item.seerrMediaType ??
-        (item.type == 'Series' ? 'tv' : item.type == 'Movie' ? 'movie' : null);
+    final mediaType =
+        item.seerrMediaType ??
+        (item.type == 'Series'
+            ? 'tv'
+            : item.type == 'Movie'
+            ? 'movie'
+            : null);
     if (mediaType != 'movie' && mediaType != 'tv') return null;
 
     final year = item.productionYear;
-    final date = year == null ? null : '${year.toString().padLeft(4, '0')}-01-01';
+    final date = year == null
+        ? null
+        : '${year.toString().padLeft(4, '0')}-01-01';
     final genreIds = (raw['GenreIds'] as List? ?? const [])
         .map((value) => value is int ? value : int.tryParse(value.toString()))
         .whereType<int>()
@@ -204,8 +214,8 @@ class SeerrDiscoveryPersonalisationService {
     final status = raw['IsBlacklisted'] == true
         ? 6
         : item.serverId == 'seerr'
-            ? item.seerrStatus
-            : 5;
+        ? item.seerrStatus
+        : 5;
 
     return SeerrDiscoverItem(
       id: tmdb,
