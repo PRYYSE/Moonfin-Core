@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -49,9 +49,9 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Format focused Discovery source
+      - name: Check focused Discovery formatting
         run: |
-          dart format \
+          dart format --output=none --set-exit-if-changed \
             lib/data/services/seerr/seerr_discovery_*.dart \
             lib/data/viewmodels/seerr_discovery_collection_controller.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
@@ -65,26 +65,6 @@ jobs:
           flutter test \
             test/data/seerr_discovery_*.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
-
-      - name: Commit formatting only after tests pass
-        if: success()
-        run: |
-          if git diff --quiet; then
-            echo "No formatting changes required."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            lib/data/services/seerr/seerr_discovery_*.dart \
-            lib/data/viewmodels/seerr_discovery_collection_controller.dart \
-            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
-            lib/data/services/seerr/seerr_http_client.dart \
-            lib/data/repositories/seerr_repository.dart \
-            test/data/seerr_discovery_*.dart \
-            test/data/seerr_deep_discovery_view_model_test.dart
-          git commit -m "chore(discovery): format validated personalisation layer [skip ci]"
-          git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
