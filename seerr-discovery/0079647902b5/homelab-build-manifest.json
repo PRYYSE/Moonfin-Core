@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "prototype": "homelab-seerr-discovery-v1",
+  "design": "seerr-discovery-v1-candidate",
+  "sourceBranch": "homelab/seerr-discovery-v1-staging",
+  "sourceCommit": "0079647902b54b78d71b048a4a7572c51cba49f2",
+  "sourceOwned": true,
+  "builder": "github-actions",
+  "flutterVersion": "3.44.1",
+  "theme": "home_lab_streaming",
+  "discoverySchemaVersion": 2,
+  "authoringLaneCount": 486,
+  "builtAtUtc": "2026-08-14T10:07:43Z"
+}

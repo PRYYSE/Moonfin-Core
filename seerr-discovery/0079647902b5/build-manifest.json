@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "version": "2.4.0",
+  "commit": "0079647902b54b78d71b048a4a7572c51cba49f2",
+  "ref": "homelab/seerr-discovery-v1-staging",
+  "flutterVersion": "3.44.1",
+  "baseHref": "/Moonfin/Web/",
+  "buildTime": "2026-08-14T10:07:43Z"
+}
