@@ -70,8 +70,10 @@ void main() {
 
     final result = await tabLoader.load(sections);
     expect(maxInFlight, lessThanOrEqualTo(2));
-    expect(result.rendered.map((entry) => entry.section.id),
-        ['s0', 's1', 's2', 's3', 's4', 's5']);
+    expect(
+      result.rendered.map((entry) => entry.section.id),
+      ['s0', 's1', 's2', 's3', 's4', 's5'],
+    );
   });
 
   test('failed optional lane is omitted while a failed anchor remains retryable',
@@ -82,15 +84,9 @@ void main() {
     );
     final optional = _section('optional');
     final good = _section('good');
-    final loader = SeerrDiscoveryLaneLoader(
-      fetchPage: (query, page) async {
-        // Lane identity is not passed to fetchPage, so use call order here.
-        throw StateError('replaced below');
-      },
-    );
 
     var calls = 0;
-    final realLoader = SeerrDiscoveryLaneLoader(
+    final loader = SeerrDiscoveryLaneLoader(
       fetchPage: (_, __) async {
         calls++;
         if (calls <= 2) throw StateError('lane failed');
@@ -102,14 +98,13 @@ void main() {
       },
     );
     final result = await SeerrDiscoveryTabLoader(
-      laneLoader: realLoader,
+      laneLoader: loader,
       concurrency: 1,
     ).load([anchor, optional, good]);
 
     expect(result.hasAnchorFailure, isTrue);
     expect(result.rendered.map((entry) => entry.section.id), ['anchor', 'good']);
     expect(result.failedOptional.map((entry) => entry.section.id), ['optional']);
-    expect(loader.concurrencySafeReference, isNull);
   });
 
   test('successful shallow lane is classified separately from an error', () async {
@@ -127,8 +122,4 @@ void main() {
     expect(result.failedOptional, isEmpty);
     expect(result.hiddenShallow.single.section.id, 'shallow');
   });
-}
-
-extension on SeerrDiscoveryLaneLoader {
-  Object? get concurrencySafeReference => null;
 }
