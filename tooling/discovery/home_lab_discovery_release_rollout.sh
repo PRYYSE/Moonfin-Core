@@ -453,6 +453,17 @@ PY
   say "rollback_command=bash $WORKTREE/tooling/discovery/home_lab_discovery_server_job.sh rollback \"\$(cat $LATEST_BACKUP)\""
 }
 
+prepare_control_paths() {
+  local uid gid
+  uid="$(id -u)"
+  gid="$(id -g)"
+  privileged mkdir -p "$CONTROL" "$LOG_DIR" "$STATE_DIR"
+  privileged chown -R "$uid:$gid" "$CONTROL"
+  privileged touch "$PID_FILE" "$LATEST_BACKUP" "$LATEST_SOURCE" "$LATEST_ARTIFACT"
+  privileged chown "$uid:$gid" \
+    "$PID_FILE" "$LATEST_BACKUP" "$LATEST_SOURCE" "$LATEST_ARTIFACT"
+}
+
 launch() {
   need bash
   if [[ "$(id -u)" -ne 0 ]]; then
@@ -466,10 +477,10 @@ launch() {
   stamp="$(date +%Y%m%d-%H%M%S)"
   log="$LOG_DIR/discovery-release-$stamp.log"
 
-  privileged mkdir -p "$CONTROL" "$LOG_DIR" "$STATE_DIR"
+  prepare_control_paths
   privileged install -m 0755 "$0" "$STABLE_SCRIPT"
-  privileged touch "$log" "$PID_FILE"
-  privileged chown "$uid:$gid" "$log" "$PID_FILE"
+  privileged touch "$log"
+  privileged chown "$uid:$gid" "$log"
 
   if [[ -s "$PID_FILE" ]]; then
     old_pid="$(cat "$PID_FILE" 2>/dev/null || true)"
@@ -497,13 +508,13 @@ manual_rollback() {
   fi
   start_sudo_keepalive
   trap stop_sudo_keepalive EXIT
+  prepare_control_paths
 
   [[ -s "$LATEST_BACKUP" ]] || die "no Discovery release rollback backup is recorded"
   BACKUP="$(cat "$LATEST_BACKUP")"
   [[ -d "$BACKUP/plugin" ]] || die "recorded rollback backup is missing"
 
   if [[ ! -s "$WORKTREE/tooling/discovery/home_lab_discovery_server_job.sh" ]]; then
-    mkdir -p "$CONTROL"
     prepare_worktree
   fi
   rollback_live
