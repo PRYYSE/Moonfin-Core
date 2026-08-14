@@ -29,6 +29,15 @@ jobs:
           python tooling/discovery/test_home_lab_discovery_catalogue.py
           python tooling/discovery/generate_home_lab_discovery_catalogue.py --check
 
+      - name: Validate deployment tooling syntax
+        run: |
+          python -m py_compile \
+            tooling/discovery/home_lab_discovery_compile_live.py \
+            tooling/discovery/home_lab_discovery_verify_live.py \
+            tooling/discovery/apply_discovery_network_patch.py
+          bash -n tooling/discovery/home_lab_discovery_server_job.sh
+          bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
+
       - name: Apply networking integration in CI checkout
         run: |
           python tooling/discovery/apply_discovery_network_patch.py \
