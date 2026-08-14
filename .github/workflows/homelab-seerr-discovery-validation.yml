@@ -11,6 +11,7 @@ permissions:
 
 env:
   FLUTTER_VERSION: '3.44.1'
+  MOONBASE_VERSION: '2.0.3.1'
 
 jobs:
   discovery-validation:
@@ -52,3 +53,44 @@ jobs:
 
       - name: Run focused Discovery tests
         run: flutter test test/data/seerr_discovery_*.dart
+
+  moonbase-candidate-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Prepare exact Moonbase 2.0.3 source
+        run: |
+          git clone --quiet --depth 1 --branch 2.0.3 \
+            https://github.com/Moonfin-Client/Plugin.git \
+            "$RUNNER_TEMP/moonbase"
+          cp tooling/discovery/moonbase/MoonfinDiscoveryController.cs \
+            "$RUNNER_TEMP/moonbase/Jellyfin/backend/Api/MoonfinDiscoveryController.cs"
+
+      - name: Build and verify Moonbase DLL only
+        run: |
+          ROOT="$RUNNER_TEMP/moonbase/Jellyfin"
+          PUBLISH="$RUNNER_TEMP/moonbase-publish"
+          dotnet publish "$ROOT/backend/Moonfin.Server.csproj" \
+            -c Release \
+            -o "$PUBLISH" \
+            -p:AssemblyVersion="$MOONBASE_VERSION" \
+            -p:FileVersion="$MOONBASE_VERSION" \
+            -p:Version="$MOONBASE_VERSION"
+          dotnet run --project "$ROOT/tools/verify-plugin/VerifyPlugin.csproj" \
+            -c Release -- "$PUBLISH/Moonfin.Server.dll" "$MOONBASE_VERSION"
+          sha256sum "$PUBLISH/Moonfin.Server.dll" \
+            | tee "$PUBLISH/Moonfin.Server.dll.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moonbase-discovery-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/moonbase-publish/Moonfin.Server.dll
+            ${{ runner.temp }}/moonbase-publish/Moonfin.Server.dll.sha256
+          if-no-files-found: error
