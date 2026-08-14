@@ -80,24 +80,27 @@ void main() {
     expect(cleared.genreIds, {28});
   });
 
-  test('taxonomy keeps Movie and TV genre IDs distinct where upstream does', () {
-    expect(
-      SeerrDiscoveryBrowseTaxonomy.movieGenres
-          .firstWhere((genre) => genre.label == 'Action')
-          .id,
-      28,
-    );
-    expect(
-      SeerrDiscoveryBrowseTaxonomy.tvGenres
-          .firstWhere((genre) => genre.label == 'Action & Adventure')
-          .id,
-      10759,
-    );
-    expect(
-      SeerrDiscoveryBrowseTaxonomy.languages
-          .firstWhere((entry) => entry.key == 'ja')
-          .value,
-      'Japanese',
-    );
-  });
+  test(
+    'taxonomy keeps Movie and TV genre IDs distinct where upstream does',
+    () {
+      expect(
+        SeerrDiscoveryBrowseTaxonomy.movieGenres
+            .firstWhere((genre) => genre.label == 'Action')
+            .id,
+        28,
+      );
+      expect(
+        SeerrDiscoveryBrowseTaxonomy.tvGenres
+            .firstWhere((genre) => genre.label == 'Action & Adventure')
+            .id,
+        10759,
+      );
+      expect(
+        SeerrDiscoveryBrowseTaxonomy.languages
+            .firstWhere((entry) => entry.key == 'ja')
+            .value,
+        'Japanese',
+      );
+    },
+  );
 }

@@ -63,8 +63,8 @@ class _SeerrDiscoveryRefinementDialogState
                 'These filters only narrow this collection. The lane’s original '
                 'filters stay locked.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
+                  color: AppColorScheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
               const SizedBox(height: 20),
               _sectionTitle(context, 'Genres — all selected must match'),
@@ -169,8 +169,7 @@ class _SeerrDiscoveryRefinementDialogState
                       child: Text(language.value),
                     ),
                 ],
-                onChanged: (value) =>
-                    setState(() => _language = value ?? ''),
+                onChanged: (value) => setState(() => _language = value ?? ''),
               ),
             ],
           ),
@@ -178,9 +177,9 @@ class _SeerrDiscoveryRefinementDialogState
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(
-            const SeerrDiscoveryBrowseRefinements(),
-          ),
+          onPressed: () => Navigator.of(
+            context,
+          ).pop(const SeerrDiscoveryBrowseRefinements()),
           child: const Text('Reset'),
         ),
         TextButton(
@@ -196,17 +195,21 @@ class _SeerrDiscoveryRefinementDialogState
   }
 
   Widget _sectionTitle(BuildContext context, String text) => Text(
-        text,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-      );
+    text,
+    style: Theme.of(
+      context,
+    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+  );
 
   SeerrDiscoveryBrowseRefinements _result() {
     final yearFrom = _years.start.round() <= 1900 ? null : _years.start.round();
     final yearTo = _years.end.round() >= _maxYear ? null : _years.end.round();
-    final runtimeMin = _runtime.start.round() <= 0 ? null : _runtime.start.round();
-    final runtimeMax = _runtime.end.round() >= 240 ? null : _runtime.end.round();
+    final runtimeMin = _runtime.start.round() <= 0
+        ? null
+        : _runtime.start.round();
+    final runtimeMax = _runtime.end.round() >= 240
+        ? null
+        : _runtime.end.round();
     return SeerrDiscoveryBrowseRefinements(
       genreIds: Set<int>.unmodifiable(_genres),
       yearFrom: yearFrom,

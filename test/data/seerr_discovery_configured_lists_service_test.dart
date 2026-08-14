@@ -13,26 +13,21 @@ HomeSectionConfig _config({
   String? display,
   bool enabled = true,
   String? mediaType,
-}) =>
-    HomeSectionConfig.pluginDynamic(
-      serverId: 'custom',
-      pluginSection: section,
-      pluginDisplayText: display,
-      pluginSource: HomeSectionPluginSource.custom,
-      enabled: enabled,
-      pluginAdditionalData: jsonEncode({
-        'source': source,
-        'type': type,
-        if (mediaType != null) 'media_type': mediaType,
-        'params': {'listid': 'ls123'},
-      }),
-    );
+}) => HomeSectionConfig.pluginDynamic(
+  serverId: 'custom',
+  pluginSection: section,
+  pluginDisplayText: display,
+  pluginSource: HomeSectionPluginSource.custom,
+  enabled: enabled,
+  pluginAdditionalData: jsonEncode({
+    'source': source,
+    'type': type,
+    if (mediaType != null) 'media_type': mediaType,
+    'params': {'listid': 'ls123'},
+  }),
+);
 
-ImdbExternalListItem _item(
-  int id, {
-  String type = 'Movie',
-  String? poster,
-}) =>
+ImdbExternalListItem _item(int id, {String type = 'Movie', String? poster}) =>
     ImdbExternalListItem(
       imdbId: 'tt${id.toString().padLeft(7, '0')}',
       tmdbId: '$id',
@@ -44,42 +39,46 @@ ImdbExternalListItem _item(
     );
 
 SeerrDiscoveryCatalogue _catalogue() => SeerrDiscoveryCatalogue(
-      schemaVersion: 2,
-      tabs: [
-        const SeerrDiscoveryTab(
-          id: 'movies',
-          title: 'Movies',
-          sections: [],
-        ),
-        SeerrDiscoveryTab(
-          id: 'lists',
-          title: 'Lists',
-          initialLaneBudget: 16,
-          minimumLaneCount: 8,
-          sections: List.generate(
-            20,
-            (index) => SeerrDiscoverySection(
-              id: 'placeholder-$index',
-              title: 'Placeholder $index',
-              query: SeerrDiscoveryQuery(
-                source: SeerrDiscoverySource.externalList,
-                mediaType: 'all',
-                listProvider: 'server',
-                listId: 'placeholder-$index',
-              ),
-            ),
+  schemaVersion: 2,
+  tabs: [
+    const SeerrDiscoveryTab(id: 'movies', title: 'Movies', sections: []),
+    SeerrDiscoveryTab(
+      id: 'lists',
+      title: 'Lists',
+      initialLaneBudget: 16,
+      minimumLaneCount: 8,
+      sections: List.generate(
+        20,
+        (index) => SeerrDiscoverySection(
+          id: 'placeholder-$index',
+          title: 'Placeholder $index',
+          query: SeerrDiscoveryQuery(
+            source: SeerrDiscoverySource.externalList,
+            mediaType: 'all',
+            listProvider: 'server',
+            listId: 'placeholder-$index',
           ),
         ),
-      ],
-    );
+      ),
+    ),
+  ],
+);
 
 void main() {
   test('imports only enabled supported custom external-list configs', () {
     final configs = [
       _config(section: 'imdb-row', source: 'imdb', display: 'IMDb Picks'),
-      _config(section: 'mdblist-row', source: 'mdblist', display: 'MDBList Picks'),
+      _config(
+        section: 'mdblist-row',
+        source: 'mdblist',
+        display: 'MDBList Picks',
+      ),
       _config(section: 'tmdb-row', source: 'tmdb', display: 'TMDb Collection'),
-      _config(section: 'letterboxd-row', source: 'letterboxd', display: 'Letterboxd Watchlist'),
+      _config(
+        section: 'letterboxd-row',
+        source: 'letterboxd',
+        display: 'Letterboxd Watchlist',
+      ),
       _config(section: 'editorial-row', source: 'tmdb_chart'),
       _config(section: 'disabled-row', source: 'imdb', enabled: false),
     ];
@@ -90,19 +89,18 @@ void main() {
 
     final sections = service.configuredSections();
     expect(sections.length, 4);
-    expect(
-      sections.map((section) => section.title).toSet(),
-      {
-        'IMDb Picks',
-        'MDBList Picks',
-        'TMDb Collection',
-        'Letterboxd Watchlist',
-      },
-    );
-    expect(
-      sections.map((section) => section.query.listProvider).toSet(),
-      {'imdb', 'mdblist', 'tmdb', 'letterboxd'},
-    );
+    expect(sections.map((section) => section.title).toSet(), {
+      'IMDb Picks',
+      'MDBList Picks',
+      'TMDb Collection',
+      'Letterboxd Watchlist',
+    });
+    expect(sections.map((section) => section.query.listProvider).toSet(), {
+      'imdb',
+      'mdblist',
+      'tmdb',
+      'letterboxd',
+    });
   });
 
   test('replaces placeholder Lists tab with actual configured sources', () {
@@ -136,41 +134,42 @@ void main() {
     expect(merged.tabs.map((tab) => tab.id), ['movies']);
   });
 
-  test('loads and pages configured list once from existing external service', () async {
-    final config = _config(
-      section: 'big-list',
-      source: 'mdblist',
-      display: 'Big List',
-    );
-    var fetches = 0;
-    final service = SeerrDiscoveryConfiguredListsService.forTesting(
-      readConfigs: () => [config],
-      fetchItems: (_, {forceRefresh = false}) async {
-        fetches++;
-        return List.generate(
-          45,
-          (index) => _item(
-            index + 1,
-            type: index.isEven ? 'Movie' : 'Series',
-          ),
-        );
-      },
-    );
-    final section = service.configuredSections().single;
+  test(
+    'loads and pages configured list once from existing external service',
+    () async {
+      final config = _config(
+        section: 'big-list',
+        source: 'mdblist',
+        display: 'Big List',
+      );
+      var fetches = 0;
+      final service = SeerrDiscoveryConfiguredListsService.forTesting(
+        readConfigs: () => [config],
+        fetchItems: (_, {forceRefresh = false}) async {
+          fetches++;
+          return List.generate(
+            45,
+            (index) =>
+                _item(index + 1, type: index.isEven ? 'Movie' : 'Series'),
+          );
+        },
+      );
+      final section = service.configuredSections().single;
 
-    final first = await service.load(section, page: 1);
-    final second = await service.load(section, page: 2);
-    final third = await service.load(section, page: 3);
+      final first = await service.load(section, page: 1);
+      final second = await service.load(section, page: 2);
+      final third = await service.load(section, page: 3);
 
-    expect(first.results.length, 20);
-    expect(second.results.length, 20);
-    expect(third.results.length, 5);
-    expect(first.totalResults, 45);
-    expect(first.totalPages, 3);
-    expect(fetches, 1);
-    expect(first.results[0].mediaType, 'movie');
-    expect(first.results[1].mediaType, 'tv');
-  });
+      expect(first.results.length, 20);
+      expect(second.results.length, 20);
+      expect(third.results.length, 5);
+      expect(first.totalResults, 45);
+      expect(first.totalPages, 3);
+      expect(fetches, 1);
+      expect(first.results[0].mediaType, 'movie');
+      expect(first.results[1].mediaType, 'tv');
+    },
+  );
 
   test('force refresh replaces in-memory list cache', () async {
     final config = _config(section: 'refresh-list', source: 'imdb');
@@ -192,24 +191,24 @@ void main() {
     expect(refreshed.results.single.id, 2);
   });
 
-  test('normalises TMDb image URL and drops entries without TMDb identity', () async {
-    final config = _config(section: 'images', source: 'tmdb');
-    final service = SeerrDiscoveryConfiguredListsService.forTesting(
-      readConfigs: () => [config],
-      fetchItems: (_, {forceRefresh = false}) async => [
-        _item(
-          10,
-          poster: 'https://image.tmdb.org/t/p/w500/abc123.jpg',
-        ),
-        ImdbExternalListItem(
-          imdbId: 'tt0000999',
-          title: 'IMDb only',
-          type: 'Movie',
-        ),
-      ],
-    );
-    final page = await service.load(service.configuredSections().single);
-    expect(page.results.length, 1);
-    expect(page.results.single.posterPath, '/abc123.jpg');
-  });
+  test(
+    'normalises TMDb image URL and drops entries without TMDb identity',
+    () async {
+      final config = _config(section: 'images', source: 'tmdb');
+      final service = SeerrDiscoveryConfiguredListsService.forTesting(
+        readConfigs: () => [config],
+        fetchItems: (_, {forceRefresh = false}) async => [
+          _item(10, poster: 'https://image.tmdb.org/t/p/w500/abc123.jpg'),
+          ImdbExternalListItem(
+            imdbId: 'tt0000999',
+            title: 'IMDb only',
+            type: 'Movie',
+          ),
+        ],
+      );
+      final page = await service.load(service.configuredSections().single);
+      expect(page.results.length, 1);
+      expect(page.results.single.posterPath, '/abc123.jpg');
+    },
+  );
 }

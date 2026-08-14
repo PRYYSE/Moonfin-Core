@@ -7,8 +7,11 @@ import 'seerr_api_models.dart';
 import 'seerr_discovery_schema.dart';
 
 typedef SeerrDiscoveryConfiguredListReader = List<HomeSectionConfig> Function();
-typedef SeerrDiscoveryConfiguredListFetcher = Future<List<ImdbExternalListItem>>
-    Function(HomeSectionConfig config, {bool forceRefresh});
+typedef SeerrDiscoveryConfiguredListFetcher =
+    Future<List<ImdbExternalListItem>> Function(
+      HomeSectionConfig config, {
+      bool forceRefresh,
+    });
 
 /// Bridges Moonfin's existing user-configured external rows into deep Discovery.
 ///
@@ -33,14 +36,14 @@ class SeerrDiscoveryConfiguredListsService {
   SeerrDiscoveryConfiguredListsService({
     required UserPreferences preferences,
     required CustomExternalListsService externalLists,
-  })  : _readConfigs = (() => preferences.activeHomeSectionConfigs),
-        _fetchItems = externalLists.fetchCustomRow;
+  }) : _readConfigs = (() => preferences.activeHomeSectionConfigs),
+       _fetchItems = externalLists.fetchCustomRow;
 
   SeerrDiscoveryConfiguredListsService.forTesting({
     required SeerrDiscoveryConfiguredListReader readConfigs,
     required SeerrDiscoveryConfiguredListFetcher fetchItems,
-  })  : _readConfigs = readConfigs,
-        _fetchItems = fetchItems;
+  }) : _readConfigs = readConfigs,
+       _fetchItems = fetchItems;
 
   /// Returns only executable external-list sections. Existing placeholder
   /// `server` list IDs are intentionally not treated as configured sources.
@@ -203,10 +206,10 @@ class SeerrDiscoveryConfiguredListsService {
     final title = display != null && display.isNotEmpty
         ? display
         : (data['title']?.toString().trim().isNotEmpty ?? false)
-            ? data['title'].toString().trim()
-            : config.pluginSection?.trim().isNotEmpty == true
-                ? config.pluginSection!.trim()
-                : 'Curated List';
+        ? data['title'].toString().trim()
+        : config.pluginSection?.trim().isNotEmpty == true
+        ? config.pluginSection!.trim()
+        : 'Curated List';
     return _ConfiguredListDefinition(
       source: source,
       mediaType: mediaType,
