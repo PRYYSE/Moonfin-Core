@@ -7,14 +7,20 @@
 class SeerrDiscoverySession {
   final Map<String, Set<String>> _seenByGroup = {};
 
-  /// Returns only IDs not already surfaced in [group], then records them.
+  /// Prefers IDs not already surfaced in [group] or optional [sharedGroup],
+  /// then records the retained IDs into both scopes.
+  ///
+  /// A lane can therefore use a specific group such as `movies-genres` and a
+  /// shared tab scope such as `tab:movies`. Expanded full-result screens should
+  /// omit [sharedGroup] so landing-page novelty never hides valid catalogue
+  /// results.
   ///
   /// [minimumRetained] prevents aggressive deduplication from emptying a row.
-  /// If too few unseen IDs remain, the original ordering is retained and only
-  /// the unseen prefix is preferred. This allows intentional overlap without
-  /// turning discovery into blank shelves.
+  /// If too few unseen IDs remain, prior items are reintroduced in original
+  /// order after the fresh items.
   List<T> filterFresh<T>({
     required String group,
+    String? sharedGroup,
     required Iterable<T> items,
     required String Function(T item) identity,
     int minimumRetained = 6,
@@ -24,12 +30,17 @@ class SeerrDiscoverySession {
     if (list.isEmpty) return const [];
 
     final seen = _seenByGroup.putIfAbsent(group, () => <String>{});
+    final sharedSeen = sharedGroup == null || sharedGroup == group
+        ? null
+        : _seenByGroup.putIfAbsent(sharedGroup, () => <String>{});
     final fresh = <T>[];
     final repeats = <T>[];
 
     for (final item in list) {
       final id = identity(item);
-      if (id.isEmpty || !seen.contains(id)) {
+      final hasSeen = id.isNotEmpty &&
+          (seen.contains(id) || (sharedSeen?.contains(id) ?? false));
+      if (!hasSeen) {
         fresh.add(item);
       } else {
         repeats.add(item);
@@ -44,7 +55,9 @@ class SeerrDiscoverySession {
     if (record) {
       for (final item in result) {
         final id = identity(item);
-        if (id.isNotEmpty) seen.add(id);
+        if (id.isEmpty) continue;
+        seen.add(id);
+        sharedSeen?.add(id);
       }
     }
     return result;
@@ -53,9 +66,17 @@ class SeerrDiscoverySession {
   bool hasSeen(String group, String identity) =>
       _seenByGroup[group]?.contains(identity) ?? false;
 
-  void markSeen(String group, Iterable<String> identities) {
+  void markSeen(
+    String group,
+    Iterable<String> identities, {
+    String? sharedGroup,
+  }) {
+    final clean = identities.where((value) => value.isNotEmpty).toList();
     final seen = _seenByGroup.putIfAbsent(group, () => <String>{});
-    seen.addAll(identities.where((value) => value.isNotEmpty));
+    seen.addAll(clean);
+    if (sharedGroup != null && sharedGroup != group) {
+      _seenByGroup.putIfAbsent(sharedGroup, () => <String>{}).addAll(clean);
+    }
   }
 
   void resetGroup(String group) => _seenByGroup.remove(group);
