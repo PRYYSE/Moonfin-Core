@@ -321,6 +321,9 @@ prepare_worktree() {
 rollback_live() {
   [[ -n "$BACKUP" && -d "$BACKUP" ]] || return 0
   say "Rolling back the exact pre-Discovery Moonfin plugin state..."
+  if [[ -n "$JELLYFIN" ]]; then
+    docker_cmd start "$JELLYFIN" >/dev/null 2>&1 || true
+  fi
   bash "$WORKTREE/tooling/discovery/home_lab_discovery_server_job.sh" \
     rollback "$BACKUP"
 }
