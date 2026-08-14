@@ -20,13 +20,14 @@ class SeerrDiscoveryCatalogueService {
   final Dio _dio;
 
   SeerrDiscoveryCatalogueService({Dio? dio})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 15),
-              ),
-            );
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 15),
+            ),
+          );
 
   Future<SeerrDiscoveryCatalogueLoadResult> load() async {
     final loader = SeerrDiscoveryCatalogueLoader(
@@ -44,7 +45,9 @@ class SeerrDiscoveryCatalogueService {
         ? GetIt.instance<MediaServerClient>()
         : null;
     if (client == null || client.accessToken == null) {
-      throw StateError('No authenticated Jellyfin client for Discovery catalogue');
+      throw StateError(
+        'No authenticated Jellyfin client for Discovery catalogue',
+      );
     }
 
     final response = await _dio.get(
@@ -58,7 +61,8 @@ class SeerrDiscoveryCatalogueService {
             accessToken: client.accessToken!,
           ),
         },
-        validateStatus: (status) => status != null && status >= 200 && status < 500,
+        validateStatus: (status) =>
+            status != null && status >= 200 && status < 500,
       ),
     );
 
@@ -74,7 +78,9 @@ class SeerrDiscoveryCatalogueService {
       final decoded = jsonDecode(data);
       if (decoded is Map) return Map<String, dynamic>.from(decoded);
     }
-    throw const FormatException('Discovery catalogue endpoint returned invalid JSON');
+    throw const FormatException(
+      'Discovery catalogue endpoint returned invalid JSON',
+    );
   }
 
   Future<Map<String, dynamic>?> _readCached() async {
@@ -83,7 +89,9 @@ class SeerrDiscoveryCatalogueService {
     if (raw == null || raw.isEmpty) return null;
     final decoded = jsonDecode(raw);
     if (decoded is! Map) {
-      throw const FormatException('Cached Discovery catalogue is not an object');
+      throw const FormatException(
+        'Cached Discovery catalogue is not an object',
+      );
     }
     return Map<String, dynamic>.from(decoded);
   }
