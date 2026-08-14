@@ -1,5 +1,6 @@
 import 'seerr_discovery_filter_policy.dart';
 import 'seerr_discovery_schema.dart';
+import 'seerr_discovery_sort_policy.dart';
 
 class SeerrDiscoveryRouteState {
   final String? title;
@@ -37,7 +38,7 @@ abstract final class SeerrDiscoveryRouteCodec {
     final query = SeerrDiscoveryQuery(
       source: source,
       mediaType: mediaType,
-      sortBy: SeerrDiscoveryRequestSort.normalise(parameters['sortBy']),
+      sortBy: SeerrDiscoverySortPolicy.normalise(parameters['sortBy']),
       filters: SeerrDiscoveryFilterPolicy.fromRouteParameters(
         parameters,
         now: now,
@@ -55,33 +56,5 @@ abstract final class SeerrDiscoveryRouteCodec {
   static String? _trimmed(String? value) {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
-  }
-}
-
-/// Mirrors the safe sort allow-list used by request-plan compilation without
-/// making route decoding depend on HTTP implementation details.
-abstract final class SeerrDiscoveryRequestSort {
-  static const allowed = <String>{
-    'popularity.asc',
-    'popularity.desc',
-    'vote_average.asc',
-    'vote_average.desc',
-    'primary_release_date.asc',
-    'primary_release_date.desc',
-    'first_air_date.asc',
-    'first_air_date.desc',
-    'title.asc',
-    'title.desc',
-    'name.asc',
-    'name.desc',
-    'original_title.asc',
-    'original_title.desc',
-    'revenue.asc',
-    'revenue.desc',
-  };
-
-  static String normalise(String? value) {
-    final sort = value?.trim();
-    return sort != null && allowed.contains(sort) ? sort : 'popularity.desc';
   }
 }
