@@ -6,6 +6,7 @@ import 'package:playback_core/playback_core.dart';
 import '../../auth/repositories/session_repository.dart';
 import '../../auth/repositories/user_repository.dart';
 import '../../data/services/connectivity_service.dart';
+import '../../data/services/seerr/seerr_discovery_route_codec.dart';
 import '../../di/injection.dart';
 import '../../playback/external_player_policy.dart';
 import '../../preference/user_preferences.dart';
@@ -764,11 +765,15 @@ final appRouter = GoRouter(
       path: Destinations.seerrBrowse,
       builder: (context, state) {
         final params = state.uri.queryParameters;
+        final deepRoute = params.containsKey('source')
+            ? SeerrDiscoveryRouteCodec.decode(params)
+            : null;
         return SeerrBrowseScreen(
-          filterId: params['filterId'],
-          filterName: params['filterName'],
-          mediaType: params['mediaType'],
-          filterType: params['filterType'],
+          filterId: deepRoute == null ? params['filterId'] : null,
+          filterName: deepRoute?.title ?? params['filterName'],
+          mediaType: deepRoute?.query.mediaType ?? params['mediaType'],
+          filterType: deepRoute == null ? params['filterType'] : null,
+          baseQuery: deepRoute?.query,
         );
       },
     ),

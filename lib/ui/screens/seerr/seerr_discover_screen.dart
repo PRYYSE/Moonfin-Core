@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +9,9 @@ import 'package:moonfin_design/moonfin_design.dart';
 
 import '../../../data/repositories/seerr_repository.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
-import '../../../data/viewmodels/seerr_discover_view_model.dart';
+import '../../../data/services/seerr/seerr_discovery_route_codec.dart';
+import '../../../data/services/seerr/seerr_discovery_schema.dart';
+import '../../../data/viewmodels/seerr_deep_discovery_view_model.dart';
 import '../../../preference/preference_constants.dart';
 import '../../../preference/user_preferences.dart';
 import '../../../ui/mixins/focus_state_mixin.dart';
@@ -34,12 +35,11 @@ class SeerrDiscoverScreen extends StatefulWidget {
   const SeerrDiscoverScreen({super.key});
 
   @override
-  State<SeerrDiscoverScreen> createState() =>
-      _SeerrDiscoverScreenState();
+  State<SeerrDiscoverScreen> createState() => _SeerrDiscoverScreenState();
 }
 
 class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
-  SeerrDiscoverViewModel? _viewModel;
+  SeerrDeepDiscoveryViewModel? _viewModel;
   final _prefs = GetIt.instance<UserPreferences>();
   final _scrollController = ScrollController();
 
@@ -48,9 +48,13 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
   Timer? _backdropDebounce;
   String? _backdropUrl;
   final _initialFocusNode = FocusNode(debugLabel: 'seerrDiscoverInitial');
-  final _loadingHoldFocusNode =
-      FocusNode(debugLabel: 'seerrDiscoverLoadingHold', skipTraversal: true);
+  final _loadingHoldFocusNode = FocusNode(
+    debugLabel: 'seerrDiscoverLoadingHold',
+    skipTraversal: true,
+  );
   final _requestsEntryFocusNode = FocusNode(debugLabel: 'seerrRequestsEntry');
+  final _tabRowKey = GlobalKey<LockedFocusRowState>();
+  final _tabScrollController = ScrollController();
   int _badgeCount = 0;
   bool _initialFocusResolved = false;
   bool _isFirstRowFocused = false;
@@ -72,7 +76,8 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
 
   void _onRowLeftEdge() {
     final prefs = GetIt.instance<UserPreferences>();
-    final navbarIsLeft = prefs.get(UserPreferences.navbarPosition) == NavbarPosition.left;
+    final navbarIsLeft =
+        prefs.get(UserPreferences.navbarPosition) == NavbarPosition.left;
     if (!navbarIsLeft) return;
     final focusNavbar = NavigationLayout.focusNavbarNotifier.value;
     if (focusNavbar != null) {
@@ -91,16 +96,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
       }
     } else if (isUp && targetIndex == -1) {
       _restoreNavbarToNormalPosition();
-      // The requests entry sits between the rows and the navbar.
-      if (_requestsEntryFocusNode.context != null) {
-        _requestsEntryFocusNode.requestFocus();
-        return true;
-      }
-      final prefs = GetIt.instance<UserPreferences>();
-      final navbarPosition = prefs.get(UserPreferences.navbarPosition);
-      if (navbarPosition == NavbarPosition.top) {
-        NavigationLayout.focusNavbarNotifier.value?.call();
-      }
+      _focusActiveTab();
       return true;
     }
     return false;
@@ -125,7 +121,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
   }
 
   Future<void> _initViewModel() async {
-    final vm = await GetIt.instance.getAsync<SeerrDiscoverViewModel>();
+    final vm = await GetIt.instance.getAsync<SeerrDeepDiscoveryViewModel>();
     if (!mounted) return;
     vm.addListener(_onChanged);
     setState(() => _viewModel = vm);
@@ -168,6 +164,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     _selectionDebounce?.cancel();
     _backdropDebounce?.cancel();
     _scrollController.dispose();
+    _tabScrollController.dispose();
     for (final controller in _rowScrollControllers.values) {
       controller.dispose();
     }
@@ -233,20 +230,13 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     if (!event.logicalKey.isUpKey) return KeyEventResult.ignored;
     if (!_isFirstRowFocused) return KeyEventResult.ignored;
 
-    // The requests entry sits between the rows and the navbar.
-    if (_requestsEntryFocusNode.context != null) {
-      _restoreNavbarToNormalPosition();
-      _requestsEntryFocusNode.requestFocus();
-      return KeyEventResult.handled;
-    }
-
     _restoreNavbarToNormalPosition();
-    NavigationLayout.focusNavbarNotifier.value?.call();
+    _focusActiveTab();
     return KeyEventResult.handled;
   }
 
   void _onPrefsChanged() {
-    _viewModel?.applyRowConfig();
+    if (mounted) setState(() {});
   }
 
   void _onChanged() {
@@ -263,12 +253,8 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     });
   }
 
-  bool _rowHasFocusableContent(SeerrDiscoverRow row) {
-    if (row.isGenreRow) return row.genres.isNotEmpty;
-    if (row.isNetworkRow) return row.networks.isNotEmpty;
-    if (row.isStudioRow) return row.studios.isNotEmpty;
-    return row.items.isNotEmpty;
-  }
+  bool _rowHasFocusableContent(SeerrDeepDiscoveryRow row) =>
+      row.items.isNotEmpty;
 
   void _onItemSelected(SeerrDiscoverItem item) {
     _selectionDebounce?.cancel();
@@ -281,7 +267,9 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
         if (!mounted) return;
         final backdrop = item.backdropPath;
         setState(() {
-          _backdropUrl = backdrop != null ? '$_tmdbBackdropBase$backdrop' : null;
+          _backdropUrl = backdrop != null
+              ? '$_tmdbBackdropBase$backdrop'
+              : null;
         });
       });
     });
@@ -295,13 +283,12 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      RequestInitialFocus(
-        // On mobile the target is never attached (no row autofocuses it), so
-        // RequestInitialFocus simply finds nothing to focus and gives up.
-        targetNode: _initialFocusNode,
-        child: _buildScreenContent(context),
-      );
+  Widget build(BuildContext context) => RequestInitialFocus(
+    // On mobile the target is never attached (no row autofocuses it), so
+    // RequestInitialFocus simply finds nothing to focus and gives up.
+    targetNode: _initialFocusNode,
+    child: _buildScreenContent(context),
+  );
 
   Widget _buildScreenContent(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
@@ -309,11 +296,17 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     final navbarPosition = prefs.get(UserPreferences.navbarPosition);
     final backdropEnabled = prefs.get(UserPreferences.backdropEnabled);
     final navbarHeight = navbarPosition == NavbarPosition.top
-        ? (PlatformDetection.isTV ? 95.0 : PlatformDetection.useMobileUi ? 60.0 : 80.0)
+        ? (PlatformDetection.isTV
+              ? 95.0
+              : PlatformDetection.useMobileUi
+              ? 60.0
+              : 80.0)
         : 0.0;
     final navbarIsLeft = navbarPosition == NavbarPosition.left;
     final tvTopNavbarInset =
-        navbarPosition == NavbarPosition.top && PlatformDetection.isTV && !PlatformDetection.useMobileUi
+        navbarPosition == NavbarPosition.top &&
+            PlatformDetection.isTV &&
+            !PlatformDetection.useMobileUi
         ? 48.0
         : 0.0;
     final rowLeftInset =
@@ -324,7 +317,8 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     final infoPanelLeft =
         ((navbarIsLeft && !PlatformDetection.useMobileUi) ? 80.0 : 48.0) +
         (!PlatformDetection.useMobileUi ? 16.0 : 0.0);
-    final infoTopInset = topPad + (navbarHeight > 0 ? navbarHeight - 12.0 : 28.0);
+    final infoTopInset =
+        topPad + (navbarHeight > 0 ? navbarHeight - 12.0 : 28.0);
     return Scaffold(
       backgroundColor: AppColorScheme.background,
       body: NavigationLayout(
@@ -340,7 +334,11 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _InfoPanel(item: _selectedItem, topInset: infoTopInset, leftInset: infoPanelLeft),
+                  _InfoPanel(
+                    item: _selectedItem,
+                    topInset: infoTopInset,
+                    leftInset: infoPanelLeft,
+                  ),
                   Expanded(
                     child: Focus(
                       focusNode: _loadingHoldFocusNode,
@@ -363,7 +361,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
                   focusNode: _requestsEntryFocusNode,
                   badgeCount: _badgeCount,
                   onTap: _openRequests,
-                  onDown: () => _initialFocusNode.requestFocus(),
+                  onDown: _focusActiveTab,
                   onUp: _focusNavbarFromEntry,
                 ),
               ),
@@ -393,10 +391,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: vm.refresh,
-              child: Text(l10n.retry),
-            ),
+            ElevatedButton(onPressed: vm.refresh, child: Text(l10n.retry)),
           ],
         ),
       );
@@ -422,56 +417,31 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     return ListView.builder(
       controller: _scrollController,
       padding: EdgeInsets.only(left: rowLeftInset, bottom: 32),
-      itemCount: rows.length,
+      itemCount: rows.length + 1,
       scrollCacheExtent: const ScrollCacheExtent.pixels(600.0),
-      itemBuilder: (context, index) {
-        final row = rows[index];
+      itemBuilder: (context, listIndex) {
+        if (listIndex == 0) return _buildDiscoveryTabs();
+        final rowIndex = listIndex - 1;
+        final row = rows[rowIndex];
         if (!row.isLoading && !_rowHasFocusableContent(row)) {
           return const SizedBox.shrink();
         }
-        final isFirstFocusableRow = index == _firstFocusableVisibleIndex;
+        final isFirstFocusableRow = rowIndex == _firstFocusableVisibleIndex;
         final autofocusRow = isFirstFocusableRow && _wantsInitialFocus;
         final firstNode = autofocusRow ? _initialFocusNode : null;
-        Widget rowWidget;
-        if (row.isGenreRow) {
-          rowWidget = _buildGenreRow(
-            row,
-            index,
-            isFirstVisibleRow: isFirstFocusableRow,
-            autofocusFirst: autofocusRow,
-            firstFocusNode: firstNode,
-          );
-        } else if (row.isNetworkRow) {
-          rowWidget = _buildNetworkRow(
-            row,
-            index,
-            isFirstVisibleRow: isFirstFocusableRow,
-            autofocusFirst: autofocusRow,
-            firstFocusNode: firstNode,
-          );
-        } else if (row.isStudioRow) {
-          rowWidget = _buildStudioRow(
-            row,
-            index,
-            isFirstVisibleRow: isFirstFocusableRow,
-            autofocusFirst: autofocusRow,
-            firstFocusNode: firstNode,
-          );
-        } else {
-          rowWidget = _buildMediaRow(
-            row,
-            index,
-            isFirstVisibleRow: isFirstFocusableRow,
-            autofocusFirst: autofocusRow,
-            firstFocusNode: firstNode,
-          );
-        }
+        final rowWidget = _buildMediaRow(
+          row,
+          rowIndex,
+          isFirstVisibleRow: isFirstFocusableRow,
+          autofocusFirst: autofocusRow,
+          firstFocusNode: firstNode,
+        );
         return Builder(
           builder: (rowContext) => Focus(
             skipTraversal: true,
             onFocusChange: (hasFocus) {
               if (hasFocus) {
-                if (index == _firstFocusableVisibleIndex) {
+                if (rowIndex == _firstFocusableVisibleIndex) {
                   if (_scrollController.hasClients) {
                     _scrollController.animateTo(
                       0.0,
@@ -496,6 +466,129 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     );
   }
 
+  bool _canExpand(SeerrDeepDiscoveryRow row) {
+    final source = row.section.query.source;
+    return row.section.expandable &&
+        source != SeerrDiscoverySource.personalised &&
+        source != SeerrDiscoverySource.externalList;
+  }
+
+  void _openExpandedRow(SeerrDeepDiscoveryRow row) {
+    if (!_canExpand(row)) return;
+    final uri = Uri(
+      path: Destinations.seerrBrowse,
+      queryParameters: SeerrDiscoveryRouteCodec.encode(
+        row.section.query,
+        title: row.title,
+      ),
+    );
+    context.push(uri.toString());
+  }
+
+  void _focusActiveTab() {
+    final vm = _viewModel;
+    final state = _tabRowKey.currentState;
+    if (vm == null || state == null || vm.tabs.isEmpty) {
+      _requestsEntryFocusNode.requestFocus();
+      return;
+    }
+    final index = vm.tabs.indexWhere((tab) => tab.id == vm.activeTabId);
+    state.requestFocusAt(index < 0 ? 0 : index);
+  }
+
+  bool _onTabVerticalNavigation(bool isUp) {
+    if (isUp) {
+      if (_requestsEntryFocusNode.context != null) {
+        _requestsEntryFocusNode.requestFocus();
+      } else {
+        NavigationLayout.focusNavbarNotifier.value?.call();
+      }
+      return true;
+    }
+    if (_viewModel?.rows.isNotEmpty ?? false) {
+      _getRowKey(0).currentState?.requestFocusAt(0);
+    }
+    return true;
+  }
+
+  Future<void> _selectDiscoveryTab(SeerrDiscoveryTab tab) async {
+    final vm = _viewModel;
+    if (vm == null || vm.activeTabId == tab.id) return;
+    _selectionDebounce?.cancel();
+    _backdropDebounce?.cancel();
+    if (mounted) {
+      setState(() {
+        _selectedItem = null;
+        _backdropUrl = null;
+        _isFirstRowFocused = false;
+      });
+    }
+    for (final controller in _rowScrollControllers.values) {
+      if (controller.hasClients) controller.jumpTo(0);
+    }
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    await vm.selectTab(tab.id);
+  }
+
+  Widget _buildDiscoveryTabs() {
+    final vm = _viewModel;
+    if (vm == null || vm.tabs.isEmpty) return const SizedBox.shrink();
+    final desktopScale = GetIt.instance<UserPreferences>()
+        .get(UserPreferences.desktopUiScale)
+        .scaleFactor;
+    return SizedBox(
+      height: 62 * desktopScale,
+      child: LockedFocusRow<SeerrDiscoveryTab>(
+        key: _tabRowKey,
+        items: vm.tabs,
+        hubKey: 'seerr_deep_discovery_tabs',
+        controller: _tabScrollController,
+        itemExtent: 150 * desktopScale,
+        itemSpacing: 8 * desktopScale,
+        height: 54 * desktopScale,
+        padding: EdgeInsets.fromLTRB(
+          20 * desktopScale,
+          4 * desktopScale,
+          20 * desktopScale,
+          4 * desktopScale,
+        ),
+        onLeftEdge: _onRowLeftEdge,
+        onVerticalNavigation: _onTabVerticalNavigation,
+        onTap: (_, tab) => unawaited(_selectDiscoveryTab(tab)),
+        itemBuilder: (context, tab, index, isFocused) {
+          final active = tab.id == vm.activeTabId;
+          final accent = AppColorScheme.accent;
+          final surface = Theme.of(context).colorScheme.surface;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            decoration: BoxDecoration(
+              color: active
+                  ? accent.withValues(alpha: 0.20)
+                  : surface.withValues(alpha: isFocused ? 0.72 : 0.45),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isFocused || active
+                    ? accent.withValues(alpha: isFocused ? 0.95 : 0.55)
+                    : AppColorScheme.onSurface.withValues(alpha: 0.12),
+                width: isFocused ? 2 : 1,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              tab.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppColorScheme.onSurface,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildRowContainer({
     required String title,
     required double rowHeight,
@@ -503,6 +596,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     required bool hasItems,
     required ScrollController scrollController,
     required Widget child,
+    Widget? trailing,
   }) {
     final l10n = AppLocalizations.of(context);
     final desktopScale = GetIt.instance<UserPreferences>()
@@ -525,6 +619,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
       ),
       contentSpacing: 0,
       showControls: showControls,
+      trailing: trailing,
       builder: (context, controller) {
         return SizedBox(
           height: (rowHeight + 10) * desktopScale,
@@ -537,35 +632,38 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
                   ),
                 )
               : hasItems
-                  ? child
-                  : Center(
-                      child: Text(
-                        l10n.noItems,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withAlpha(128),
-                            ),
-                      ),
+              ? child
+              : Center(
+                  child: Text(
+                    l10n.noItems,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(128),
                     ),
+                  ),
+                ),
         );
       },
     );
   }
 
   Widget _buildMediaRow(
-    SeerrDiscoverRow row,
+    SeerrDeepDiscoveryRow row,
     int rowIndex, {
     bool isFirstVisibleRow = false,
     bool autofocusFirst = false,
     FocusNode? firstFocusNode,
   }) {
     final suppressFocusGlow = ThemeRegistry.active.borders.focusGlow.isNotEmpty;
-    final focusColor =
-      Color(GetIt.instance<UserPreferences>().get(UserPreferences.focusColor).colorValue);
-    final cardExpansion =
-      GetIt.instance<UserPreferences>().get(UserPreferences.cardFocusExpansion);
+    final focusColor = Color(
+      GetIt.instance<UserPreferences>()
+          .get(UserPreferences.focusColor)
+          .colorValue,
+    );
+    final cardExpansion = GetIt.instance<UserPreferences>().get(
+      UserPreferences.cardFocusExpansion,
+    );
     final desktopScale = GetIt.instance<UserPreferences>()
         .get(UserPreferences.desktopUiScale)
         .scaleFactor;
@@ -597,7 +695,9 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
           5 * desktopScale,
         ),
         onLeftEdge: _onRowLeftEdge,
-        onVerticalNavigation: (isUp) => _onRowVerticalNavigation(rowIndex, isUp),
+        onRightEdge: _canExpand(row) ? () => _openExpandedRow(row) : null,
+        onVerticalNavigation: (isUp) =>
+            _onRowVerticalNavigation(rowIndex, isUp),
         onTap: (index, item) => _onItemTap(item),
         onIndexChanged: (index, item) {
           _onItemSelected(item);
@@ -641,265 +741,12 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
       isLoading: row.isLoading && row.items.isEmpty,
       hasItems: row.items.isNotEmpty,
       scrollController: _getRowScroll(rowIndex),
-      child: child,
-    );
-  }
-
-  Widget _buildGenreRow(
-    SeerrDiscoverRow row,
-    int rowIndex, {
-    bool isFirstVisibleRow = false,
-    bool autofocusFirst = false,
-    FocusNode? firstFocusNode,
-  }) {
-    final mediaType = row.type == SeerrRowType.movieGenres ? 'movie' : 'tv';
-    final desktopScale = GetIt.instance<UserPreferences>()
-        .get(UserPreferences.desktopUiScale)
-        .scaleFactor;
-
-    final focusKey = _getRowKey(rowIndex);
-    final child = LockedFocusRow<SeerrGenre>(
-      key: focusKey,
-      items: row.genres,
-      hubKey: 'seerr_discover_genres_${rowIndex}_${row.title}',
-      controller: _getRowScroll(rowIndex),
-      itemExtent: 180,
-      itemSpacing: 12 * desktopScale,
-      height: 90 * desktopScale,
-      clipBehavior: Clip.none,
-      padding: EdgeInsets.fromLTRB(
-        20 * desktopScale,
-        5 * desktopScale,
-        20 * desktopScale,
-        5 * desktopScale,
-      ),
-      onLeftEdge: _onRowLeftEdge,
-      onVerticalNavigation: (isUp) => _onRowVerticalNavigation(rowIndex, isUp),
-      onTap: (index, genre) {
-        final uri = Uri(
-          path: Destinations.seerrBrowse,
-          queryParameters: {
-            'filterId': genre.id.toString(),
-            'filterName': genre.name,
-            'mediaType': mediaType,
-            'filterType': 'genre',
-          },
-        );
-        context.push(uri.toString());
-      },
-      onIndexChanged: (index, genre) {
-        if (rowIndex == 0) {
-          _setFirstRowFocused(true);
-          _restoreNavbarToNormalPosition();
-        }
-      },
-      onFocusChange: (has) {
-        if (rowIndex == 0) {
-          _setFirstRowFocused(has);
-        }
-      },
-      autofocus: autofocusFirst,
-      focusNode: autofocusFirst ? firstFocusNode : null,
-      itemBuilder: (context, genre, index, isFocused) {
-        final backdrop = genre.backdrops.isNotEmpty
-            ? '$_tmdbBackdropBase${genre.backdrops.first}'
-            : null;
-        return _GenreCard(
-          name: genre.name,
-          imageUrl: backdrop,
-          externalIsFocused: isFocused,
-          onTap: () {
-            final uri = Uri(
-              path: Destinations.seerrBrowse,
-              queryParameters: {
-                'filterId': genre.id.toString(),
-                'filterName': genre.name,
-                'mediaType': mediaType,
-                'filterType': 'genre',
-              },
-            );
-            context.push(uri.toString());
-          },
-        );
-      },
-    );
-
-    return _buildRowContainer(
-      title: row.title,
-      rowHeight: 90,
-      isLoading: row.isLoading && row.genres.isEmpty,
-      hasItems: row.genres.isNotEmpty,
-      scrollController: _getRowScroll(rowIndex),
-      child: child,
-    );
-  }
-
-  Widget _buildNetworkRow(
-    SeerrDiscoverRow row,
-    int rowIndex, {
-    bool isFirstVisibleRow = false,
-    bool autofocusFirst = false,
-    FocusNode? firstFocusNode,
-  }) {
-    final desktopScale = GetIt.instance<UserPreferences>()
-        .get(UserPreferences.desktopUiScale)
-        .scaleFactor;
-
-    final focusKey = _getRowKey(rowIndex);
-    final child = LockedFocusRow<SeerrNetwork>(
-      key: focusKey,
-      items: row.networks,
-      hubKey: 'seerr_discover_networks_${rowIndex}_${row.title}',
-      controller: _getRowScroll(rowIndex),
-      itemExtent: 180,
-      itemSpacing: 12 * desktopScale,
-      height: 90 * desktopScale,
-      clipBehavior: Clip.none,
-      padding: EdgeInsets.fromLTRB(
-        20 * desktopScale,
-        5 * desktopScale,
-        20 * desktopScale,
-        5 * desktopScale,
-      ),
-      onLeftEdge: _onRowLeftEdge,
-      onVerticalNavigation: (isUp) => _onRowVerticalNavigation(rowIndex, isUp),
-      onTap: (index, network) {
-        final uri = Uri(
-          path: Destinations.seerrBrowse,
-          queryParameters: {
-            'filterId': network.id.toString(),
-            'filterName': network.name,
-            'mediaType': 'tv',
-            'filterType': 'network',
-          },
-        );
-        context.push(uri.toString());
-      },
-      onIndexChanged: (index, network) {
-        if (rowIndex == 0) {
-          _setFirstRowFocused(true);
-          _restoreNavbarToNormalPosition();
-        }
-      },
-      onFocusChange: (has) {
-        if (rowIndex == 0) {
-          _setFirstRowFocused(has);
-        }
-      },
-      autofocus: autofocusFirst,
-      focusNode: autofocusFirst ? firstFocusNode : null,
-      itemBuilder: (context, network, index, isFocused) {
-        return _LogoCard(
-          name: network.name,
-          logoUrl: network.logoPath,
-          externalIsFocused: isFocused,
-          onTap: () {
-            final uri = Uri(
-              path: Destinations.seerrBrowse,
-              queryParameters: {
-                'filterId': network.id.toString(),
-                'filterName': network.name,
-                'mediaType': 'tv',
-                'filterType': 'network',
-              },
-            );
-            context.push(uri.toString());
-          },
-        );
-      },
-    );
-
-    return _buildRowContainer(
-      title: row.title,
-      rowHeight: 90,
-      isLoading: row.isLoading && row.networks.isEmpty,
-      hasItems: row.networks.isNotEmpty,
-      scrollController: _getRowScroll(rowIndex),
-      child: child,
-    );
-  }
-
-  Widget _buildStudioRow(
-    SeerrDiscoverRow row,
-    int rowIndex, {
-    bool isFirstVisibleRow = false,
-    bool autofocusFirst = false,
-    FocusNode? firstFocusNode,
-  }) {
-    final desktopScale = GetIt.instance<UserPreferences>()
-        .get(UserPreferences.desktopUiScale)
-        .scaleFactor;
-
-    final focusKey = _getRowKey(rowIndex);
-    final child = LockedFocusRow<SeerrStudio>(
-      key: focusKey,
-      items: row.studios,
-      hubKey: 'seerr_discover_studios_${rowIndex}_${row.title}',
-      controller: _getRowScroll(rowIndex),
-      itemExtent: 180,
-      itemSpacing: 12 * desktopScale,
-      height: 90 * desktopScale,
-      clipBehavior: Clip.none,
-      padding: EdgeInsets.fromLTRB(
-        20 * desktopScale,
-        5 * desktopScale,
-        20 * desktopScale,
-        5 * desktopScale,
-      ),
-      onLeftEdge: _onRowLeftEdge,
-      onVerticalNavigation: (isUp) => _onRowVerticalNavigation(rowIndex, isUp),
-      onTap: (index, studio) {
-        final uri = Uri(
-          path: Destinations.seerrBrowse,
-          queryParameters: {
-            'filterId': studio.id.toString(),
-            'filterName': studio.name,
-            'mediaType': 'movie',
-            'filterType': 'studio',
-          },
-        );
-        context.push(uri.toString());
-      },
-      onIndexChanged: (index, studio) {
-        if (rowIndex == 0) {
-          _setFirstRowFocused(true);
-          _restoreNavbarToNormalPosition();
-        }
-      },
-      onFocusChange: (has) {
-        if (rowIndex == 0) {
-          _setFirstRowFocused(has);
-        }
-      },
-      autofocus: autofocusFirst,
-      focusNode: autofocusFirst ? firstFocusNode : null,
-      itemBuilder: (context, studio, index, isFocused) {
-        return _LogoCard(
-          name: studio.name,
-          logoUrl: studio.logoPath,
-          externalIsFocused: isFocused,
-          onTap: () {
-            final uri = Uri(
-              path: Destinations.seerrBrowse,
-              queryParameters: {
-                'filterId': studio.id.toString(),
-                'filterName': studio.name,
-                'mediaType': 'movie',
-                'filterType': 'studio',
-              },
-            );
-            context.push(uri.toString());
-          },
-        );
-      },
-    );
-
-    return _buildRowContainer(
-      title: row.title,
-      rowHeight: 90,
-      isLoading: row.isLoading && row.studios.isEmpty,
-      hasItems: row.studios.isNotEmpty,
-      scrollController: _getRowScroll(rowIndex),
+      trailing: _canExpand(row)
+          ? TextButton(
+              onPressed: () => _openExpandedRow(row),
+              child: const Text('See All'),
+            )
+          : null,
       child: child,
     );
   }
@@ -910,6 +757,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     return date.substring(0, 4);
   }
 }
+
 class _Backdrop extends StatelessWidget {
   final String? url;
   const _Backdrop({this.url});
@@ -962,13 +810,11 @@ class _InfoPanel extends StatelessWidget {
     final shadows = [
       Shadow(
         blurRadius: 4,
-        color: isNeon ? Colors.black : AppColorScheme.scrim.withValues(alpha: 0.54),
+        color: isNeon
+            ? Colors.black
+            : AppColorScheme.scrim.withValues(alpha: 0.54),
       ),
-      if (isNeon)
-        const Shadow(
-          blurRadius: 10,
-          color: Colors.black,
-        ),
+      if (isNeon) const Shadow(blurRadius: 10, color: Colors.black),
     ];
     final year = _SeerrDiscoverScreenState._yearFromItem(item!);
     final rating = item!.voteAverage;
@@ -1010,18 +856,23 @@ class _InfoPanel extends StatelessWidget {
               Row(
                 children: [
                   if (year != null)
-                    Text(year,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: secondaryColor,
-                          shadows: shadows,
-                        )),
-                  if (year != null && rating != null)
-                    const SizedBox(width: 12),
+                    Text(
+                      year,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: secondaryColor,
+                        shadows: shadows,
+                      ),
+                    ),
+                  if (year != null && rating != null) const SizedBox(width: 12),
                   if (rating != null)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star, size: 16, color: AppColors.orange500),
+                        const Icon(
+                          Icons.star,
+                          size: 16,
+                          color: AppColors.orange500,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           rating.toStringAsFixed(1),
@@ -1033,16 +884,19 @@ class _InfoPanel extends StatelessWidget {
                       ],
                     ),
                   const SizedBox(width: 12),
-                  Text(mediaType,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: tertiaryColor,
-                        shadows: shadows,
-                      )),
+                  Text(
+                    mediaType,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: tertiaryColor,
+                      shadows: shadows,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
               SizedBox(
-                height: (theme.textTheme.bodySmall?.fontSize ?? 12) * 1.4 * 3 + 8.0,
+                height:
+                    (theme.textTheme.bodySmall?.fontSize ?? 12) * 1.4 * 3 + 8.0,
                 child: item!.overview != null && item!.overview!.isNotEmpty
                     ? Text(
                         item!.overview!,
@@ -1060,229 +914,6 @@ class _InfoPanel extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _GenreCard extends StatefulWidget {
-  final String name;
-  final String? imageUrl;
-  final VoidCallback? onTap;
-  final bool? externalIsFocused;
-
-  const _GenreCard({
-    required this.name,
-    this.imageUrl,
-    this.onTap,
-    this.externalIsFocused,
-  });
-
-  @override
-  State<_GenreCard> createState() => _GenreCardState();
-}
-
-class _GenreCardState extends State<_GenreCard> with FocusStateMixin {
-
-  @override
-  Widget build(BuildContext context) {
-    final focusColor =
-        Color(GetIt.instance<UserPreferences>().get(UserPreferences.focusColor).colorValue);
-    final externallyDriven = widget.externalIsFocused != null;
-    final effectiveFocused = widget.externalIsFocused ?? (focused || hovered);
-
-    final inner = GestureDetector(
-      onTap: widget.onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setHovered(true),
-        onExit: (_) => setHovered(false),
-        child: AnimatedScale(
-          scale: effectiveFocused ? 1.05 : 1.0,
-          duration: const Duration(milliseconds: 150),
-          child: SizedBox(
-            width: 180,
-            height: 90,
-            child: ClipRRect(
-              borderRadius: AppRadius.circular(8),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (widget.imageUrl != null)
-                    CachedNetworkImage(
-                      imageUrl: widget.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, _, _) => Container(
-                        color: AppColorScheme.surfaceVariant,
-                      ),
-                    )
-                  else
-                    Container(color: AppColorScheme.surfaceVariant),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColorScheme.scrim.withValues(alpha: 0),
-                          AppColorScheme.scrim.withValues(alpha: 0.73),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    right: 8,
-                    child: Text(
-                      widget.name,
-                      style: TextStyle(
-                        color: AppColorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 4,
-                            color: AppColorScheme.scrim,
-                          ),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (effectiveFocused)
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.fromBorderSide(
-                          ThemeRegistry.active.borders.focusBorder.copyWith(
-                            color: focusColor,
-                            width: 2,
-                          ),
-                        ),
-                        borderRadius: AppRadius.circular(8),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    if (externallyDriven) return inner;
-
-    return Focus(
-      onKeyEvent: (_, event) {
-        if (!event.logicalKey.isSelectKey) return KeyEventResult.ignored;
-        if (event is KeyDownEvent) {
-          widget.onTap?.call();
-        }
-        return KeyEventResult.handled;
-      },
-      onFocusChange: setFocused,
-      child: inner,
-    );
-  }
-}
-
-class _LogoCard extends StatefulWidget {
-  final String name;
-  final String? logoUrl;
-  final VoidCallback? onTap;
-  final bool? externalIsFocused;
-
-  const _LogoCard({
-    required this.name,
-    this.logoUrl,
-    this.onTap,
-    this.externalIsFocused,
-  });
-
-  @override
-  State<_LogoCard> createState() => _LogoCardState();
-}
-
-class _LogoCardState extends State<_LogoCard> with FocusStateMixin {
-
-  @override
-  Widget build(BuildContext context) {
-    final focusColor =
-        Color(GetIt.instance<UserPreferences>().get(UserPreferences.focusColor).colorValue);
-    final externallyDriven = widget.externalIsFocused != null;
-    final effectiveFocused = widget.externalIsFocused ?? (focused || hovered);
-
-    final inner = GestureDetector(
-      onTap: widget.onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setHovered(true),
-        onExit: (_) => setHovered(false),
-        child: AnimatedScale(
-          scale: effectiveFocused ? 1.05 : 1.0,
-          duration: const Duration(milliseconds: 150),
-          child: SizedBox(
-            width: 180,
-            height: 90,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppColorScheme.surface,
-                borderRadius: AppRadius.circular(8),
-                border: effectiveFocused
-                    ? Border.fromBorderSide(
-                        ThemeRegistry.active.borders.focusBorder.copyWith(
-                          color: focusColor,
-                          width: 2,
-                        ),
-                      )
-                    : null,
-              ),
-              child: widget.logoUrl != null
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: CachedNetworkImage(
-                        imageUrl: widget.logoUrl!,
-                        fit: BoxFit.contain,
-                        errorWidget: (_, _, _) => Center(
-                          child: Text(
-                            widget.name,
-                            style: TextStyle(
-                              color: AppColorScheme.onSurface.withValues(alpha: 0.7),
-                              fontSize: 13,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    )
-                  : Center(
-                      child: Text(
-                        widget.name,
-                        style: TextStyle(
-                          color: AppColorScheme.onSurface.withValues(alpha: 0.7),
-                          fontSize: 13,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    if (externallyDriven) return inner;
-
-    return Focus(
-      onKeyEvent: (_, event) {
-        if (!event.logicalKey.isSelectKey) return KeyEventResult.ignored;
-        if (event is KeyDownEvent) {
-          widget.onTap?.call();
-        }
-        return KeyEventResult.handled;
-      },
-      onFocusChange: setFocused,
-      child: inner,
     );
   }
 }
