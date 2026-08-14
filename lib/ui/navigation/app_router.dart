@@ -773,6 +773,7 @@ final appRouter = GoRouter(
           filterName: deepRoute?.title ?? params['filterName'],
           mediaType: deepRoute?.query.mediaType ?? params['mediaType'],
           filterType: deepRoute == null ? params['filterType'] : null,
+          sectionId: deepRoute?.sectionId,
           baseQuery: deepRoute?.query,
         );
       },

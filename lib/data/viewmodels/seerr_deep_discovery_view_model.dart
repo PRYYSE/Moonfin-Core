@@ -59,9 +59,7 @@ class SeerrDeepDiscoveryRow {
   bool get hasMore => page < totalPages;
   bool get isPersonalised =>
       section.query.source == SeerrDiscoverySource.personalised;
-  bool get canExpand =>
-      section.expandable &&
-      section.query.source != SeerrDiscoverySource.externalList;
+  bool get canExpand => section.expandable;
 
   SeerrDeepDiscoveryRow copyWith({
     String? title,

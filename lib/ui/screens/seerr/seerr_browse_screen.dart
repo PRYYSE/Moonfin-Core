@@ -8,6 +8,7 @@ import '../../../data/repositories/seerr_repository.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../../../data/services/seerr/seerr_discovery_browse_refinements.dart';
 import '../../../data/services/seerr/seerr_discovery_configured_lists_service.dart';
+import '../../../data/services/seerr/seerr_discovery_personalisation_service.dart';
 import '../../../data/services/seerr/seerr_discovery_schema.dart';
 import '../../../data/viewmodels/seerr_browse_view_model.dart';
 import '../../../preference/preference_constants.dart';
@@ -39,6 +40,7 @@ class SeerrBrowseScreen extends StatefulWidget {
   final String? filterName;
   final String? mediaType;
   final String? filterType;
+  final String? sectionId;
   final SeerrDiscoveryQuery? baseQuery;
 
   const SeerrBrowseScreen({
@@ -47,6 +49,7 @@ class SeerrBrowseScreen extends StatefulWidget {
     this.filterName,
     this.mediaType,
     this.filterType,
+    this.sectionId,
     this.baseQuery,
   });
 
@@ -79,11 +82,18 @@ class _SeerrBrowseScreenState extends State<SeerrBrowseScreen> {
       mediaType: widget.baseQuery?.mediaType ?? widget.mediaType ?? 'movie',
       filterType: widget.filterType,
       baseQuery: widget.baseQuery,
+      sectionId: widget.sectionId,
       configuredLists:
           widget.baseQuery?.source == SeerrDiscoverySource.externalList &&
               GetIt.instance
                   .isRegistered<SeerrDiscoveryConfiguredListsService>()
           ? GetIt.instance<SeerrDiscoveryConfiguredListsService>()
+          : null,
+      personalisation:
+          widget.baseQuery?.source == SeerrDiscoverySource.personalised &&
+              GetIt.instance
+                  .isRegistered<SeerrDiscoveryPersonalisationService>()
+          ? GetIt.instance<SeerrDiscoveryPersonalisationService>()
           : null,
     );
     vm.addListener(_onChanged);

@@ -466,11 +466,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     );
   }
 
-  bool _canExpand(SeerrDeepDiscoveryRow row) {
-    final source = row.section.query.source;
-    return row.section.expandable &&
-        source != SeerrDiscoverySource.personalised;
-  }
+  bool _canExpand(SeerrDeepDiscoveryRow row) => row.section.expandable;
 
   void _openExpandedRow(SeerrDeepDiscoveryRow row) {
     if (!_canExpand(row)) return;
@@ -479,6 +475,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
       queryParameters: SeerrDiscoveryRouteCodec.encode(
         row.section.query,
         title: row.title,
+        sectionId: row.section.id,
       ),
     );
     context.push(uri.toString());
