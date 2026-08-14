@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -43,17 +43,14 @@ jobs:
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
 
-      - name: Confirm committed foundation patches are present
+      - name: Confirm committed Discovery integrations are present
         run: |
           python tooling/discovery/apply_discovery_network_patch.py --check
           python tooling/discovery/apply_deep_discovery_ui_patch.py --check
           python tooling/discovery/cleanup_deep_discovery_legacy_ui.py --check
-
-      - name: Apply validated pending integrations
-        run: |
-          python tooling/discovery/apply_configured_lists_patch_v2.py
-          python tooling/discovery/apply_rich_browse_filters_patch_v2.py
-          python tooling/discovery/apply_refinement_semantics_fix.py
+          python tooling/discovery/apply_configured_lists_patch_v2.py --check
+          python tooling/discovery/apply_rich_browse_filters_patch_v2.py --check
+          python tooling/discovery/apply_refinement_semantics_fix.py --check
 
       - uses: subosito/flutter-action@v2
         with:
@@ -63,14 +60,22 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Format exact promotion source
+      - name: Check focused Discovery formatting
         run: |
-          dart format \
-            lib/data/services/seerr/seerr_discovery_browse_refinements.dart \
+          dart format --output=none --set-exit-if-changed \
+            lib/data/services/seerr/seerr_discovery_*.dart \
+            lib/data/viewmodels/seerr_discovery_collection_controller.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
             lib/data/viewmodels/seerr_browse_view_model.dart \
+            lib/data/services/seerr/seerr_http_client.dart \
+            lib/data/repositories/seerr_repository.dart \
             lib/di/modules/app_module.dart \
-            lib/ui/screens/seerr/seerr_browse_screen.dart
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
+            lib/ui/screens/seerr/seerr_browse_screen.dart \
+            lib/ui/screens/seerr/seerr_discovery_refinement_dialog.dart \
+            lib/ui/navigation/app_router.dart \
+            test/data/seerr_discovery_*.dart \
+            test/data/seerr_deep_discovery_view_model_test.dart
 
       - name: Analyse deep Discovery integration
         run: |
@@ -92,29 +97,6 @@ jobs:
           flutter test \
             test/data/seerr_discovery_*.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
-
-      - name: Commit exact validated integrations
-        if: success()
-        run: |
-          if git diff --quiet -- \
-            lib/data/services/seerr/seerr_discovery_browse_refinements.dart \
-            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
-            lib/data/viewmodels/seerr_browse_view_model.dart \
-            lib/di/modules/app_module.dart \
-            lib/ui/screens/seerr/seerr_browse_screen.dart; then
-            echo "Validated Lists/refinement integration is already committed."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            lib/data/services/seerr/seerr_discovery_browse_refinements.dart \
-            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
-            lib/data/viewmodels/seerr_browse_view_model.dart \
-            lib/di/modules/app_module.dart \
-            lib/ui/screens/seerr/seerr_browse_screen.dart
-          git commit -m "feat(discovery): commit configured Lists and rich browse filters [skip ci]"
-          git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
