@@ -163,7 +163,7 @@ printf '\n[2/5] Building a DLL-only Moonbase %s candidate from exact upstream %s
   "$MOONBASE_VERSION" "$MOONBASE_TAG"
 SRC="$WORK/moonbase-$MOONBASE_TAG"
 PUBLISH="$WORK/publish-$MOONBASE_VERSION"
-rm -rf "$SRC" "$PUBLISH"
+"${P[@]}" rm -rf "$SRC" "$PUBLISH"
 git clone --quiet --depth 1 --branch "$MOONBASE_TAG" \
   https://github.com/Moonfin-Client/Plugin.git "$SRC"
 cp "$ROOT/tooling/discovery/moonbase/MoonfinDiscoveryController.cs" \
