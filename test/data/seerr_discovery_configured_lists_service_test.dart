@@ -47,10 +47,7 @@ SeerrDiscoveryCatalogue _catalogue() => SeerrDiscoveryCatalogue(
       title: 'Lists',
       initialLaneBudget: 16,
       minimumLaneCount: 8,
-      poolBudgets: const {
-        'smart-collections': 12,
-        'configured-lists': 6,
-      },
+      poolBudgets: const {'smart-collections': 12, 'configured-lists': 6},
       sections: List.generate(
         20,
         (index) => SeerrDiscoverySection(
