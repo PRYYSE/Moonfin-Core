@@ -29,17 +29,21 @@ jobs:
           python tooling/discovery/test_home_lab_discovery_catalogue.py
           python tooling/discovery/generate_home_lab_discovery_catalogue.py --check
 
-      - name: Validate deployment tooling syntax
+      - name: Validate Discovery tooling syntax
         run: |
           python -m py_compile \
             tooling/discovery/home_lab_discovery_compile_live.py \
             tooling/discovery/home_lab_discovery_verify_live.py \
-            tooling/discovery/apply_discovery_network_patch.py
+            tooling/discovery/apply_discovery_network_patch.py \
+            tooling/discovery/apply_deep_discovery_ui_patch.py
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
 
       - name: Confirm networking integration is already committed
         run: python tooling/discovery/apply_discovery_network_patch.py --check
+
+      - name: Apply deep Discovery UI integration in CI checkout
+        run: python tooling/discovery/apply_deep_discovery_ui_patch.py
 
       - uses: subosito/flutter-action@v2
         with:
@@ -49,16 +53,33 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Check focused Discovery formatting
+      - name: Format CI checkout for deterministic analysis
         run: |
-          dart format --output=none --set-exit-if-changed \
+          dart format \
             lib/data/services/seerr/seerr_discovery_*.dart \
             lib/data/viewmodels/seerr_discovery_collection_controller.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
+            lib/data/viewmodels/seerr_browse_view_model.dart \
             lib/data/services/seerr/seerr_http_client.dart \
             lib/data/repositories/seerr_repository.dart \
+            lib/di/modules/app_module.dart \
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
+            lib/ui/screens/seerr/seerr_browse_screen.dart \
+            lib/ui/navigation/app_router.dart \
             test/data/seerr_discovery_*.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
+
+      - name: Analyse deep Discovery integration
+        run: |
+          flutter analyze \
+            lib/data/services/seerr/seerr_discovery_catalogue_service.dart \
+            lib/data/services/seerr/seerr_discovery_personalisation_service.dart \
+            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
+            lib/data/viewmodels/seerr_browse_view_model.dart \
+            lib/di/modules/app_module.dart \
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
+            lib/ui/screens/seerr/seerr_browse_screen.dart \
+            lib/ui/navigation/app_router.dart
 
       - name: Run focused Discovery tests
         run: |
