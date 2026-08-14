@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moonfin/data/services/seerr/home_lab_discovery_catalogue.dart';
+import 'package:moonfin/data/services/seerr/seerr_discovery_filter_policy.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_schema.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_session.dart';
 
@@ -50,6 +51,60 @@ void main() {
         'q.voteCountGte': '150',
         'q.voteCountLte': '1500',
       });
+    });
+  });
+
+  group('SeerrDiscoveryFilterPolicy', () {
+    test('only forwards current Seerr discover filters', () {
+      final filters = SeerrDiscoveryFilterPolicy.fromRouteParameters({
+        'source': 'discoverMovies',
+        'q.genre': '878',
+        'q.voteCountGte': '500',
+        'q.notASeerrFilter': 'blocked',
+        'api_key': 'never-forward',
+      });
+
+      expect(filters, {
+        'genre': '878',
+        'voteCountGte': '500',
+      });
+    });
+
+    test('resolves moving date windows without hard-coded years', () {
+      final filters = SeerrDiscoveryFilterPolicy.sanitise(
+        {
+          'firstAirDateGte': r'$monthsAgo:6',
+          'firstAirDateLte': r'$today',
+          'primaryReleaseDateGte': r'$yearStart',
+        },
+        now: DateTime(2026, 8, 14),
+      );
+
+      expect(filters, {
+        'firstAirDateGte': '2026-02-14',
+        'firstAirDateLte': '2026-08-14',
+        'primaryReleaseDateGte': '2026-01-01',
+      });
+    });
+
+    test('month shifting clamps impossible calendar dates', () {
+      final filters = SeerrDiscoveryFilterPolicy.sanitise(
+        {'primaryReleaseDateGte': r'$monthsAgo:1'},
+        now: DateTime(2025, 3, 31),
+      );
+      expect(filters['primaryReleaseDateGte'], '2025-02-28');
+    });
+
+    test('drops invalid dynamic date tokens', () {
+      final filters = SeerrDiscoveryFilterPolicy.sanitise(
+        {
+          'firstAirDateGte': r'$monthsAgo:nope',
+          'firstAirDateLte': r'$unknown',
+          'genre': '16',
+        },
+        now: DateTime(2026, 8, 14),
+      );
+      expect(filters, {'genre': '16'});
     });
   });
 
