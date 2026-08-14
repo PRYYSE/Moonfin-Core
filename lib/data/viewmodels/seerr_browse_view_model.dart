@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../repositories/seerr_repository.dart';
 import '../services/seerr/seerr_api_models.dart';
+import '../services/seerr/seerr_discovery_schema.dart';
+import '../services/seerr/seerr_discovery_sort_policy.dart';
 
 enum SeerrBrowseFilter { all, available, requested }
 
@@ -17,7 +19,7 @@ List<SeerrSortOption> getSortOptionsFor(String mediaType) {
       SeerrSortOption('Popularity', 'popularity.desc'),
       SeerrSortOption('Rating', 'vote_average.desc'),
       SeerrSortOption('Release Date', 'first_air_date.desc'),
-      SeerrSortOption('Title', 'name.asc'),
+      SeerrSortOption('Vote Count', 'vote_count.desc'),
     ];
   }
   return const [
@@ -26,6 +28,7 @@ List<SeerrSortOption> getSortOptionsFor(String mediaType) {
     SeerrSortOption('Release Date', 'primary_release_date.desc'),
     SeerrSortOption('Title', 'original_title.asc'),
     SeerrSortOption('Revenue', 'revenue.desc'),
+    SeerrSortOption('Vote Count', 'vote_count.desc'),
   ];
 }
 
@@ -64,18 +67,17 @@ class SeerrBrowseState {
     SeerrSortOption? sortBy,
     SeerrBrowseFilter? filter,
     String? letterFilter,
-  }) =>
-      SeerrBrowseState(
-        isLoading: isLoading ?? this.isLoading,
-        isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-        error: error,
-        items: items ?? this.items,
-        currentPage: currentPage ?? this.currentPage,
-        totalPages: totalPages ?? this.totalPages,
-        sortBy: sortBy ?? this.sortBy,
-        filter: filter ?? this.filter,
-        letterFilter: letterFilter ?? this.letterFilter,
-      );
+  }) => SeerrBrowseState(
+    isLoading: isLoading ?? this.isLoading,
+    isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    error: error,
+    items: items ?? this.items,
+    currentPage: currentPage ?? this.currentPage,
+    totalPages: totalPages ?? this.totalPages,
+    sortBy: sortBy ?? this.sortBy,
+    filter: filter ?? this.filter,
+    letterFilter: letterFilter ?? this.letterFilter,
+  );
 }
 
 class SeerrBrowseViewModel extends ChangeNotifier {
@@ -91,6 +93,13 @@ class SeerrBrowseViewModel extends ChangeNotifier {
   final String mediaType;
   final String? filterType;
 
+  /// Exact immutable base query from a deep-Discovery landing lane.
+  ///
+  /// Legacy genre/network/studio routes leave this null and continue through
+  /// their existing code path. Deep routes preserve every compiled filter when
+  /// the user opens See All; only the supported sort can be changed locally.
+  final SeerrDiscoveryQuery? baseQuery;
+
   bool _requestLookupLoaded = false;
   final Map<int, List<SeerrRequest>> _requestsByMediaId = {};
   final Map<int, List<SeerrRequest>> _requestsByTmdbId = {};
@@ -105,9 +114,31 @@ class SeerrBrowseViewModel extends ChangeNotifier {
     this.filterId,
     required this.mediaType,
     this.filterType,
+    this.baseQuery,
   }) {
-    _state = SeerrBrowseState(sortBy: sortOptions.first);
+    final safeSort = SeerrDiscoverySortPolicy.normalise(
+      baseQuery?.sortBy ?? sortOptions.first.value,
+    );
+    final initialSort = sortOptions.firstWhere(
+      (option) => option.value == safeSort,
+      orElse: () => SeerrSortOption(_sortLabel(safeSort), safeSort),
+    );
+    _state = SeerrBrowseState(sortBy: initialSort);
   }
+
+  static String _sortLabel(String value) => switch (value) {
+    'vote_average.desc' || 'vote_average.asc' => 'Rating',
+    'vote_count.desc' || 'vote_count.asc' => 'Vote Count',
+    'primary_release_date.desc' ||
+    'primary_release_date.asc' ||
+    'first_air_date.desc' ||
+    'first_air_date.asc' ||
+    'release_date.desc' ||
+    'release_date.asc' => 'Release Date',
+    'revenue.desc' || 'revenue.asc' => 'Revenue',
+    'original_title.asc' || 'original_title.desc' => 'Title',
+    _ => 'Popularity',
+  };
 
   Future<void> load() async {
     _state = SeerrBrowseState(
@@ -140,7 +171,7 @@ class SeerrBrowseViewModel extends ChangeNotifier {
 
       _state = _state.copyWith(
         isLoading: false,
-        items: matches,
+        items: _dedupe(matches),
         currentPage: lastPage.page,
         totalPages: lastPage.totalPages,
       );
@@ -176,19 +207,21 @@ class SeerrBrowseViewModel extends ChangeNotifier {
 
       _state = _state.copyWith(
         isLoadingMore: false,
-        items: [..._state.items, ...matches],
+        items: _dedupe([..._state.items, ...matches]),
         currentPage: lastPage.page,
         totalPages: lastPage.totalPages,
       );
-    } catch (e) {
+    } catch (_) {
       _state = _state.copyWith(isLoadingMore: false);
     }
     notifyListeners();
   }
 
   void setSortBy(SeerrSortOption option) {
-    if (option.value == _state.sortBy.value) return;
-    _state = _state.copyWith(sortBy: option);
+    final safeValue = SeerrDiscoverySortPolicy.normalise(option.value);
+    if (safeValue == _state.sortBy.value) return;
+    final safeOption = SeerrSortOption(option.label, safeValue);
+    _state = _state.copyWith(sortBy: safeOption);
     load();
   }
 
@@ -205,6 +238,23 @@ class SeerrBrowseViewModel extends ChangeNotifier {
   }
 
   Future<SeerrDiscoverPage> _fetchPage(int page) {
+    final deepQuery = baseQuery;
+    if (deepQuery != null) {
+      final query = SeerrDiscoveryQuery(
+        source: deepQuery.source,
+        mediaType: deepQuery.mediaType,
+        sortBy: _state.sortBy.value,
+        filters: deepQuery.filters,
+        keywordNames: deepQuery.keywordNames,
+        excludeKeywordNames: deepQuery.excludeKeywordNames,
+        providerNames: deepQuery.providerNames,
+        seedStrategy: deepQuery.seedStrategy,
+        listProvider: deepQuery.listProvider,
+        listId: deepQuery.listId,
+      );
+      return _repo.executeDiscoveryQuery(query, page: page);
+    }
+
     final id = filterId != null ? int.tryParse(filterId!) : null;
     if (mediaType == 'tv') {
       return _repo.discoverTv(
@@ -283,7 +333,8 @@ class SeerrBrowseViewModel extends ChangeNotifier {
         return item;
       }
 
-      final byMediaId = mediaInfo.id != null ? _requestsByMediaId[mediaInfo.id!] : null;
+      final byMediaId =
+          mediaInfo.id != null ? _requestsByMediaId[mediaInfo.id!] : null;
       final byTmdbId = mediaInfo.tmdbId != null
           ? _requestsByTmdbId[mediaInfo.tmdbId!]
           : _requestsByTmdbId[item.id];
@@ -359,5 +410,16 @@ class SeerrBrowseViewModel extends ChangeNotifier {
 
       return first == letterFilter;
     }).toList();
+  }
+
+  List<SeerrDiscoverItem> _dedupe(List<SeerrDiscoverItem> items) {
+    final seen = <String>{};
+    final output = <SeerrDiscoverItem>[];
+    for (final item in items) {
+      final type = item.mediaType ?? mediaType;
+      if (!seen.add('$type:${item.id}')) continue;
+      output.add(item);
+    }
+    return output;
   }
 }
