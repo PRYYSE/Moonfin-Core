@@ -125,8 +125,10 @@ void main() {
     expect(lists.sections.first.title, 'Movie Collection');
     expect(lists.sections.first.query.mediaType, 'movie');
     expect(lists.sections.first.query.listId, config.stableId);
-    expect(lists.sections.skip(1).map((section) => section.id),
-        List.generate(20, (index) => 'smart-$index'));
+    expect(
+      lists.sections.skip(1).map((section) => section.id),
+      List.generate(20, (index) => 'smart-$index'),
+    );
     expect(lists.initialLaneBudget, 16);
     expect(lists.minimumLaneCount, 8);
     expect(lists.poolBudgets['smart-collections'], 12);
