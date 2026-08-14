@@ -193,9 +193,10 @@ self_test() {
   for command in curl sha256sum tar python3; do
     need "$command"
   done
-  local tmp
+  local tmp quoted_tmp
   tmp="$(mktemp -d)"
-  trap 'rm -rf -- "$tmp"' EXIT
+  printf -v quoted_tmp '%q' "$tmp"
+  trap "rm -rf -- $quoted_tmp" EXIT
   prepare_candidate "$tmp/candidate"
   local full_sha
   full_sha="$(awk 'NR == 1 {print $1}' "$tmp/candidate/$ASSET.sha256")"
@@ -204,6 +205,8 @@ self_test() {
   say "source_sha=$SOURCE_SHA"
   say "artifact_ref=$ARTIFACT_REF"
   say "artifact_sha256=$full_sha"
+  rm -rf -- "$tmp"
+  trap - EXIT
 }
 
 start_sudo_keepalive() {
