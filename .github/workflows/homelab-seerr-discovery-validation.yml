@@ -39,12 +39,15 @@ jobs:
             tooling/discovery/apply_rotation_persistence_patch.py \
             tooling/discovery/apply_catalogue_index_ui_patch.py \
             tooling/discovery/apply_smart_lists_patch.py \
-            tooling/discovery/apply_detail_rabbit_holes_patch.py
+            tooling/discovery/apply_detail_rabbit_holes_patch.py \
+            tooling/discovery/apply_detail_rabbit_holes_lint_fix.py
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
 
-      - name: Apply detail rabbit holes in checkout
-        run: python tooling/discovery/apply_detail_rabbit_holes_patch.py
+      - name: Apply detail rabbit holes and strict lint cleanup in checkout
+        run: |
+          python tooling/discovery/apply_detail_rabbit_holes_patch.py
+          python tooling/discovery/apply_detail_rabbit_holes_lint_fix.py
 
       - name: Validate generated Home Lab catalogue
         run: |
@@ -64,6 +67,7 @@ jobs:
           python tooling/discovery/apply_catalogue_index_ui_patch.py --check
           python tooling/discovery/apply_smart_lists_patch.py --check
           python tooling/discovery/apply_detail_rabbit_holes_patch.py --check
+          python tooling/discovery/apply_detail_rabbit_holes_lint_fix.py --check
 
       - uses: subosito/flutter-action@v2
         with:
