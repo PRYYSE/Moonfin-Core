@@ -1,10 +1,8 @@
 import 'seerr_api_models.dart';
 import 'seerr_discovery_schema.dart';
 
-typedef SeerrDiscoveryPageFetcher = Future<SeerrDiscoverPage> Function(
-  SeerrDiscoveryQuery query,
-  int page,
-);
+typedef SeerrDiscoveryPageFetcher =
+    Future<SeerrDiscoverPage> Function(SeerrDiscoveryQuery query, int page);
 
 typedef SeerrDiscoveryItemPredicate = bool Function(SeerrDiscoverItem item);
 
@@ -47,8 +45,8 @@ class SeerrDiscoveryPaginator {
     this.include,
     this.minimumMatchesPerLoad = 12,
     this.maxPagesPerScan = 6,
-  })  : assert(minimumMatchesPerLoad > 0),
-        assert(maxPagesPerScan > 0);
+  }) : assert(minimumMatchesPerLoad > 0),
+       assert(maxPagesPerScan > 0);
 
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;

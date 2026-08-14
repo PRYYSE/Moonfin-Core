@@ -10,7 +10,10 @@ void main() {
       expect(() => homeLabDiscoveryCatalogue.validate(), returnsNormally);
       final sections = homeLabDiscoveryCatalogue.allSections.toList();
       expect(sections.length, greaterThanOrEqualTo(30));
-      expect(sections.map((section) => section.id).toSet().length, sections.length);
+      expect(
+        sections.map((section) => section.id).toSet().length,
+        sections.length,
+      );
     });
 
     test('round-trips without changing exact section query identity', () {
@@ -64,21 +67,15 @@ void main() {
         'api_key': 'never-forward',
       });
 
-      expect(filters, {
-        'genre': '878',
-        'voteCountGte': '500',
-      });
+      expect(filters, {'genre': '878', 'voteCountGte': '500'});
     });
 
     test('resolves moving date windows without hard-coded years', () {
-      final filters = SeerrDiscoveryFilterPolicy.sanitise(
-        {
-          'firstAirDateGte': r'$monthsAgo:6',
-          'firstAirDateLte': r'$today',
-          'primaryReleaseDateGte': r'$yearStart',
-        },
-        now: DateTime(2026, 8, 14),
-      );
+      final filters = SeerrDiscoveryFilterPolicy.sanitise({
+        'firstAirDateGte': r'$monthsAgo:6',
+        'firstAirDateLte': r'$today',
+        'primaryReleaseDateGte': r'$yearStart',
+      }, now: DateTime(2026, 8, 14));
 
       expect(filters, {
         'firstAirDateGte': '2026-02-14',
@@ -88,22 +85,18 @@ void main() {
     });
 
     test('month shifting clamps impossible calendar dates', () {
-      final filters = SeerrDiscoveryFilterPolicy.sanitise(
-        {'primaryReleaseDateGte': r'$monthsAgo:1'},
-        now: DateTime(2025, 3, 31),
-      );
+      final filters = SeerrDiscoveryFilterPolicy.sanitise({
+        'primaryReleaseDateGte': r'$monthsAgo:1',
+      }, now: DateTime(2025, 3, 31));
       expect(filters['primaryReleaseDateGte'], '2025-02-28');
     });
 
     test('drops invalid dynamic date tokens', () {
-      final filters = SeerrDiscoveryFilterPolicy.sanitise(
-        {
-          'firstAirDateGte': r'$monthsAgo:nope',
-          'firstAirDateLte': r'$unknown',
-          'genre': '16',
-        },
-        now: DateTime(2026, 8, 14),
-      );
+      final filters = SeerrDiscoveryFilterPolicy.sanitise({
+        'firstAirDateGte': r'$monthsAgo:nope',
+        'firstAirDateLte': r'$unknown',
+        'genre': '16',
+      }, now: DateTime(2026, 8, 14));
       expect(filters, {'genre': '16'});
     });
   });

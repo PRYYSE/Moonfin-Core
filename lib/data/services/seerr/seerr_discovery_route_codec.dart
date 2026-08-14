@@ -26,7 +26,8 @@ abstract final class SeerrDiscoveryRouteCodec {
       (value) => value.name == sourceName,
       orElse: () => SeerrDiscoverySource.discoverMovies,
     );
-    final mediaType = parameters['mediaType'] ??
+    final mediaType =
+        parameters['mediaType'] ??
         switch (source) {
           SeerrDiscoverySource.discoverTv ||
           SeerrDiscoverySource.upcomingTv => 'tv',

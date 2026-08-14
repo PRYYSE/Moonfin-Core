@@ -12,8 +12,8 @@ class SeerrDiscoveryRotationHistory {
     int sessionNumber = 0,
     Map<String, int>? lastSeenSession,
     this.maxEntries = 512,
-  })  : _sessionNumber = sessionNumber < 0 ? 0 : sessionNumber,
-        _lastSeenSession = Map<String, int>.from(lastSeenSession ?? const {});
+  }) : _sessionNumber = sessionNumber < 0 ? 0 : sessionNumber,
+       _lastSeenSession = Map<String, int>.from(lastSeenSession ?? const {});
 
   factory SeerrDiscoveryRotationHistory.fromJson(
     Map<String, dynamic> json, {
@@ -36,10 +36,9 @@ class SeerrDiscoveryRotationHistory {
   /// `0` means shown in the latest committed session, `1` means one session
   /// ago, and so on.
   Map<String, int> get sessionsSinceSeen => {
-        for (final entry in _lastSeenSession.entries)
-          entry.key:
-              (_sessionNumber - 1 - entry.value).clamp(0, 1 << 30).toInt(),
-      };
+    for (final entry in _lastSeenSession.entries)
+      entry.key: (_sessionNumber - 1 - entry.value).clamp(0, 1 << 30).toInt(),
+  };
 
   void commitSession(Iterable<String> selectedSectionIds) {
     final current = _sessionNumber;
@@ -57,9 +56,9 @@ class SeerrDiscoveryRotationHistory {
   }
 
   Map<String, dynamic> toJson() => {
-        'sessionNumber': _sessionNumber,
-        'lastSeenSession': _lastSeenSession,
-      };
+    'sessionNumber': _sessionNumber,
+    'lastSeenSession': _lastSeenSession,
+  };
 
   void _trim() {
     if (_lastSeenSession.length <= maxEntries) return;

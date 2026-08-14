@@ -14,43 +14,46 @@ class SeerrHttpClient {
   late final Dio _dio;
 
   SeerrHttpClient({required this.proxyConfig}) {
-    _dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      sendTimeout: const Duration(seconds: 30),
-      followRedirects: true,
-      validateStatus: (_) => true,
-    ));
+    _dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+        followRedirects: true,
+        validateStatus: (_) => true,
+      ),
+    );
 
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        _log?.network('-> ${options.method} ${options.uri}');
-        handler.next(options);
-      },
-      onResponse: (response, handler) {
-        _log?.network(
-          '<- ${response.statusCode} ${response.requestOptions.method} '
-          '${response.requestOptions.uri}',
-        );
-        handler.next(response);
-      },
-      onError: (error, handler) {
-        _log?.network(
-          'x ${error.requestOptions.method} ${error.requestOptions.uri} '
-          '(${error.response?.statusCode ?? error.type.name})',
-          level: LogLevel.error,
-          error: error.message ?? error.toString(),
-        );
-        handler.next(error);
-      },
-    ));
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          _log?.network('-> ${options.method} ${options.uri}');
+          handler.next(options);
+        },
+        onResponse: (response, handler) {
+          _log?.network(
+            '<- ${response.statusCode} ${response.requestOptions.method} '
+            '${response.requestOptions.uri}',
+          );
+          handler.next(response);
+        },
+        onError: (error, handler) {
+          _log?.network(
+            'x ${error.requestOptions.method} ${error.requestOptions.uri} '
+            '(${error.response?.statusCode ?? error.type.name})',
+            level: LogLevel.error,
+            error: error.message ?? error.toString(),
+          );
+          handler.next(error);
+        },
+      ),
+    );
     _dio.interceptors.add(_ProxyUnwrapInterceptor());
   }
 
-  static LogService? get _log =>
-      GetIt.instance.isRegistered<LogService>()
-          ? GetIt.instance<LogService>()
-          : null;
+  static LogService? get _log => GetIt.instance.isRegistered<LogService>()
+      ? GetIt.instance<LogService>()
+      : null;
 
   static String _trimSlash(String path) =>
       path.startsWith('/') ? path.substring(1) : path;
@@ -74,9 +77,9 @@ class SeerrHttpClient {
   }
 
   Options _authJsonOptions([Options? existing]) {
-    return _authOptions(existing).copyWith(
-      contentType: Headers.jsonContentType,
-    );
+    return _authOptions(
+      existing,
+    ).copyWith(contentType: Headers.jsonContentType);
   }
 
   /// Turns the request mutation error codes Seerr uses, such as a 403 for a
@@ -90,13 +93,44 @@ class SeerrHttpClient {
   }
 
   void _requireSuccess(Response response, String context) {
-    if (response.statusCode == null || response.statusCode! < 200 || response.statusCode! > 299) {
+    if (response.statusCode == null ||
+        response.statusCode! < 200 ||
+        response.statusCode! > 299) {
       throw DioException(
         requestOptions: response.requestOptions,
         response: response,
         message: '$context: HTTP ${response.statusCode}',
       );
     }
+  }
+
+  /// Executes a compiled deep-discovery GET through Moonfin's existing
+  /// authenticated Seerr proxy. The route is deliberately restricted to the
+  /// discover namespace so a server-delivered catalogue cannot turn this into
+  /// an arbitrary Seerr API proxy.
+  Future<Map<String, dynamic>> getDiscoveryPath(
+    String path, {
+    Map<String, dynamic> queryParameters = const {},
+  }) async {
+    final trimmed = _trimSlash(path);
+    if (!trimmed.startsWith('discover/')) {
+      throw ArgumentError.value(
+        path,
+        'path',
+        'Discovery path must start with discover/',
+      );
+    }
+    final response = await _dio.get(
+      _apiUrl(trimmed),
+      queryParameters: queryParameters,
+      options: _authOptions(),
+    );
+    _requireSuccess(response, 'getDiscoveryPath');
+    final data = response.data;
+    if (data is! Map) {
+      throw StateError('getDiscoveryPath returned a non-object response');
+    }
+    return Map<String, dynamic>.from(data);
   }
 
   Future<Map<String, dynamic>> getCurrentUser() async {
@@ -219,7 +253,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> commentOnIssue(int issueId, String message) async {
+  Future<Map<String, dynamic>> commentOnIssue(
+    int issueId,
+    String message,
+  ) async {
     final response = await _dio.post(
       _apiUrl('issue/$issueId/comment'),
       data: {'message': message},
@@ -229,7 +266,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> setIssueStatus(int issueId, String status) async {
+  Future<Map<String, dynamic>> setIssueStatus(
+    int issueId,
+    String status,
+  ) async {
     final response = await _dio.post(
       _apiUrl('issue/$issueId/$status'),
       options: _authJsonOptions(),
@@ -342,14 +382,21 @@ class SeerrHttpClient {
   Future<Map<String, dynamic>> getRecentlyAdded({int take = 20}) async {
     final response = await _dio.get(
       _apiUrl('media'),
-      queryParameters: {'filter': 'allavailable', 'sort': 'mediaAdded', 'take': take},
+      queryParameters: {
+        'filter': 'allavailable',
+        'sort': 'mediaAdded',
+        'take': take,
+      },
       options: _authOptions(),
     );
     _requireSuccess(response, 'getRecentlyAdded');
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getTrending({int limit = 20, int offset = 0}) async {
+  Future<Map<String, dynamic>> getTrending({
+    int limit = 20,
+    int offset = 0,
+  }) async {
     final page = (offset ~/ limit) + 1;
     final response = await _dio.get(
       _apiUrl('discover/trending'),
@@ -360,7 +407,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getTrendingMovies({int limit = 20, int offset = 0}) async {
+  Future<Map<String, dynamic>> getTrendingMovies({
+    int limit = 20,
+    int offset = 0,
+  }) async {
     final page = (offset ~/ limit) + 1;
     final response = await _dio.get(
       _apiUrl('discover/movies'),
@@ -371,7 +421,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getTrendingTv({int limit = 20, int offset = 0}) async {
+  Future<Map<String, dynamic>> getTrendingTv({
+    int limit = 20,
+    int offset = 0,
+  }) async {
     final page = (offset ~/ limit) + 1;
     final response = await _dio.get(
       _apiUrl('discover/tv'),
@@ -382,7 +435,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getTopMovies({int limit = 20, int offset = 0}) async {
+  Future<Map<String, dynamic>> getTopMovies({
+    int limit = 20,
+    int offset = 0,
+  }) async {
     final response = await _dio.get(
       _apiUrl('discover/movies/top'),
       queryParameters: {'limit': limit, 'offset': offset},
@@ -392,7 +448,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getTopTv({int limit = 20, int offset = 0}) async {
+  Future<Map<String, dynamic>> getTopTv({
+    int limit = 20,
+    int offset = 0,
+  }) async {
     final response = await _dio.get(
       _apiUrl('discover/tv/top'),
       queryParameters: {'limit': limit, 'offset': offset},
@@ -422,7 +481,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<void> addToWatchlist({required int tmdbId, required String mediaType}) async {
+  Future<void> addToWatchlist({
+    required int tmdbId,
+    required String mediaType,
+  }) async {
     final response = await _dio.post(
       _apiUrl('watchlist'),
       data: {'tmdbId': tmdbId, 'mediaType': mediaType},
@@ -431,7 +493,10 @@ class SeerrHttpClient {
     _requireSuccess(response, 'addToWatchlist');
   }
 
-  Future<void> removeFromWatchlist({required int tmdbId, required String mediaType}) async {
+  Future<void> removeFromWatchlist({
+    required int tmdbId,
+    required String mediaType,
+  }) async {
     final response = await _dio.delete(
       _apiUrl('watchlist/$tmdbId'),
       queryParameters: {'mediaType': mediaType},
@@ -447,7 +512,9 @@ class SeerrHttpClient {
       options: _authOptions(),
     );
     _requireSuccess(response, 'getWatchlist');
-    final body = Map<String, dynamic>.from(response.data as Map<String, dynamic>);
+    final body = Map<String, dynamic>.from(
+      response.data as Map<String, dynamic>,
+    );
     final results = (body['results'] as List? ?? []).map((raw) {
       final item = Map<String, dynamic>.from(raw as Map<String, dynamic>);
       if (item['tmdbId'] != null) item['id'] = item['tmdbId'];
@@ -530,10 +597,7 @@ class SeerrHttpClient {
       url += '&type=${Uri.encodeComponent(mediaType)}';
     }
 
-    final response = await _dio.get(
-      url,
-      options: _authOptions(),
-    );
+    final response = await _dio.get(url, options: _authOptions());
     _requireSuccess(response, 'search');
     return response.data as Map<String, dynamic>;
   }
@@ -565,7 +629,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getSimilarMovies(int tmdbId, {int page = 1}) async {
+  Future<Map<String, dynamic>> getSimilarMovies(
+    int tmdbId, {
+    int page = 1,
+  }) async {
     final response = await _dio.get(
       _apiUrl('movie/$tmdbId/similar'),
       queryParameters: {'page': page},
@@ -585,7 +652,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getMovieRecommendations(int tmdbId, {int page = 1}) async {
+  Future<Map<String, dynamic>> getMovieRecommendations(
+    int tmdbId, {
+    int page = 1,
+  }) async {
     final response = await _dio.get(
       _apiUrl('movie/$tmdbId/recommendations'),
       queryParameters: {'page': page},
@@ -595,7 +665,10 @@ class SeerrHttpClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> getTvRecommendations(int tmdbId, {int page = 1}) async {
+  Future<Map<String, dynamic>> getTvRecommendations(
+    int tmdbId, {
+    int page = 1,
+  }) async {
     final response = await _dio.get(
       _apiUrl('tv/$tmdbId/recommendations'),
       queryParameters: {'page': page},
@@ -642,10 +715,7 @@ class SeerrHttpClient {
   }
 
   Future<SeerrStatus> getStatus() async {
-    final response = await _dio.get(
-      _apiUrl('status'),
-      options: _authOptions(),
-    );
+    final response = await _dio.get(_apiUrl('status'), options: _authOptions());
     _requireSuccess(response, 'getStatus');
     return SeerrStatus.fromJson(response.data as Map<String, dynamic>);
   }
@@ -730,10 +800,7 @@ class SeerrHttpClient {
   Future<List<dynamic>> getRadarrCalendar({String? start, String? end}) async {
     final response = await _dio.get(
       _moonfinUrl('Radarr/Calendar'),
-      queryParameters: {
-        'start': ?start,
-        'end': ?end,
-      },
+      queryParameters: {'start': ?start, 'end': ?end},
       options: _authOptions(),
     );
     _requireSuccess(response, 'getRadarrCalendar');
@@ -743,10 +810,7 @@ class SeerrHttpClient {
   Future<List<dynamic>> getSonarrCalendar({String? start, String? end}) async {
     final response = await _dio.get(
       _moonfinUrl('Sonarr/Calendar'),
-      queryParameters: {
-        'start': ?start,
-        'end': ?end,
-      },
+      queryParameters: {'start': ?start, 'end': ?end},
       options: _authOptions(),
     );
     _requireSuccess(response, 'getSonarrCalendar');
@@ -759,7 +823,9 @@ class SeerrHttpClient {
       options: _authOptions(),
     );
     _requireSuccess(response, 'getMoonfinStatus');
-    return MoonfinStatusResponse.fromJson(response.data as Map<String, dynamic>);
+    return MoonfinStatusResponse.fromJson(
+      response.data as Map<String, dynamic>,
+    );
   }
 
   Future<MoonfinLoginResponse> moonfinLogin({
@@ -777,7 +843,9 @@ class SeerrHttpClient {
       options: _authJsonOptions(),
     );
     _requireSuccess(response, 'moonfinLogin');
-    final result = MoonfinLoginResponse.fromJson(response.data as Map<String, dynamic>);
+    final result = MoonfinLoginResponse.fromJson(
+      response.data as Map<String, dynamic>,
+    );
     if (!result.success) {
       throw Exception(result.error ?? 'Moonfin login failed');
     }
@@ -823,7 +891,9 @@ class SeerrHttpClient {
       options: _authOptions(),
     );
     _requireSuccess(response, 'moonfinValidate');
-    return MoonfinValidateResponse.fromJson(response.data as Map<String, dynamic>);
+    return MoonfinValidateResponse.fromJson(
+      response.data as Map<String, dynamic>,
+    );
   }
 
   void close() {

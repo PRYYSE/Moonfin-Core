@@ -24,8 +24,6 @@ abstract final class SeerrDiscoverySortPolicy {
 
   static String normalise(String? value) {
     final sort = value?.trim();
-    return sort != null && allowed.contains(sort)
-        ? sort
-        : 'popularity.desc';
+    return sort != null && allowed.contains(sort) ? sort : 'popularity.desc';
   }
 }

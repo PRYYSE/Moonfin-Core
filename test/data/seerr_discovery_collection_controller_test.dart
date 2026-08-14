@@ -5,11 +5,8 @@ import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_schema.dart';
 import 'package:moonfin/data/viewmodels/seerr_discovery_collection_controller.dart';
 
-SeerrDiscoverItem _item(int id) => SeerrDiscoverItem(
-      id: id,
-      mediaType: 'movie',
-      title: 'Item $id',
-    );
+SeerrDiscoverItem _item(int id) =>
+    SeerrDiscoverItem(id: id, mediaType: 'movie', title: 'Item $id');
 
 void main() {
   const base = SeerrDiscoveryQuery(
@@ -53,11 +50,7 @@ void main() {
       minimumMatchesPerLoad: 1,
       fetchPage: (query, page) async {
         seenQuery = query;
-        return SeerrDiscoverPage(
-          page: 1,
-          totalPages: 1,
-          results: [_item(1)],
-        );
+        return SeerrDiscoverPage(page: 1, totalPages: 1, results: [_item(1)]);
       },
     );
 
@@ -75,32 +68,35 @@ void main() {
     controller.dispose();
   });
 
-  test('sort override resets collection and uses current Seerr sort policy', () async {
-    final seenSorts = <String>[];
-    final controller = SeerrDiscoveryCollectionController(
-      baseQuery: base,
-      minimumMatchesPerLoad: 1,
-      fetchPage: (query, page) async {
-        seenSorts.add(query.sortBy);
-        return SeerrDiscoverPage(
-          page: 1,
-          totalPages: 1,
-          results: [_item(seenSorts.length)],
-        );
-      },
-    );
+  test(
+    'sort override resets collection and uses current Seerr sort policy',
+    () async {
+      final seenSorts = <String>[];
+      final controller = SeerrDiscoveryCollectionController(
+        baseQuery: base,
+        minimumMatchesPerLoad: 1,
+        fetchPage: (query, page) async {
+          seenSorts.add(query.sortBy);
+          return SeerrDiscoverPage(
+            page: 1,
+            totalPages: 1,
+            results: [_item(seenSorts.length)],
+          );
+        },
+      );
 
-    await controller.load();
-    await controller.setSort('vote_count.desc');
-    await controller.setSort('name.asc');
+      await controller.load();
+      await controller.setSort('vote_count.desc');
+      await controller.setSort('name.asc');
 
-    expect(seenSorts, [
-      'vote_average.desc',
-      'vote_count.desc',
-      'popularity.desc',
-    ]);
-    controller.dispose();
-  });
+      expect(seenSorts, [
+        'vote_average.desc',
+        'vote_count.desc',
+        'popularity.desc',
+      ]);
+      controller.dispose();
+    },
+  );
 
   test('stale initial load cannot overwrite a newer refined load', () async {
     final first = Completer<SeerrDiscoverPage>();
@@ -111,22 +107,16 @@ void main() {
       fetchPage: (query, page) async {
         calls++;
         if (calls == 1) return first.future;
-        return SeerrDiscoverPage(
-          page: 1,
-          totalPages: 1,
-          results: [_item(200)],
-        );
+        return SeerrDiscoverPage(page: 1, totalPages: 1, results: [_item(200)]);
       },
     );
 
     final oldLoad = controller.load();
     final newLoad = controller.setRefinements({'genre': '27'});
     await newLoad;
-    first.complete(SeerrDiscoverPage(
-      page: 1,
-      totalPages: 1,
-      results: [_item(100)],
-    ));
+    first.complete(
+      SeerrDiscoverPage(page: 1, totalPages: 1, results: [_item(100)]),
+    );
     await oldLoad;
 
     expect(controller.state.items.single.id, 200);
@@ -142,11 +132,7 @@ void main() {
       fetchPage: (_, page) async {
         calls++;
         if (calls == 2) throw StateError('page failed');
-        return SeerrDiscoverPage(
-          page: 1,
-          totalPages: 2,
-          results: [_item(1)],
-        );
+        return SeerrDiscoverPage(page: 1, totalPages: 2, results: [_item(1)]);
       },
     );
 

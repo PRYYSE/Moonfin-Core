@@ -51,21 +51,21 @@ class SeerrDiscoveryRequestPlan {
       SeerrDiscoverySource.discoverMovies => discover('discover/movies'),
       SeerrDiscoverySource.discoverTv => discover('discover/tv'),
       SeerrDiscoverySource.trending => SeerrDiscoveryRequestPlan(
-          path: 'discover/trending',
-          queryParameters: {'page': safePage},
-        ),
+        path: 'discover/trending',
+        queryParameters: {'page': safePage},
+      ),
       SeerrDiscoverySource.upcomingMovies => SeerrDiscoveryRequestPlan(
-          path: 'discover/movies/upcoming',
-          queryParameters: {'page': safePage},
-        ),
+        path: 'discover/movies/upcoming',
+        queryParameters: {'page': safePage},
+      ),
       SeerrDiscoverySource.upcomingTv => SeerrDiscoveryRequestPlan(
-          path: 'discover/tv/upcoming',
-          queryParameters: {'page': safePage},
-        ),
+        path: 'discover/tv/upcoming',
+        queryParameters: {'page': safePage},
+      ),
       SeerrDiscoverySource.watchlist => SeerrDiscoveryRequestPlan(
-          path: 'discover/watchlist',
-          queryParameters: {'page': safePage},
-        ),
+        path: 'discover/watchlist',
+        queryParameters: {'page': safePage},
+      ),
       // These are composed through user context/server list services rather
       // than a single raw Seerr discovery endpoint.
       SeerrDiscoverySource.personalised ||

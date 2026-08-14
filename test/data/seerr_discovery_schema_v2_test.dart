@@ -58,25 +58,31 @@ void main() {
     expect(section.query.keywordNames, ['isekai']);
     expect(section.query.excludeKeywordNames, ['hentai']);
     expect(section.query.providerNames, ['Crunchyroll']);
-    expect(section.query.cacheKey, catalogue.tabs.single.sections.single.query.cacheKey);
-  });
-
-  test('semantic authoring fields never leak into executable route filters', () {
-    const query = SeerrDiscoveryQuery(
-      source: SeerrDiscoverySource.discoverMovies,
-      mediaType: 'movie',
-      filters: {'genre': '878'},
-      keywordNames: ['time travel'],
-      providerNames: ['Netflix'],
+    expect(
+      section.query.cacheKey,
+      catalogue.tabs.single.sections.single.query.cacheKey,
     );
-
-    expect(query.toRouteParameters(), {
-      'source': 'discoverMovies',
-      'mediaType': 'movie',
-      'sortBy': 'popularity.desc',
-      'q.genre': '878',
-    });
   });
+
+  test(
+    'semantic authoring fields never leak into executable route filters',
+    () {
+      const query = SeerrDiscoveryQuery(
+        source: SeerrDiscoverySource.discoverMovies,
+        mediaType: 'movie',
+        filters: {'genre': '878'},
+        keywordNames: ['time travel'],
+        providerNames: ['Netflix'],
+      );
+
+      expect(query.toRouteParameters(), {
+        'source': 'discoverMovies',
+        'mediaType': 'movie',
+        'sortBy': 'popularity.desc',
+        'q.genre': '878',
+      });
+    },
+  );
 
   test('invalid v2 lane constraints are rejected', () {
     const bad = SeerrDiscoveryCatalogue(

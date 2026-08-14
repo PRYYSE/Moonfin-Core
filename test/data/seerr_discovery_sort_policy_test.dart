@@ -14,13 +14,7 @@ void main() {
   });
 
   test('rejects older Moonfin name/title sorts not in current Seerr', () {
-    expect(
-      SeerrDiscoverySortPolicy.normalise('name.asc'),
-      'popularity.desc',
-    );
-    expect(
-      SeerrDiscoverySortPolicy.normalise('title.desc'),
-      'popularity.desc',
-    );
+    expect(SeerrDiscoverySortPolicy.normalise('name.asc'), 'popularity.desc');
+    expect(SeerrDiscoverySortPolicy.normalise('title.desc'), 'popularity.desc');
   });
 }

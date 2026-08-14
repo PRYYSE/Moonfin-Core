@@ -1,7 +1,7 @@
 import '../custom_external_lists_service.dart';
 
-typedef SeerrDiscoveryExternalListLoader = Future<List<ImdbExternalListItem>>
-    Function({bool forceRefresh});
+typedef SeerrDiscoveryExternalListLoader =
+    Future<List<ImdbExternalListItem>> Function({bool forceRefresh});
 
 class SeerrDiscoveryExternalListWindow {
   final List<ImdbExternalListItem> items;

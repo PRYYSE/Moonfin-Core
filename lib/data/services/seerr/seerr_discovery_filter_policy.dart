@@ -101,9 +101,12 @@ class SeerrDiscoveryFilterPolicy {
     return switch (parts[0]) {
       'monthsAgo' => _isoDate(_shiftMonths(date, -amount)),
       'monthsFromNow' => _isoDate(_shiftMonths(date, amount)),
-      'yearsAgo' => _isoDate(_safeDate(date.year - amount, date.month, date.day)),
-      'yearsFromNow' =>
-        _isoDate(_safeDate(date.year + amount, date.month, date.day)),
+      'yearsAgo' => _isoDate(
+        _safeDate(date.year - amount, date.month, date.day),
+      ),
+      'yearsFromNow' => _isoDate(
+        _safeDate(date.year + amount, date.month, date.day),
+      ),
       _ => '',
     };
   }

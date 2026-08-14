@@ -7,39 +7,32 @@ SeerrDiscoveryTasteSeed _seed(
   String mediaType = 'movie',
   Set<int> genres = const {},
   String? franchise,
-}) =>
-    SeerrDiscoveryTasteSeed(
-      id: id,
-      mediaType: mediaType,
-      affinity: affinity,
-      genreIds: genres,
-      franchiseKey: franchise,
-    );
+}) => SeerrDiscoveryTasteSeed(
+  id: id,
+  mediaType: mediaType,
+  affinity: affinity,
+  genreIds: genres,
+  franchiseKey: franchise,
+);
 
 void main() {
   test('first pass avoids near-identical genre clusters', () {
-    final selected = SeerrDiscoverySeedSelector.select(
-      [
-        _seed('a', 10, genres: {28, 12}),
-        _seed('b', 9, genres: {28, 12}),
-        _seed('c', 8, genres: {35}),
-        _seed('d', 7, genres: {878}),
-      ],
-      limit: 3,
-    );
+    final selected = SeerrDiscoverySeedSelector.select([
+      _seed('a', 10, genres: {28, 12}),
+      _seed('b', 9, genres: {28, 12}),
+      _seed('c', 8, genres: {35}),
+      _seed('d', 7, genres: {878}),
+    ], limit: 3);
 
     expect(selected.map((seed) => seed.id), ['a', 'c', 'd']);
   });
 
   test('duplicate franchise seeds are deferred when alternatives exist', () {
-    final selected = SeerrDiscoverySeedSelector.select(
-      [
-        _seed('film-1', 10, franchise: 'collection:42'),
-        _seed('film-2', 9, franchise: 'collection:42'),
-        _seed('other', 8, franchise: 'collection:77'),
-      ],
-      limit: 2,
-    );
+    final selected = SeerrDiscoverySeedSelector.select([
+      _seed('film-1', 10, franchise: 'collection:42'),
+      _seed('film-2', 9, franchise: 'collection:42'),
+      _seed('other', 8, franchise: 'collection:77'),
+    ], limit: 2);
 
     expect(selected.map((seed) => seed.id), ['film-1', 'other']);
   });
@@ -77,14 +70,11 @@ void main() {
   });
 
   test('affinity order is deterministic for equivalent diversity', () {
-    final selected = SeerrDiscoverySeedSelector.select(
-      [
-        _seed('low', 1, genres: {35}),
-        _seed('high', 5, genres: {28}),
-        _seed('mid', 3, genres: {878}),
-      ],
-      limit: 3,
-    );
+    final selected = SeerrDiscoverySeedSelector.select([
+      _seed('low', 1, genres: {35}),
+      _seed('high', 5, genres: {28}),
+      _seed('mid', 3, genres: {878}),
+    ], limit: 3);
     expect(selected.map((seed) => seed.id), ['high', 'mid', 'low']);
   });
 }

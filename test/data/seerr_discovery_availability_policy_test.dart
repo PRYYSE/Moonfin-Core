@@ -4,10 +4,10 @@ import 'package:moonfin/data/services/seerr/seerr_discovery_availability_policy.
 import 'package:moonfin/data/services/seerr/seerr_discovery_schema.dart';
 
 SeerrDiscoverItem _item(int status) => SeerrDiscoverItem(
-      id: status,
-      title: 'Item $status',
-      mediaInfo: SeerrMediaInfo(status: status),
-    );
+  id: status,
+  title: 'Item $status',
+  mediaInfo: SeerrMediaInfo(status: status),
+);
 
 void main() {
   test('general discovery keeps available/requested/requestable media', () {
@@ -106,10 +106,7 @@ void main() {
   test('blocklist wins over every lane mode', () {
     final blocked = _item(6);
     for (final mode in SeerrDiscoveryAvailabilityMode.values) {
-      expect(
-        SeerrDiscoveryAvailabilityPolicy.include(blocked, mode),
-        isFalse,
-      );
+      expect(SeerrDiscoveryAvailabilityPolicy.include(blocked, mode), isFalse);
     }
   });
 }

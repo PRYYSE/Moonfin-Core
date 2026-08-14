@@ -76,10 +76,9 @@ class SeerrDiscoveryQuery {
     );
     final rawFilters = json['filters'] as Map? ?? const {};
 
-    List<String> stringList(String key) =>
-        (json[key] as List? ?? const []).map((value) => value.toString()).toList(
-              growable: false,
-            );
+    List<String> stringList(String key) => (json[key] as List? ?? const [])
+        .map((value) => value.toString())
+        .toList(growable: false);
 
     return SeerrDiscoveryQuery(
       source: source,
@@ -98,18 +97,18 @@ class SeerrDiscoveryQuery {
   }
 
   Map<String, dynamic> toJson() => {
-        'source': source.name,
-        'mediaType': mediaType,
-        'sortBy': sortBy,
-        if (filters.isNotEmpty) 'filters': filters,
-        if (keywordNames.isNotEmpty) 'keywordNames': keywordNames,
-        if (excludeKeywordNames.isNotEmpty)
-          'excludeKeywordNames': excludeKeywordNames,
-        if (providerNames.isNotEmpty) 'providerNames': providerNames,
-        if (seedStrategy != null) 'seedStrategy': seedStrategy,
-        if (listProvider != null) 'listProvider': listProvider,
-        if (listId != null) 'listId': listId,
-      };
+    'source': source.name,
+    'mediaType': mediaType,
+    'sortBy': sortBy,
+    if (filters.isNotEmpty) 'filters': filters,
+    if (keywordNames.isNotEmpty) 'keywordNames': keywordNames,
+    if (excludeKeywordNames.isNotEmpty)
+      'excludeKeywordNames': excludeKeywordNames,
+    if (providerNames.isNotEmpty) 'providerNames': providerNames,
+    if (seedStrategy != null) 'seedStrategy': seedStrategy,
+    if (listProvider != null) 'listProvider': listProvider,
+    if (listId != null) 'listId': listId,
+  };
 
   /// Query parameters for the Moonfin full-screen discovery route.
   ///
@@ -118,15 +117,15 @@ class SeerrDiscoveryQuery {
   /// by the catalogue compiler/server first. Filters are prefixed with `q.` so
   /// routing metadata can never collide with Seerr/TMDb filter names.
   Map<String, String> toRouteParameters({String? title}) => {
-        'source': source.name,
-        'mediaType': mediaType,
-        'sortBy': sortBy,
-        if (title != null && title.isNotEmpty) 'filterName': title,
-        for (final entry in filters.entries) 'q.${entry.key}': entry.value,
-        if (seedStrategy != null) 'seedStrategy': seedStrategy!,
-        if (listProvider != null) 'listProvider': listProvider!,
-        if (listId != null) 'listId': listId!,
-      };
+    'source': source.name,
+    'mediaType': mediaType,
+    'sortBy': sortBy,
+    if (title != null && title.isNotEmpty) 'filterName': title,
+    for (final entry in filters.entries) 'q.${entry.key}': entry.value,
+    if (seedStrategy != null) 'seedStrategy': seedStrategy!,
+    if (listProvider != null) 'listProvider': listProvider!,
+    if (listId != null) 'listId': listId!,
+  };
 
   /// Stable identity used for preview/expanded-query equality and caches.
   String get cacheKey {
@@ -239,24 +238,24 @@ class SeerrDiscoverySection {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        if (subtitle != null) 'subtitle': subtitle,
-        'query': query.toJson(),
-        'presentation': presentation.name,
-        'expandable': expandable,
-        'previewLimit': previewLimit,
-        'dedupGroup': dedupGroup,
-        'sessionDedup': sessionDedup,
-        'pool': pool,
-        'priority': priority.name,
-        'weight': weight,
-        'cooldownSessions': cooldownSessions,
-        'minItems': minItems,
-        'availabilityMode': availabilityMode.name,
-        if (tags.isNotEmpty) 'tags': tags,
-        if (conditions.isNotEmpty) 'conditions': conditions,
-      };
+    'id': id,
+    'title': title,
+    if (subtitle != null) 'subtitle': subtitle,
+    'query': query.toJson(),
+    'presentation': presentation.name,
+    'expandable': expandable,
+    'previewLimit': previewLimit,
+    'dedupGroup': dedupGroup,
+    'sessionDedup': sessionDedup,
+    'pool': pool,
+    'priority': priority.name,
+    'weight': weight,
+    'cooldownSessions': cooldownSessions,
+    'minItems': minItems,
+    'availabilityMode': availabilityMode.name,
+    if (tags.isNotEmpty) 'tags': tags,
+    if (conditions.isNotEmpty) 'conditions': conditions,
+  };
 
   bool get isAnchor => priority == SeerrDiscoveryPriority.anchor;
 }
@@ -302,13 +301,13 @@ class SeerrDiscoveryTab {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'sections': sections.map((section) => section.toJson()).toList(),
-        'initialLaneBudget': initialLaneBudget,
-        'minimumLaneCount': minimumLaneCount,
-        if (poolBudgets.isNotEmpty) 'poolBudgets': poolBudgets,
-      };
+    'id': id,
+    'title': title,
+    'sections': sections.map((section) => section.toJson()).toList(),
+    'initialLaneBudget': initialLaneBudget,
+    'minimumLaneCount': minimumLaneCount,
+    if (poolBudgets.isNotEmpty) 'poolBudgets': poolBudgets,
+  };
 }
 
 class SeerrDiscoveryCatalogue {
@@ -333,9 +332,9 @@ class SeerrDiscoveryCatalogue {
       );
 
   Map<String, dynamic> toJson() => {
-        'schemaVersion': schemaVersion,
-        'tabs': tabs.map((tab) => tab.toJson()).toList(),
-      };
+    'schemaVersion': schemaVersion,
+    'tabs': tabs.map((tab) => tab.toJson()).toList(),
+  };
 
   Iterable<SeerrDiscoverySection> get allSections sync* {
     for (final tab in tabs) {

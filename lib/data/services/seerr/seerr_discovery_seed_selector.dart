@@ -50,13 +50,17 @@ abstract final class SeerrDiscoverySeedSelector {
         (mediaCounts[seed.mediaType] ?? 0) < maxPerMediaType;
 
     bool genreDiverse(SeerrDiscoveryTasteSeed seed) => selected.every(
-          (other) => _jaccard(seed.genreIds, other.genreIds) < maxGenreSimilarity,
-        );
+      (other) => _jaccard(seed.genreIds, other.genreIds) < maxGenreSimilarity,
+    );
 
     void add(SeerrDiscoveryTasteSeed seed) {
       if (selected.length >= limit || !selectedIds.add(seed.id)) return;
       selected.add(seed);
-      mediaCounts.update(seed.mediaType, (value) => value + 1, ifAbsent: () => 1);
+      mediaCounts.update(
+        seed.mediaType,
+        (value) => value + 1,
+        ifAbsent: () => 1,
+      );
       final franchise = seed.franchiseKey?.trim();
       if (franchise != null && franchise.isNotEmpty) franchises.add(franchise);
     }
@@ -64,7 +68,9 @@ abstract final class SeerrDiscoverySeedSelector {
     // First pass: strong diversity across genre, media type and franchise.
     for (final seed in ordered) {
       if (selected.length >= limit) break;
-      if (!franchiseAvailable(seed) || !mediaHasRoom(seed) || !genreDiverse(seed)) {
+      if (!franchiseAvailable(seed) ||
+          !mediaHasRoom(seed) ||
+          !genreDiverse(seed)) {
         continue;
       }
       add(seed);

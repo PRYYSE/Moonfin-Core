@@ -4,11 +4,8 @@ import 'package:moonfin/data/services/seerr/seerr_discovery_lane_loader.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_schema.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_session.dart';
 
-SeerrDiscoverItem _item(int id) => SeerrDiscoverItem(
-      id: id,
-      mediaType: 'movie',
-      title: 'Item $id',
-    );
+SeerrDiscoverItem _item(int id) =>
+    SeerrDiscoverItem(id: id, mediaType: 'movie', title: 'Item $id');
 
 SeerrDiscoverySection _section({int minItems = 3, int previewLimit = 5}) =>
     SeerrDiscoverySection(
@@ -40,20 +37,23 @@ void main() {
     expect(result.throughPage, 3);
   });
 
-  test('shallow optional lane becomes hideable instead of failing tab', () async {
-    final loader = SeerrDiscoveryLaneLoader(
-      fetchPage: (_, page) async => SeerrDiscoverPage(
-        page: page,
-        totalPages: 1,
-        results: [_item(1), _item(2)],
-      ),
-    );
+  test(
+    'shallow optional lane becomes hideable instead of failing tab',
+    () async {
+      final loader = SeerrDiscoveryLaneLoader(
+        fetchPage: (_, page) async => SeerrDiscoverPage(
+          page: page,
+          totalPages: 1,
+          results: [_item(1), _item(2)],
+        ),
+      );
 
-    final result = await loader.load(_section(minItems: 3));
-    expect(result.hasError, isFalse);
-    expect(result.shouldHide, isTrue);
-    expect(result.items.length, 2);
-  });
+      final result = await loader.load(_section(minItems: 3));
+      expect(result.hasError, isFalse);
+      expect(result.shouldHide, isTrue);
+      expect(result.items.length, 2);
+    },
+  );
 
   test('one lane fetch error is returned as data rather than thrown', () async {
     final loader = SeerrDiscoveryLaneLoader(
@@ -68,11 +68,10 @@ void main() {
 
   test('session dedup prefers unseen items across lane pools', () async {
     final session = SeerrDiscoverySession();
-    session.markSeen(
-      'previous',
-      ['movie:1', 'movie:2'],
-      sharedGroup: 'tab:movies',
-    );
+    session.markSeen('previous', [
+      'movie:1',
+      'movie:2',
+    ], sharedGroup: 'tab:movies');
     final loader = SeerrDiscoveryLaneLoader(
       session: session,
       sharedDedupGroup: 'tab:movies',

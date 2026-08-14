@@ -30,9 +30,14 @@ abstract final class SeerrDiscoveryRefinementPolicy {
     Map<String, String> refinements, {
     DateTime? now,
   }) {
-    final safeBase = SeerrDiscoveryFilterPolicy.sanitise(base.filters, now: now);
-    final safeRefinements =
-        SeerrDiscoveryFilterPolicy.sanitise(refinements, now: now);
+    final safeBase = SeerrDiscoveryFilterPolicy.sanitise(
+      base.filters,
+      now: now,
+    );
+    final safeRefinements = SeerrDiscoveryFilterPolicy.sanitise(
+      refinements,
+      now: now,
+    );
     final merged = Map<String, String>.from(safeBase);
 
     for (final entry in safeRefinements.entries) {

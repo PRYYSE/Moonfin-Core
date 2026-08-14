@@ -25,9 +25,8 @@ class SeerrDiscoveryCollectionState {
     this.totalPages = 1,
   });
 
-  bool get canLoadMore => !isLoading &&
-      !isLoadingMore &&
-      currentPage < totalPages;
+  bool get canLoadMore =>
+      !isLoading && !isLoadingMore && currentPage < totalPages;
 
   SeerrDiscoveryCollectionState copyWith({
     SeerrDiscoveryQuery? query,
@@ -38,16 +37,15 @@ class SeerrDiscoveryCollectionState {
     bool clearError = false,
     int? currentPage,
     int? totalPages,
-  }) =>
-      SeerrDiscoveryCollectionState(
-        query: query ?? this.query,
-        items: items ?? this.items,
-        isLoading: isLoading ?? this.isLoading,
-        isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-        error: clearError ? null : (error ?? this.error),
-        currentPage: currentPage ?? this.currentPage,
-        totalPages: totalPages ?? this.totalPages,
-      );
+  }) => SeerrDiscoveryCollectionState(
+    query: query ?? this.query,
+    items: items ?? this.items,
+    isLoading: isLoading ?? this.isLoading,
+    isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    error: clearError ? null : (error ?? this.error),
+    currentPage: currentPage ?? this.currentPage,
+    totalPages: totalPages ?? this.totalPages,
+  );
 }
 
 /// Generic controller for an expanded Discovery lane.
@@ -86,10 +84,7 @@ class SeerrDiscoveryCollectionController extends ChangeNotifier {
     final generation = ++_generation;
     final query = _effectiveQuery();
     _paginator = _createPaginator(query);
-    _state = SeerrDiscoveryCollectionState(
-      query: query,
-      isLoading: true,
-    );
+    _state = SeerrDiscoveryCollectionState(query: query, isLoading: true);
     notifyListeners();
 
     try {
@@ -104,10 +99,7 @@ class SeerrDiscoveryCollectionController extends ChangeNotifier {
       );
     } catch (error) {
       if (generation != _generation) return;
-      _state = _state.copyWith(
-        isLoading: false,
-        error: error.toString(),
-      );
+      _state = _state.copyWith(isLoading: false, error: error.toString());
     }
     notifyListeners();
   }
@@ -132,10 +124,7 @@ class SeerrDiscoveryCollectionController extends ChangeNotifier {
       );
     } catch (error) {
       if (generation != _generation) return;
-      _state = _state.copyWith(
-        isLoadingMore: false,
-        error: error.toString(),
-      );
+      _state = _state.copyWith(isLoadingMore: false, error: error.toString());
     }
     notifyListeners();
   }

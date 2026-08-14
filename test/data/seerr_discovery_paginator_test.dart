@@ -3,11 +3,8 @@ import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_paginator.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_schema.dart';
 
-SeerrDiscoverItem _item(int id, {String? mediaType}) => SeerrDiscoverItem(
-      id: id,
-      title: 'Item $id',
-      mediaType: mediaType,
-    );
+SeerrDiscoverItem _item(int id, {String? mediaType}) =>
+    SeerrDiscoverItem(id: id, title: 'Item $id', mediaType: mediaType);
 
 void main() {
   const query = SeerrDiscoveryQuery(
@@ -15,38 +12,41 @@ void main() {
     mediaType: 'movie',
   );
 
-  test('reads ahead through sparse pages until it has a useful window', () async {
-    final pages = <int, SeerrDiscoverPage>{
-      1: SeerrDiscoverPage(
-        page: 1,
-        totalPages: 4,
-        results: [_item(1), _item(2)],
-      ),
-      2: SeerrDiscoverPage(
-        page: 2,
-        totalPages: 4,
-        results: [_item(3), _item(4)],
-      ),
-      3: SeerrDiscoverPage(
-        page: 3,
-        totalPages: 4,
-        results: [_item(5), _item(6)],
-      ),
-    };
+  test(
+    'reads ahead through sparse pages until it has a useful window',
+    () async {
+      final pages = <int, SeerrDiscoverPage>{
+        1: SeerrDiscoverPage(
+          page: 1,
+          totalPages: 4,
+          results: [_item(1), _item(2)],
+        ),
+        2: SeerrDiscoverPage(
+          page: 2,
+          totalPages: 4,
+          results: [_item(3), _item(4)],
+        ),
+        3: SeerrDiscoverPage(
+          page: 3,
+          totalPages: 4,
+          results: [_item(5), _item(6)],
+        ),
+      };
 
-    final paginator = SeerrDiscoveryPaginator(
-      query: query,
-      minimumMatchesPerLoad: 5,
-      fetchPage: (_, page) async => pages[page]!,
-    );
+      final paginator = SeerrDiscoveryPaginator(
+        query: query,
+        minimumMatchesPerLoad: 5,
+        fetchPage: (_, page) async => pages[page]!,
+      );
 
-    final window = await paginator.loadNext();
-    expect(window.fromPage, 1);
-    expect(window.throughPage, 3);
-    expect(window.items.map((item) => item.id), [1, 2, 3, 4, 5, 6]);
-    expect(paginator.currentPage, 3);
-    expect(paginator.canLoadMore, isTrue);
-  });
+      final window = await paginator.loadNext();
+      expect(window.fromPage, 1);
+      expect(window.throughPage, 3);
+      expect(window.items.map((item) => item.id), [1, 2, 3, 4, 5, 6]);
+      expect(paginator.currentPage, 3);
+      expect(paginator.canLoadMore, isTrue);
+    },
+  );
 
   test('suppresses exact duplicates across source page boundaries', () async {
     final paginator = SeerrDiscoveryPaginator(
@@ -54,15 +54,15 @@ void main() {
       minimumMatchesPerLoad: 2,
       fetchPage: (_, page) async => switch (page) {
         1 => SeerrDiscoverPage(
-            page: 1,
-            totalPages: 2,
-            results: [_item(1), _item(2)],
-          ),
+          page: 1,
+          totalPages: 2,
+          results: [_item(1), _item(2)],
+        ),
         _ => SeerrDiscoverPage(
-            page: 2,
-            totalPages: 2,
-            results: [_item(2), _item(3)],
-          ),
+          page: 2,
+          totalPages: 2,
+          results: [_item(2), _item(3)],
+        ),
       },
     );
 

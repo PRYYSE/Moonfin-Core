@@ -29,30 +29,30 @@ void main() {
     expect(decoded.query.cacheKey, query.cacheKey);
   });
 
-  test('route decoder ignores arbitrary non-q and unsupported q parameters', () {
+  test(
+    'route decoder ignores arbitrary non-q and unsupported q parameters',
+    () {
+      final decoded = SeerrDiscoveryRouteCodec.decode({
+        'source': 'discoverTv',
+        'mediaType': 'tv',
+        'sortBy': 'vote_average.desc',
+        'filterName': 'Safe',
+        'apiKey': 'must-not-pass',
+        'q.genre': '80',
+        'q.apiKey': 'must-not-pass',
+        'q.notARealFilter': 'drop-me',
+      });
+
+      expect(decoded.query.filters, {'genre': '80'});
+    },
+  );
+
+  test('moving route dates are resolved on decode', () {
     final decoded = SeerrDiscoveryRouteCodec.decode({
       'source': 'discoverTv',
       'mediaType': 'tv',
-      'sortBy': 'vote_average.desc',
-      'filterName': 'Safe',
-      'apiKey': 'must-not-pass',
-      'q.genre': '80',
-      'q.apiKey': 'must-not-pass',
-      'q.notARealFilter': 'drop-me',
-    });
-
-    expect(decoded.query.filters, {'genre': '80'});
-  });
-
-  test('moving route dates are resolved on decode', () {
-    final decoded = SeerrDiscoveryRouteCodec.decode(
-      {
-        'source': 'discoverTv',
-        'mediaType': 'tv',
-        'q.firstAirDateGte': r'$monthsAgo:3',
-      },
-      now: DateTime(2026, 8, 14),
-    );
+      'q.firstAirDateGte': r'$monthsAgo:3',
+    }, now: DateTime(2026, 8, 14));
     expect(decoded.query.filters['firstAirDateGte'], '2026-05-14');
   });
 

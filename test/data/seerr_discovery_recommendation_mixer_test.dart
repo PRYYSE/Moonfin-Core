@@ -3,11 +3,7 @@ import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_recommendation_mixer.dart';
 
 SeerrDiscoverItem _item(int id, {String mediaType = 'movie'}) =>
-    SeerrDiscoverItem(
-      id: id,
-      title: 'Item $id',
-      mediaType: mediaType,
-    );
+    SeerrDiscoverItem(id: id, title: 'Item $id', mediaType: mediaType);
 
 void main() {
   test('round robin prevents one seed monopolising the result', () {
@@ -71,26 +67,23 @@ void main() {
     expect(output.take(4).map((item) => item.id), [2, 11, 3, 12]);
   });
 
-  test('recent candidates can return as fallback when fresh pool is sparse', () {
-    final output = SeerrDiscoveryRecommendationMixer.mix(
-      limit: 3,
-      recentlySurfaced: const {'movie:1', 'movie:2'},
-      seeds: [
-        SeerrDiscoverySeedResults(
-          seedId: 'a',
-          items: [_item(1), _item(3)],
-        ),
-        SeerrDiscoverySeedResults(
-          seedId: 'b',
-          items: [_item(2)],
-        ),
-      ],
-    );
+  test(
+    'recent candidates can return as fallback when fresh pool is sparse',
+    () {
+      final output = SeerrDiscoveryRecommendationMixer.mix(
+        limit: 3,
+        recentlySurfaced: const {'movie:1', 'movie:2'},
+        seeds: [
+          SeerrDiscoverySeedResults(seedId: 'a', items: [_item(1), _item(3)]),
+          SeerrDiscoverySeedResults(seedId: 'b', items: [_item(2)]),
+        ],
+      );
 
-    expect(output.first.id, 3);
-    expect(output.length, 3);
-    expect(output.map((item) => item.id).toSet(), {1, 2, 3});
-  });
+      expect(output.first.id, 3);
+      expect(output.length, 3);
+      expect(output.map((item) => item.id).toSet(), {1, 2, 3});
+    },
+  );
 
   test('media-type lane drops clearly mismatched mixed results', () {
     final output = SeerrDiscoveryRecommendationMixer.mix(

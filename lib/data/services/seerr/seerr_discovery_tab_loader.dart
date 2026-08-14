@@ -46,13 +46,12 @@ class SeerrDiscoveryTabLoader {
       );
     }
 
-    final results = await mapBounded<
-        SeerrDiscoverySection,
-        SeerrDiscoveryLaneLoadResult>(
-      sections,
-      concurrency,
-      laneLoader.load,
-    );
+    final results =
+        await mapBounded<SeerrDiscoverySection, SeerrDiscoveryLaneLoadResult>(
+          sections,
+          concurrency,
+          laneLoader.load,
+        );
 
     final rendered = <SeerrDiscoveryLaneLoadResult>[];
     final failedOptional = <SeerrDiscoveryLaneLoadResult>[];

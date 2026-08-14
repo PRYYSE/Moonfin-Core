@@ -3,10 +3,8 @@ import 'seerr_discovery_paginator.dart';
 import 'seerr_discovery_schema.dart';
 import 'seerr_discovery_session.dart';
 
-typedef SeerrDiscoveryLanePredicate = bool Function(
-  SeerrDiscoverySection section,
-  SeerrDiscoverItem item,
-);
+typedef SeerrDiscoveryLanePredicate =
+    bool Function(SeerrDiscoverySection section, SeerrDiscoverItem item);
 
 class SeerrDiscoveryLaneLoadResult {
   final SeerrDiscoverySection section;
@@ -61,14 +59,17 @@ class SeerrDiscoveryLaneLoader {
         include: include == null ? null : (item) => include!(section, item),
       );
       final window = await paginator.loadNext();
-      var items = window.items.take(section.previewLimit).toList(growable: false);
+      var items = window.items
+          .take(section.previewLimit)
+          .toList(growable: false);
 
       if (section.sessionDedup && session != null && items.isNotEmpty) {
         items = session!.filterFresh<SeerrDiscoverItem>(
           group: section.dedupGroup,
           sharedGroup: sharedDedupGroup,
           items: items,
-          identity: (item) => '${item.mediaType ?? section.query.mediaType}:${item.id}',
+          identity: (item) =>
+              '${item.mediaType ?? section.query.mediaType}:${item.id}',
           minimumRetained: section.minItems,
         );
       }
@@ -80,10 +81,7 @@ class SeerrDiscoveryLaneLoader {
         totalPages: window.totalPages,
       );
     } catch (error) {
-      return SeerrDiscoveryLaneLoadResult(
-        section: section,
-        error: error,
-      );
+      return SeerrDiscoveryLaneLoadResult(section: section, error: error);
     }
   }
 }

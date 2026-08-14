@@ -23,8 +23,7 @@ class SeerrDiscoveryAvailabilityPolicy {
 
     return switch (mode) {
       SeerrDiscoveryAvailabilityMode.all => true,
-      SeerrDiscoveryAvailabilityMode.requestable =>
-        !available && !requested,
+      SeerrDiscoveryAvailabilityMode.requestable => !available && !requested,
       SeerrDiscoveryAvailabilityMode.available => available,
       SeerrDiscoveryAvailabilityMode.requested => requested,
       SeerrDiscoveryAvailabilityMode.notOwned => !available,

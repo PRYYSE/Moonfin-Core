@@ -16,10 +16,10 @@ class SeerrDiscoveryCatalogueLoadResult {
   });
 }
 
-typedef SeerrDiscoveryCatalogueReader = Future<Map<String, dynamic>?> Function();
-typedef SeerrDiscoveryCatalogueWriter = Future<void> Function(
-  Map<String, dynamic> json,
-);
+typedef SeerrDiscoveryCatalogueReader =
+    Future<Map<String, dynamic>?> Function();
+typedef SeerrDiscoveryCatalogueWriter =
+    Future<void> Function(Map<String, dynamic> json);
 
 /// Loads the versioned server catalogue without making Discovery depend on it.
 ///

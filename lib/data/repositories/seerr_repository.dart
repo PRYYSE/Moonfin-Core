@@ -4,6 +4,8 @@ import 'package:server_core/server_core.dart';
 import '../../auth/repositories/session_repository.dart';
 import '../services/seerr/seerr_api_models.dart';
 import '../services/seerr/seerr_http_client.dart';
+import '../services/seerr/seerr_discovery_request_plan.dart';
+import '../services/seerr/seerr_discovery_schema.dart';
 import '../services/seerr/seerr_models.dart';
 
 class SeerrRepository {
@@ -140,10 +142,9 @@ class SeerrRepository {
       return;
     }
 
-    _initClient(MoonfinProxyConfig(
-      jellyfinBaseUrl: baseUrl,
-      jellyfinToken: token,
-    ));
+    _initClient(
+      MoonfinProxyConfig(jellyfinBaseUrl: baseUrl, jellyfinToken: token),
+    );
     _isMoonfinMode = true;
 
     try {
@@ -205,10 +206,12 @@ class SeerrRepository {
     if (userId == null) throw StateError('No active user');
     _lastUserId = userId;
 
-    _initClient(MoonfinProxyConfig(
-      jellyfinBaseUrl: jellyfinBaseUrl,
-      jellyfinToken: jellyfinToken,
-    ));
+    _initClient(
+      MoonfinProxyConfig(
+        jellyfinBaseUrl: jellyfinBaseUrl,
+        jellyfinToken: jellyfinToken,
+      ),
+    );
 
     final status = await _httpClient!.getMoonfinStatus();
     final effectiveEnabled = status.enabled && status.authenticated;
@@ -255,7 +258,8 @@ class SeerrRepository {
     if (status.authenticated) return;
     if (!status.enabled) return;
 
-    final hasPassword = username != null &&
+    final hasPassword =
+        username != null &&
         username.isNotEmpty &&
         password != null &&
         password.isNotEmpty;
@@ -338,10 +342,7 @@ class SeerrRepository {
       authType: authType,
     );
 
-    await _store.setString(
-      _moonfinDisplayNameKey,
-      response.displayName ?? '',
-    );
+    await _store.setString(_moonfinDisplayNameKey, response.displayName ?? '');
     await _store.setString(
       _moonfinUserIdKey,
       response.seerrUserId?.toString() ?? '',
@@ -426,11 +427,19 @@ class SeerrRepository {
     (c) async => SeerrDiscoverPage.fromJson(await c.getWatchlist(page: page)),
   );
 
-  Future<void> addToWatchlist({required int tmdbId, required String mediaType}) =>
-      _withClient((c) => c.addToWatchlist(tmdbId: tmdbId, mediaType: mediaType));
+  Future<void> addToWatchlist({
+    required int tmdbId,
+    required String mediaType,
+  }) => _withClient(
+    (c) => c.addToWatchlist(tmdbId: tmdbId, mediaType: mediaType),
+  );
 
-  Future<void> removeFromWatchlist({required int tmdbId, required String mediaType}) =>
-      _withClient((c) => c.removeFromWatchlist(tmdbId: tmdbId, mediaType: mediaType));
+  Future<void> removeFromWatchlist({
+    required int tmdbId,
+    required String mediaType,
+  }) => _withClient(
+    (c) => c.removeFromWatchlist(tmdbId: tmdbId, mediaType: mediaType),
+  );
 
   Future<SeerrDiscoverPage> discoverMovies({
     int page = 1,
@@ -467,6 +476,36 @@ class SeerrRepository {
       ),
     ),
   );
+
+  /// Executes one compiled server-delivered Discovery query while preserving
+  /// the repository's existing Seerr client/session lifecycle.
+  ///
+  /// Personalised and external-list sources are intentionally handled by their
+  /// dedicated services and therefore do not produce a raw Seerr request plan.
+  Future<SeerrDiscoverPage> executeDiscoveryQuery(
+    SeerrDiscoveryQuery query, {
+    int page = 1,
+    DateTime? now,
+  }) async {
+    final plan = SeerrDiscoveryRequestPlan.fromQuery(
+      query,
+      page: page,
+      now: now,
+    );
+    if (plan == null) {
+      throw UnsupportedError(
+        'Discovery source ${query.source.name} requires a dedicated executor or unresolved semantic filters',
+      );
+    }
+    return _withClient(
+      (client) async => SeerrDiscoverPage.fromJson(
+        await client.getDiscoveryPath(
+          plan.path,
+          queryParameters: plan.queryParameters,
+        ),
+      ),
+    );
+  }
 
   Future<SeerrDiscoverPage> search(
     String query, {
@@ -704,9 +743,8 @@ class SeerrRepository {
   );
 
   Future<SeerrCollection> getCollectionDetails(int collectionId) => _withClient(
-    (c) async => SeerrCollection.fromJson(
-      await c.getCollectionDetails(collectionId),
-    ),
+    (c) async =>
+        SeerrCollection.fromJson(await c.getCollectionDetails(collectionId)),
   );
 
   Future<SeerrIssue> createIssue({
@@ -749,9 +787,8 @@ class SeerrRepository {
     (c) async => SeerrIssueCounts.fromJson(await c.getIssueCount()),
   );
 
-  Future<SeerrIssue> getIssue(int issueId) => _withClient(
-    (c) async => SeerrIssue.fromJson(await c.getIssue(issueId)),
-  );
+  Future<SeerrIssue> getIssue(int issueId) =>
+      _withClient((c) async => SeerrIssue.fromJson(await c.getIssue(issueId)));
 
   Future<SeerrIssue> commentOnIssue(int issueId, String message) => _withClient(
     (c) async => SeerrIssue.fromJson(await c.commentOnIssue(issueId, message)),

@@ -50,15 +50,20 @@ void main() {
     expect(merged.filters['withRuntimeLte'], '100');
   });
 
-  test('genre refinement combines with a base genre instead of replacing it', () {
-    const base = SeerrDiscoveryQuery(
-      source: SeerrDiscoverySource.discoverMovies,
-      mediaType: 'movie',
-      filters: {'genre': '878'},
-    );
-    final merged = SeerrDiscoveryRefinementPolicy.merge(base, {'genre': '53'});
-    expect(merged.filters['genre'], '878,53');
-  });
+  test(
+    'genre refinement combines with a base genre instead of replacing it',
+    () {
+      const base = SeerrDiscoveryQuery(
+        source: SeerrDiscoverySource.discoverMovies,
+        mediaType: 'movie',
+        filters: {'genre': '878'},
+      );
+      final merged = SeerrDiscoveryRefinementPolicy.merge(base, {
+        'genre': '53',
+      });
+      expect(merged.filters['genre'], '878,53');
+    },
+  );
 
   test('exact base identity filters remain locked', () {
     const base = SeerrDiscoveryQuery(

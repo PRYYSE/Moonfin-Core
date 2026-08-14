@@ -38,7 +38,8 @@ class SeerrDiscoverySession {
 
     for (final item in list) {
       final id = identity(item);
-      final hasSeen = id.isNotEmpty &&
+      final hasSeen =
+          id.isNotEmpty &&
           (seen.contains(id) || (sharedSeen?.contains(id) ?? false));
       if (!hasSeen) {
         fresh.add(item);
@@ -84,6 +85,6 @@ class SeerrDiscoverySession {
   void reset() => _seenByGroup.clear();
 
   Map<String, int> get counts => {
-        for (final entry in _seenByGroup.entries) entry.key: entry.value.length,
-      };
+    for (final entry in _seenByGroup.entries) entry.key: entry.value.length,
+  };
 }

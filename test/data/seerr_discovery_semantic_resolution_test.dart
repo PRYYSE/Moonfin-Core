@@ -13,15 +13,18 @@ void main() {
     expect(SeerrDiscoveryRequestPlan.fromQuery(query), isNull);
   });
 
-  test('unresolved AU provider authoring lane cannot ignore provider constraint', () {
-    const query = SeerrDiscoveryQuery(
-      source: SeerrDiscoverySource.discoverMovies,
-      mediaType: 'movie',
-      filters: {'watchRegion': 'AU'},
-      providerNames: ['BINGE'],
-    );
-    expect(SeerrDiscoveryRequestPlan.fromQuery(query), isNull);
-  });
+  test(
+    'unresolved AU provider authoring lane cannot ignore provider constraint',
+    () {
+      const query = SeerrDiscoveryQuery(
+        source: SeerrDiscoverySource.discoverMovies,
+        mediaType: 'movie',
+        filters: {'watchRegion': 'AU'},
+        providerNames: ['BINGE'],
+      );
+      expect(SeerrDiscoveryRequestPlan.fromQuery(query), isNull);
+    },
+  );
 
   test('compiled keyword/provider IDs become executable normal filters', () {
     const query = SeerrDiscoveryQuery(

@@ -8,19 +8,18 @@ SeerrDiscoverySection _section(
   SeerrDiscoveryPriority priority = SeerrDiscoveryPriority.normal,
   double weight = 1,
   int cooldownSessions = 0,
-}) =>
-    SeerrDiscoverySection(
-      id: id,
-      title: id,
-      pool: pool,
-      priority: priority,
-      weight: weight,
-      cooldownSessions: cooldownSessions,
-      query: const SeerrDiscoveryQuery(
-        source: SeerrDiscoverySource.discoverMovies,
-        mediaType: 'movie',
-      ),
-    );
+}) => SeerrDiscoverySection(
+  id: id,
+  title: id,
+  pool: pool,
+  priority: priority,
+  weight: weight,
+  cooldownSessions: cooldownSessions,
+  query: const SeerrDiscoveryQuery(
+    source: SeerrDiscoverySource.discoverMovies,
+    mediaType: 'movie',
+  ),
+);
 
 void main() {
   const composer = SeerrDiscoveryComposer();
@@ -67,9 +66,16 @@ void main() {
       sections: [for (var i = 0; i < 10; i++) _section('s$i')],
     );
 
-    final first = composer.compose(tab, sessionSeed: 'user-day', refreshNonce: 0);
-    final refreshed =
-        composer.compose(tab, sessionSeed: 'user-day', refreshNonce: 2);
+    final first = composer.compose(
+      tab,
+      sessionSeed: 'user-day',
+      refreshNonce: 0,
+    );
+    final refreshed = composer.compose(
+      tab,
+      sessionSeed: 'user-day',
+      refreshNonce: 2,
+    );
 
     expect(refreshed.map((s) => s.id), isNot(equals(first.map((s) => s.id))));
   });
@@ -92,28 +98,31 @@ void main() {
     expect(result.length, 5);
   });
 
-  test('cooldown is honoured unless minimum lane count requires a fallback', () {
-    final tab = SeerrDiscoveryTab(
-      id: 'movies',
-      title: 'Movies',
-      initialLaneBudget: 3,
-      minimumLaneCount: 2,
-      sections: [
-        _section('cooling', cooldownSessions: 3),
-        _section('fresh-a'),
-        _section('fresh-b'),
-        _section('fresh-c'),
-      ],
-    );
+  test(
+    'cooldown is honoured unless minimum lane count requires a fallback',
+    () {
+      final tab = SeerrDiscoveryTab(
+        id: 'movies',
+        title: 'Movies',
+        initialLaneBudget: 3,
+        minimumLaneCount: 2,
+        sections: [
+          _section('cooling', cooldownSessions: 3),
+          _section('fresh-a'),
+          _section('fresh-b'),
+          _section('fresh-c'),
+        ],
+      );
 
-    final result = composer.compose(
-      tab,
-      sessionSeed: 'cooldown',
-      sessionsSinceSeen: const {'cooling': 1},
-    );
+      final result = composer.compose(
+        tab,
+        sessionSeed: 'cooldown',
+        sessionsSinceSeen: const {'cooling': 1},
+      );
 
-    expect(result.map((s) => s.id), isNot(contains('cooling')));
-  });
+      expect(result.map((s) => s.id), isNot(contains('cooling')));
+    },
+  );
 
   test('empty and condition-filtered tabs fail closed without throwing', () {
     const empty = SeerrDiscoveryTab(id: 'empty', title: 'Empty', sections: []);
@@ -125,11 +134,7 @@ void main() {
       sections: [_section('one'), _section('two')],
     );
     expect(
-      composer.compose(
-        filtered,
-        sessionSeed: 'x',
-        isEligible: (_) => false,
-      ),
+      composer.compose(filtered, sessionSeed: 'x', isEligible: (_) => false),
       isEmpty,
     );
   });
