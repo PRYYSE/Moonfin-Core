@@ -505,16 +505,42 @@ def new_upcoming() -> list[dict[str, Any]]:
 
 
 def curated_lists() -> list[dict[str, Any]]:
+    # These are intentionally executable smart collections rather than opaque
+    # external-list placeholders. Real configured MDBList/TMDb/Letterboxd rows
+    # are appended client-side without replacing this baseline.
     definitions = [
-        ("Award Winners & Nominees", "movie"), ("Best Picture Winners", "movie"), ("Modern Movie Classics", "movie"),
-        ("Essential Sci-Fi", "movie"), ("Essential Horror", "movie"), ("Australian Cinema Spotlight", "movie"),
-        ("Prestige TV Essentials", "tv"), ("Limited Series Essentials", "tv"), ("Best Crime Series", "tv"),
-        ("Best Sci-Fi Series", "tv"), ("Australian Series Spotlight", "tv"), ("Anime Starter Pack", "all"),
-        ("Modern Anime Essentials", "all"), ("Classic Anime Essentials", "all"), ("Best Anime Movies", "movie"),
-        ("Best Mecha Anime", "tv"), ("Best Romance Anime", "tv"), ("Best Psychological Anime", "tv"),
-        ("Seasonal Anime Staff Picks", "tv"), ("Recently Refreshed Lists", "all"),
+        ("Award Season Favourites", q("discoverMovies", "movie", sort="vote_average.desc", filters={"voteAverageGte": "7.2", "voteCountGte": "1000"}, keywords=("academy award",))),
+        ("Modern Movie Classics", q("discoverMovies", "movie", sort="vote_average.desc", filters={"primaryReleaseDateGte": "2000-01-01", "voteAverageGte": "7.5", "voteCountGte": "3000"})),
+        ("Essential Sci-Fi", q("discoverMovies", "movie", sort="vote_average.desc", filters={"genre": "878", "voteAverageGte": "7.0", "voteCountGte": "500"})),
+        ("Essential Horror", q("discoverMovies", "movie", sort="vote_average.desc", filters={"genre": "27", "voteAverageGte": "6.5", "voteCountGte": "300"})),
+        ("Essential Crime & Thriller", q("discoverMovies", "movie", sort="vote_average.desc", filters={"genre": "80|53", "voteAverageGte": "7.0", "voteCountGte": "500"})),
+        ("Great Films Under Two Hours", q("discoverMovies", "movie", sort="vote_average.desc", filters={"withRuntimeLte": "120", "voteAverageGte": "7.2", "voteCountGte": "500"})),
+        ("Family Favourites", q("discoverMovies", "movie", sort="vote_average.desc", filters={"genre": "10751|16", "voteAverageGte": "6.8", "voteCountGte": "300"})),
+        ("A24 Essentials", q("discoverMovies", "movie", sort="vote_average.desc", filters={"studio": "41077", "voteAverageGte": "6.5", "voteCountGte": "100"})),
+        ("Animated Film Essentials", q("discoverMovies", "movie", sort="vote_average.desc", filters={"genre": "16", "voteAverageGte": "7.0", "voteCountGte": "300"})),
+        ("Korean Cinema Essentials", q("discoverMovies", "movie", sort="vote_average.desc", filters={"language": "ko", "voteAverageGte": "7.0", "voteCountGte": "100"})),
+        ("Prestige TV Essentials", q("discoverTv", "tv", sort="vote_average.desc", filters={"genre": "18", "voteAverageGte": "8.0", "voteCountGte": "500"})),
+        ("Crime Series Essentials", q("discoverTv", "tv", sort="vote_average.desc", filters={"genre": "80", "voteAverageGte": "7.5", "voteCountGte": "250"})),
+        ("Sci-Fi & Fantasy Series Essentials", q("discoverTv", "tv", sort="vote_average.desc", filters={"genre": "10765", "voteAverageGte": "7.5", "voteCountGte": "250"})),
+        ("Comedy Series Essentials", q("discoverTv", "tv", sort="vote_average.desc", filters={"genre": "35", "voteAverageGte": "7.5", "voteCountGte": "250"})),
+        ("Documentary Series Essentials", q("discoverTv", "tv", sort="vote_average.desc", filters={"genre": "99", "voteAverageGte": "7.5", "voteCountGte": "50"})),
+        ("Korean Series Essentials", q("discoverTv", "tv", sort="vote_average.desc", filters={"language": "ko", "voteAverageGte": "7.5", "voteCountGte": "100"})),
+        ("Anime Starter Pack", q("discoverTv", "tv", sort="vote_average.desc", filters={"genre": "16", "language": "ja", "voteAverageGte": "7.5", "voteCountGte": "200"})),
+        ("Modern Anime Essentials", q("discoverTv", "tv", sort="vote_average.desc", filters={"genre": "16", "language": "ja", "firstAirDateGte": "2010-01-01", "voteAverageGte": "8.0", "voteCountGte": "150"})),
+        ("Classic Anime Essentials", q("discoverTv", "tv", sort="vote_average.desc", filters={"genre": "16", "language": "ja", "firstAirDateLte": "2009-12-31", "voteAverageGte": "7.8", "voteCountGte": "75"})),
+        ("Best Anime Movies", q("discoverMovies", "movie", sort="vote_average.desc", filters={"genre": "16", "language": "ja", "voteAverageGte": "7.5", "voteCountGte": "50"})),
     ]
-    return [lane(f"lists-{slug(title)}", title, q("externalList", media, list_id=slug(title)), "lists", min_items=5, tags=("curated",)) for title, media in definitions]
+    return [
+        lane(
+            f"lists-{slug(title)}",
+            title,
+            query,
+            "smart-collections",
+            min_items=5,
+            tags=("curated", "smart-collection"),
+        )
+        for title, query in definitions
+    ]
 
 
 def tab(tab_id: str, title: str, sections: list[dict[str, Any]], budget: int, minimum: int, pool_budgets: dict[str, int]) -> dict[str, Any]:
@@ -528,7 +554,7 @@ def build() -> dict[str, Any]:
         tab("series", "Series", series(), 24, 18, {"series-anchor": 10, "series-discovery": 4, "series-runtime": 2, "series-era": 2, "series-genres": 4, "series-mixes": 3, "series-themes": 3, "series-networks": 3, "series-languages": 2, "series-providers": 2, "series-occasions": 2}),
         tab("anime", "Anime", anime(), 26, 20, {"anime-anchor": 12, "anime-time": 3, "anime-rating": 3, "anime-genres": 4, "anime-themes": 6, "anime-format": 2, "anime-studios": 2, "anime-global": 1, "anime-personal": 4, "anime-lists": 3}),
         tab("new-upcoming", "New & Upcoming", new_upcoming(), 16, 10, {"new-upcoming": 16}),
-        tab("lists", "Lists", curated_lists(), 16, 8, {"lists": 16}),
+        tab("lists", "Lists", curated_lists(), 16, 8, {"smart-collections": 12, "configured-lists": 6}),
     ]
     result = {"schemaVersion": SCHEMA_VERSION, "catalogueVersion": "home-lab-v2-authoring", "defaultRegion": "AU", "tabs": tabs}
     validate(result)

@@ -57,6 +57,7 @@ abstract final class SeerrDiscoveryCatalogueIndex {
       'global' => 'Global Animation',
       'personal' => 'For You',
       'lists' => 'Curated Lists',
+      'collections' => 'Curated Collections',
       'upcoming' => 'New & Upcoming',
       _ => _humanise(pool),
     };

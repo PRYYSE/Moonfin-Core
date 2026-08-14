@@ -79,34 +79,41 @@ class SeerrDiscoveryConfiguredListsService {
     return output;
   }
 
-  /// Replaces non-executable authoring placeholders in the Lists tab with the
-  /// user's real configured list rows. If none exist, hide the Lists tab until
-  /// a source is configured rather than presenting an empty destination.
+  /// Adds the user's real configured external lists to the always-available
+  /// smart-collection baseline. Configured lists are inserted first and carry
+  /// high priority, while pool budgets prevent them from monopolising a normal
+  /// rotating session. The full catalogue index still exposes every list.
   SeerrDiscoveryCatalogue mergeIntoCatalogue(
     SeerrDiscoveryCatalogue catalogue,
   ) {
     final configured = configuredSections();
+    if (configured.isEmpty) return catalogue;
+
     final tabs = <SeerrDiscoveryTab>[];
     for (final tab in catalogue.tabs) {
       if (tab.id != 'lists') {
         tabs.add(tab);
         continue;
       }
-      if (configured.isEmpty) continue;
-      final budget = configured.length < tab.initialLaneBudget
-          ? configured.length
+      final combined = <SeerrDiscoverySection>[...configured, ...tab.sections];
+      final budget = combined.length < tab.initialLaneBudget
+          ? combined.length
           : tab.initialLaneBudget;
-      final minimum = configured.length < tab.minimumLaneCount
-          ? configured.length
+      final minimum = combined.length < tab.minimumLaneCount
+          ? combined.length
           : tab.minimumLaneCount;
+      final configuredBudget = configured.length.clamp(1, 6).toInt();
       tabs.add(
         SeerrDiscoveryTab(
           id: tab.id,
           title: tab.title,
-          sections: configured,
+          sections: combined,
           initialLaneBudget: budget < 1 ? 1 : budget,
           minimumLaneCount: minimum < 1 ? 1 : minimum,
-          poolBudgets: {'configured-lists': budget < 1 ? 1 : budget},
+          poolBudgets: {
+            ...tab.poolBudgets,
+            'configured-lists': configuredBudget,
+          },
         ),
       );
     }
