@@ -42,6 +42,7 @@ import '../screens/home/home_screen.dart';
 import '../screens/seerr/seerr_browse_screen.dart';
 import '../screens/seerr/seerr_collection_screen.dart';
 import '../screens/seerr/seerr_discover_screen.dart';
+import '../screens/seerr/seerr_discovery_catalogue_screen.dart';
 import '../screens/seerr/seerr_person_screen.dart';
 import '../screens/seerr/seerr_requests_screen.dart';
 import '../screens/livetv/live_tv_channel_player_loader.dart';
@@ -754,6 +755,12 @@ final appRouter = GoRouter(
     GoRoute(
       path: Destinations.seerrDiscover,
       builder: (context, state) => const SeerrDiscoverScreen(),
+    ),
+    GoRoute(
+      path: Destinations.seerrCatalogue,
+      builder: (context, state) => SeerrDiscoveryCatalogueScreen(
+        tabId: state.uri.queryParameters['tab'] ?? 'movies',
+      ),
     ),
     GoRoute(
       path: Destinations.seerrRequests,

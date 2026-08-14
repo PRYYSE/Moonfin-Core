@@ -481,6 +481,17 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     context.push(uri.toString());
   }
 
+  void _openCatalogueIndex() {
+    final tabId = _viewModel?.activeTabId;
+    if (tabId == null || tabId.isEmpty) return;
+    context.push(
+      Uri(
+        path: Destinations.seerrCatalogue,
+        queryParameters: {'tab': tabId},
+      ).toString(),
+    );
+  }
+
   void _focusActiveTab() {
     final vm = _viewModel;
     final state = _tabRowKey.currentState;
@@ -532,11 +543,22 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     final desktopScale = GetIt.instance<UserPreferences>()
         .get(UserPreferences.desktopUiScale)
         .scaleFactor;
+    const browseAllId = '__browse_all_catalogue__';
+    final tabItems = <SeerrDiscoveryTab>[
+      ...vm.tabs,
+      const SeerrDiscoveryTab(
+        id: browseAllId,
+        title: 'All Categories',
+        sections: [],
+        initialLaneBudget: 1,
+        minimumLaneCount: 1,
+      ),
+    ];
     return SizedBox(
       height: 62 * desktopScale,
       child: LockedFocusRow<SeerrDiscoveryTab>(
         key: _tabRowKey,
-        items: vm.tabs,
+        items: tabItems,
         hubKey: 'seerr_deep_discovery_tabs',
         controller: _tabScrollController,
         itemExtent: 150 * desktopScale,
@@ -550,9 +572,16 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
         ),
         onLeftEdge: _onRowLeftEdge,
         onVerticalNavigation: _onTabVerticalNavigation,
-        onTap: (_, tab) => unawaited(_selectDiscoveryTab(tab)),
+        onTap: (_, tab) {
+          if (tab.id == browseAllId) {
+            _openCatalogueIndex();
+          } else {
+            unawaited(_selectDiscoveryTab(tab));
+          }
+        },
         itemBuilder: (context, tab, index, isFocused) {
           final active = tab.id == vm.activeTabId;
+          final browseAll = tab.id == browseAllId;
           final accent = AppColorScheme.accent;
           final surface = Theme.of(context).colorScheme.surface;
           return AnimatedContainer(
@@ -570,14 +599,32 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
               ),
             ),
             alignment: Alignment.center,
-            child: Text(
-              tab.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppColorScheme.onSurface,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (browseAll) ...[
+                  Icon(
+                    Icons.grid_view_rounded,
+                    size: 17 * desktopScale,
+                    color: AppColorScheme.onSurface,
+                  ),
+                  SizedBox(width: 6 * desktopScale),
+                ],
+                Flexible(
+                  child: Text(
+                    tab.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppColorScheme.onSurface,
+                      fontWeight: active || browseAll
+                          ? FontWeight.w700
+                          : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },

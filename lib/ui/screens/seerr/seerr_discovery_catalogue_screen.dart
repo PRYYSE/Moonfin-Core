@@ -17,10 +17,7 @@ import '../../widgets/quick_return_wrapper.dart';
 class SeerrDiscoveryCatalogueScreen extends StatefulWidget {
   final String tabId;
 
-  const SeerrDiscoveryCatalogueScreen({
-    super.key,
-    required this.tabId,
-  });
+  const SeerrDiscoveryCatalogueScreen({super.key, required this.tabId});
 
   @override
   State<SeerrDiscoveryCatalogueScreen> createState() =>
@@ -194,16 +191,13 @@ class _SeerrDiscoveryCatalogueScreenState
                 crossAxisSpacing: 12,
                 childAspectRatio: PlatformDetection.useMobileUi ? 2.35 : 2.9,
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final section = group.sections[index];
-                  return _DiscoveryCatalogueTile(
-                    section: section,
-                    onTap: () => _openSection(section),
-                  );
-                },
-                childCount: group.sections.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final section = group.sections[index];
+                return _DiscoveryCatalogueTile(
+                  section: section,
+                  onTap: () => _openSection(section),
+                );
+              }, childCount: group.sections.length),
             ),
           ),
         ],
@@ -217,10 +211,7 @@ class _DiscoveryCatalogueTile extends StatefulWidget {
   final SeerrDiscoverySection section;
   final VoidCallback onTap;
 
-  const _DiscoveryCatalogueTile({
-    required this.section,
-    required this.onTap,
-  });
+  const _DiscoveryCatalogueTile({required this.section, required this.onTap});
 
   @override
   State<_DiscoveryCatalogueTile> createState() =>

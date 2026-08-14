@@ -146,6 +146,7 @@ class Destinations {
   static const seerrDiscover = '/seerr/discover';
   static const seerrRequests = '/seerr/requests';
   static const seerrBrowse = '/seerr/browse';
+  static const seerrCatalogue = '/seerr/catalogue';
   static const seerrMediaDetail = '/seerr/media/:itemId';
   static const seerrPersonDetail = '/seerr/person/:personId';
   static const seerrCollectionDetail = '/seerr/collection/:collectionId';
@@ -177,6 +178,7 @@ class Destinations {
       '/library/$libraryId/letters';
   static String librarySuggestionsOf(String libraryId) =>
       '/library/$libraryId/suggestions';
+
   /// [seasonContext] names the season the viewer was browsing, which is not
   /// always the item's own season: a special inlined by
   /// DisplaySpecialsWithinSeasons is listed under a regular season while still
@@ -262,6 +264,7 @@ class Destinations {
         ? '$base?serverId=${Uri.encodeComponent(serverId)}'
         : base;
   }
+
   static String collection(String collectionId) => '/collection/$collectionId';
   static String musicLibrary(String libraryId) => '/music/$libraryId';
   static String bookLibrary(String libraryId, {String? collectionType}) {
@@ -270,6 +273,7 @@ class Destinations {
         ? '$base?collectionType=${Uri.encodeComponent(collectionType)}'
         : base;
   }
+
   static String photo(String itemId) => '/player/photo/$itemId';
   static String trailer({String? videoId, String? url}) {
     final params = <String, String>{
@@ -304,6 +308,7 @@ class Destinations {
     if (isFolderType(type)) return folder(itemId, serverId: serverId);
     return item(itemId, serverId: serverId);
   }
+
   static String nextUpFor(String itemId) => '/player/next-up/$itemId';
   static String stillWatchingFor(String itemId) =>
       '/player/still-watching/$itemId';
@@ -331,6 +336,7 @@ class Destinations {
     if (params.isEmpty) return base;
     return Uri(path: base, queryParameters: params).toString();
   }
+
   static String seerrPerson(String personId) => '/seerr/person/$personId';
   static String seerrCollection(String collectionId) =>
       '/seerr/collection/$collectionId';

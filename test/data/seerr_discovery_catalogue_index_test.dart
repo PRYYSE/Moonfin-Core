@@ -6,17 +6,16 @@ SeerrDiscoverySection _section(
   String id,
   String pool, {
   bool expandable = true,
-}) =>
-    SeerrDiscoverySection(
-      id: id,
-      title: id,
-      pool: pool,
-      expandable: expandable,
-      query: const SeerrDiscoveryQuery(
-        source: SeerrDiscoverySource.discoverMovies,
-        mediaType: 'movie',
-      ),
-    );
+}) => SeerrDiscoverySection(
+  id: id,
+  title: id,
+  pool: pool,
+  expandable: expandable,
+  query: const SeerrDiscoveryQuery(
+    source: SeerrDiscoverySource.discoverMovies,
+    mediaType: 'movie',
+  ),
+);
 
 void main() {
   test('groups every expandable lane without applying session budgets', () {
@@ -48,13 +47,22 @@ void main() {
   });
 
   test('known catalogue pools get concise user-facing names', () {
-    expect(SeerrDiscoveryCatalogueIndex.poolTitle('anime-themes'), 'Themes & Topics');
-    expect(SeerrDiscoveryCatalogueIndex.poolTitle('series-networks'), 'Networks');
+    expect(
+      SeerrDiscoveryCatalogueIndex.poolTitle('anime-themes'),
+      'Themes & Topics',
+    );
+    expect(
+      SeerrDiscoveryCatalogueIndex.poolTitle('series-networks'),
+      'Networks',
+    );
     expect(
       SeerrDiscoveryCatalogueIndex.poolTitle('movie-providers'),
       'Streaming Services',
     );
-    expect(SeerrDiscoveryCatalogueIndex.poolTitle('anime-rating'), 'Ratings & Hidden Gems');
+    expect(
+      SeerrDiscoveryCatalogueIndex.poolTitle('anime-rating'),
+      'Ratings & Hidden Gems',
+    );
   });
 
   test('unknown pool names are still readable instead of failing', () {
