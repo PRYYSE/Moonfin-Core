@@ -55,12 +55,17 @@ jobs:
           dart format --output=none --set-exit-if-changed \
             lib/data/services/seerr/seerr_discovery_*.dart \
             lib/data/viewmodels/seerr_discovery_collection_controller.dart \
+            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
             lib/data/services/seerr/seerr_http_client.dart \
             lib/data/repositories/seerr_repository.dart \
-            test/data/seerr_discovery_*.dart
+            test/data/seerr_discovery_*.dart \
+            test/data/seerr_deep_discovery_view_model_test.dart
 
       - name: Run focused Discovery tests
-        run: flutter test test/data/seerr_discovery_*.dart
+        run: |
+          flutter test \
+            test/data/seerr_discovery_*.dart \
+            test/data/seerr_deep_discovery_view_model_test.dart
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
