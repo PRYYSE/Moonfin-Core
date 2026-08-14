@@ -53,10 +53,7 @@ class SeerrDiscoveryRotationStore {
       for (final entry in histories.entries)
         if (entry.key.trim().isNotEmpty) entry.key: entry.value.toJson(),
     };
-    await preferences.setString(
-      _key(scope),
-      jsonEncode({'tabs': tabs}),
-    );
+    await preferences.setString(_key(scope), jsonEncode({'tabs': tabs}));
   }
 
   Future<void> clear(String scope) async {

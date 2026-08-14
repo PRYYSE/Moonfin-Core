@@ -11,6 +11,7 @@ import '../services/seerr/seerr_discovery_configured_lists_service.dart';
 import '../services/seerr/seerr_discovery_lane_loader.dart';
 import '../services/seerr/seerr_discovery_personalisation_service.dart';
 import '../services/seerr/seerr_discovery_rotation_history.dart';
+import '../services/seerr/seerr_discovery_rotation_store.dart';
 import '../services/seerr/seerr_discovery_schema.dart';
 import '../services/seerr/seerr_discovery_session.dart';
 import '../utils/bounded_concurrency.dart';
@@ -27,6 +28,13 @@ typedef SeerrDeepPersonalFetcher =
     });
 typedef SeerrDeepSeedLoader = Future<String> Function();
 typedef SeerrDeepBlockNsfw = bool Function();
+typedef SeerrDeepRotationLoader =
+    Future<Map<String, SeerrDiscoveryRotationHistory>> Function(String scope);
+typedef SeerrDeepRotationSaver =
+    Future<void> Function(
+      String scope,
+      Map<String, SeerrDiscoveryRotationHistory> histories,
+    );
 typedef SeerrDeepCatalogueMerger =
     SeerrDiscoveryCatalogue Function(SeerrDiscoveryCatalogue catalogue);
 typedef SeerrDeepExternalFetcher =
@@ -115,6 +123,8 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
   final SeerrDeepPersonalFetcher _fetchPersonal;
   final SeerrDeepSeedLoader _loadSessionSeed;
   final SeerrDeepBlockNsfw _blockNsfw;
+  late final SeerrDeepRotationLoader _loadRotationHistory;
+  late final SeerrDeepRotationSaver _saveRotationHistory;
   final SeerrDeepCatalogueMerger _mergeCatalogue;
   final SeerrDeepExternalFetcher _fetchExternal;
   final SeerrDeepExternalClearer _clearExternal;
@@ -150,6 +160,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
   int _generation = 0;
   final Map<String, SeerrDiscoverySession> _sessions = {};
   final Map<String, SeerrDiscoveryRotationHistory> _rotationHistory = {};
+  String? _rotationHistoryScope;
 
   SeerrDeepDiscoveryViewModel({
     required SeerrDiscoveryCatalogueService catalogueService,
@@ -158,6 +169,7 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     required SeerrDiscoveryConfiguredListsService configuredLists,
     required SeerrPreferences preferences,
     required String serverId,
+    SeerrDiscoveryRotationStore? rotationStore,
     SeerrDiscoveryComposer composer = const SeerrDiscoveryComposer(),
   }) : _loadCatalogue = catalogueService.load,
        _fetchPage = ((query, page) =>
@@ -185,7 +197,11 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
              forceRefresh: forceRefresh,
            )),
        _clearExternal = configuredLists.clear,
-       _composer = composer;
+       _composer = composer {
+    final store = rotationStore ?? SeerrDiscoveryRotationStore();
+    _loadRotationHistory = store.load;
+    _saveRotationHistory = store.save;
+  }
 
   SeerrDeepDiscoveryViewModel.forTesting({
     required SeerrDeepCatalogueLoader loadCatalogue,
@@ -193,6 +209,8 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
     required SeerrDeepPersonalFetcher fetchPersonal,
     required SeerrDeepSeedLoader loadSessionSeed,
     SeerrDeepBlockNsfw blockNsfw = _neverBlockNsfw,
+    SeerrDeepRotationLoader loadRotationHistory = _emptyRotationHistory,
+    SeerrDeepRotationSaver saveRotationHistory = _noopSaveRotationHistory,
     SeerrDeepCatalogueMerger mergeCatalogue = _identityCatalogue,
     SeerrDeepExternalFetcher fetchExternal = _unsupportedExternal,
     SeerrDeepExternalClearer clearExternal = _noopExternalClear,
@@ -205,7 +223,10 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
        _mergeCatalogue = mergeCatalogue,
        _fetchExternal = fetchExternal,
        _clearExternal = clearExternal,
-       _composer = composer;
+       _composer = composer {
+    _loadRotationHistory = loadRotationHistory;
+    _saveRotationHistory = saveRotationHistory;
+  }
 
   static bool _neverBlockNsfw() => false;
 
@@ -221,6 +242,14 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
 
   static void _noopExternalClear() {}
 
+  static Future<Map<String, SeerrDiscoveryRotationHistory>>
+  _emptyRotationHistory(String scope) async => {};
+
+  static Future<void> _noopSaveRotationHistory(
+    String scope,
+    Map<String, SeerrDiscoveryRotationHistory> histories,
+  ) async {}
+
   Future<void> load() async {
     final generation = ++_generation;
     _isLoading = true;
@@ -233,6 +262,8 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
       _catalogue = _mergeCatalogue(result.catalogue);
       _catalogueSource = result.source;
       _sessionSeed = await _loadSessionSeed();
+      if (generation != _generation) return;
+      await _restoreRotationHistory();
       if (generation != _generation) return;
 
       final existing = _activeTabId;
@@ -430,6 +461,32 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
       rendered.where((row) => row.error == null).map((row) => row.section.id),
     );
     notifyListeners();
+    await _persistRotationHistory();
+  }
+
+  Future<void> _restoreRotationHistory() async {
+    if (_rotationHistoryScope == _sessionSeed) return;
+    try {
+      final restored = await _loadRotationHistory(_sessionSeed);
+      _rotationHistory
+        ..clear()
+        ..addAll(restored);
+      _rotationHistoryScope = _sessionSeed;
+    } catch (exception) {
+      debugPrint('[SeerrDeepDiscovery] Rotation restore failed: $exception');
+      _rotationHistory.clear();
+      _rotationHistoryScope = _sessionSeed;
+    }
+  }
+
+  Future<void> _persistRotationHistory() async {
+    try {
+      await _saveRotationHistory(_sessionSeed, _rotationHistory);
+    } catch (exception) {
+      debugPrint(
+        '[SeerrDeepDiscovery] Rotation persistence failed: $exception',
+      );
+    }
   }
 
   Future<SeerrDeepDiscoveryRow?> _loadSection(

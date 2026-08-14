@@ -10,20 +10,19 @@ SeerrDiscoverySection _section(
   String id, {
   SeerrDiscoveryPriority priority = SeerrDiscoveryPriority.normal,
   int cooldownSessions = 0,
-}) =>
-    SeerrDiscoverySection(
-      id: id,
-      title: id,
-      priority: priority,
-      cooldownSessions: cooldownSessions,
-      minItems: 1,
-      previewLimit: 1,
-      query: SeerrDiscoveryQuery(
-        source: SeerrDiscoverySource.discoverMovies,
-        mediaType: 'movie',
-        filters: {'studio': id},
-      ),
-    );
+}) => SeerrDiscoverySection(
+  id: id,
+  title: id,
+  priority: priority,
+  cooldownSessions: cooldownSessions,
+  minItems: 1,
+  previewLimit: 1,
+  query: SeerrDiscoveryQuery(
+    source: SeerrDiscoverySource.discoverMovies,
+    mediaType: 'movie',
+    filters: {'studio': id},
+  ),
+);
 
 SeerrDiscoveryCatalogueLoadResult _catalogue() =>
     SeerrDiscoveryCatalogueLoadResult(
@@ -47,44 +46,47 @@ SeerrDiscoveryCatalogueLoadResult _catalogue() =>
     );
 
 SeerrDiscoverPage _page(SeerrDiscoveryQuery query) => SeerrDiscoverPage(
-      page: 1,
-      totalPages: 1,
-      totalResults: 1,
-      results: [
-        SeerrDiscoverItem(
-          id: query.filters['studio'].hashCode.abs(),
-          mediaType: 'movie',
-          title: query.filters['studio'],
-        ),
-      ],
-    );
+  page: 1,
+  totalPages: 1,
+  totalResults: 1,
+  results: [
+    SeerrDiscoverItem(
+      id: query.filters['studio'].hashCode.abs(),
+      mediaType: 'movie',
+      title: query.filters['studio'],
+    ),
+  ],
+);
 
 void main() {
-  test('restored cooldown avoids a lane shown in the previous session', () async {
-    final previous = SeerrDiscoveryRotationHistory()
-      ..commitSession(['optional-a']);
-    Map<String, SeerrDiscoveryRotationHistory>? saved;
+  test(
+    'restored cooldown avoids a lane shown in the previous session',
+    () async {
+      final previous = SeerrDiscoveryRotationHistory()
+        ..commitSession(['optional-a']);
+      Map<String, SeerrDiscoveryRotationHistory>? saved;
 
-    final vm = SeerrDeepDiscoveryViewModel.forTesting(
-      loadCatalogue: () async => _catalogue(),
-      loadSessionSeed: () async => 'server|user-a',
-      loadRotationHistory: (_) async => {'movies': previous},
-      saveRotationHistory: (_, histories) async => saved = histories,
-      fetchPage: (query, _) async => _page(query),
-      fetchPersonal: (section, page, {forceRefresh = false}) async =>
-          const SeerrDiscoveryPersonalPage(
-            title: 'unused',
-            page: SeerrDiscoverPage(),
-          ),
-    );
+      final vm = SeerrDeepDiscoveryViewModel.forTesting(
+        loadCatalogue: () async => _catalogue(),
+        loadSessionSeed: () async => 'server|user-a',
+        loadRotationHistory: (_) async => {'movies': previous},
+        saveRotationHistory: (_, histories) async => saved = histories,
+        fetchPage: (query, _) async => _page(query),
+        fetchPersonal: (section, page, {forceRefresh = false}) async =>
+            const SeerrDiscoveryPersonalPage(
+              title: 'unused',
+              page: SeerrDiscoverPage(),
+            ),
+      );
 
-    await vm.load();
+      await vm.load();
 
-    expect(vm.rows.map((row) => row.section.id), ['anchor', 'optional-b']);
-    expect(saved, isNotNull);
-    expect(saved!['movies']!.sessionNumber, 2);
-    vm.dispose();
-  });
+      expect(vm.rows.map((row) => row.section.id), ['anchor', 'optional-b']);
+      expect(saved, isNotNull);
+      expect(saved!['movies']!.sessionNumber, 2);
+      vm.dispose();
+    },
+  );
 
   test('new session state is persisted using the current user scope', () async {
     String? savedScope;

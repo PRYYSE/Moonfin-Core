@@ -23,10 +23,7 @@ void main() {
     final anime = SeerrDiscoveryRotationHistory();
     anime.commitSession(['anime-isekai']);
 
-    await store.save('server|user-a', {
-      'movies': movies,
-      'anime': anime,
-    });
+    await store.save('server|user-a', {'movies': movies, 'anime': anime});
     final restored = await store.load('server|user-a');
 
     expect(restored.keys.toSet(), {'movies', 'anime'});
