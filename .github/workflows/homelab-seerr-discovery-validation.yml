@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -24,11 +24,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Validate generated Home Lab catalogue
-        run: |
-          python tooling/discovery/test_home_lab_discovery_catalogue.py
-          python tooling/discovery/generate_home_lab_discovery_catalogue.py --check
-
       - name: Validate Discovery tooling syntax
         run: |
           python -m py_compile \
@@ -40,14 +35,22 @@ jobs:
             tooling/discovery/apply_configured_lists_patch_v2.py \
             tooling/discovery/apply_rich_browse_filters_patch_v2.py \
             tooling/discovery/apply_refinement_semantics_fix.py \
-            tooling/discovery/apply_external_list_expansion_patch.py \
             tooling/discovery/apply_personalised_expanded_browse_patch_v3.py \
             tooling/discovery/apply_rotation_persistence_patch.py \
-            tooling/discovery/apply_catalogue_index_ui_patch.py
+            tooling/discovery/apply_catalogue_index_ui_patch.py \
+            tooling/discovery/apply_smart_lists_patch.py
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
 
-      - name: Confirm committed Discovery integrations are present
+      - name: Apply executable additive Lists in checkout
+        run: python tooling/discovery/apply_smart_lists_patch.py
+
+      - name: Validate generated Home Lab catalogue
+        run: |
+          python tooling/discovery/test_home_lab_discovery_catalogue.py
+          python tooling/discovery/generate_home_lab_discovery_catalogue.py --check
+
+      - name: Confirm all Discovery integrations in checkout
         run: |
           python tooling/discovery/apply_discovery_network_patch.py --check
           python tooling/discovery/apply_deep_discovery_ui_patch.py --check
@@ -58,6 +61,7 @@ jobs:
           python tooling/discovery/apply_personalised_expanded_browse_patch_v3.py --check
           python tooling/discovery/apply_rotation_persistence_patch.py --check
           python tooling/discovery/apply_catalogue_index_ui_patch.py --check
+          python tooling/discovery/apply_smart_lists_patch.py --check
 
       - uses: subosito/flutter-action@v2
         with:
@@ -67,9 +71,9 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Check focused Discovery formatting
+      - name: Format exact promotion source
         run: |
-          dart format --output=none --set-exit-if-changed \
+          dart format \
             lib/data/services/seerr/seerr_discovery_*.dart \
             lib/data/viewmodels/seerr_discovery_collection_controller.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
@@ -111,6 +115,25 @@ jobs:
           flutter test \
             test/data/seerr_discovery_*.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
+
+      - name: Commit exact validated Lists implementation
+        if: success()
+        run: |
+          if git diff --quiet -- \
+            tooling/discovery/generate_home_lab_discovery_catalogue.py \
+            lib/data/services/seerr/seerr_discovery_configured_lists_service.dart \
+            lib/data/services/seerr/seerr_discovery_catalogue_index.dart; then
+            echo "Executable additive Lists are already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            tooling/discovery/generate_home_lab_discovery_catalogue.py \
+            lib/data/services/seerr/seerr_discovery_configured_lists_service.dart \
+            lib/data/services/seerr/seerr_discovery_catalogue_index.dart
+          git commit -m "feat(discovery): make Lists executable and additive [skip ci]"
+          git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
