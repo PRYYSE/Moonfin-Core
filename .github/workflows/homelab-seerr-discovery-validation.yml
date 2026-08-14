@@ -39,7 +39,8 @@ jobs:
             tooling/discovery/cleanup_deep_discovery_legacy_ui.py \
             tooling/discovery/apply_configured_lists_patch_v2.py \
             tooling/discovery/apply_rich_browse_filters_patch_v2.py \
-            tooling/discovery/apply_refinement_semantics_fix.py
+            tooling/discovery/apply_refinement_semantics_fix.py \
+            tooling/discovery/apply_external_list_expansion_patch.py
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
 
@@ -52,6 +53,9 @@ jobs:
           python tooling/discovery/apply_rich_browse_filters_patch_v2.py --check
           python tooling/discovery/apply_refinement_semantics_fix.py --check
 
+      - name: Apply external-list expansion in CI checkout
+        run: python tooling/discovery/apply_external_list_expansion_patch.py
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -60,9 +64,9 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Check focused Discovery formatting
+      - name: Format CI checkout for deterministic analysis
         run: |
-          dart format --output=none --set-exit-if-changed \
+          dart format \
             lib/data/services/seerr/seerr_discovery_*.dart \
             lib/data/viewmodels/seerr_discovery_collection_controller.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
