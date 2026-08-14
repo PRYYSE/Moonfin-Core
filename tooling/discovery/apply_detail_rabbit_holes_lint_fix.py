@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Apply the three strict analyser cleanups required by detail rabbit holes.
+"""Apply the strict analyser cleanups required by detail rabbit holes.
 
-These are deliberately semantic no-ops: nullable year values remain nullable in
-raw metadata, and the season synthetic ID string is unchanged.
+Nullable production years use Dart's null-aware map value syntax so the raw
+metadata field is omitted when no year exists. The season synthetic ID string
+is unchanged semantically.
 """
 
 from __future__ import annotations
@@ -22,25 +23,25 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-def patch_adapter(text: str) -> str:
-    if "'ProductionYear': year," in text:
+def patch_year(text: str, indent: str, label: str) -> str:
+    new = f"{indent}'ProductionYear': ?year,\n"
+    if new in text:
         return text
-    return replace_once(
-        text,
-        "        if (year != null) 'ProductionYear': year,\n",
-        "        'ProductionYear': year,\n",
-        "adapter nullable production year",
-    )
+    old_if = f"{indent}if (year != null) 'ProductionYear': year,\n"
+    if old_if in text:
+        return replace_once(text, old_if, new, label)
+    old_plain = f"{indent}'ProductionYear': year,\n"
+    if old_plain in text:
+        return replace_once(text, old_plain, new, label)
+    raise RuntimeError(f"{label}: production year marker not found")
+
+
+def patch_adapter(text: str) -> str:
+    return patch_year(text, "        ", "adapter nullable production year")
 
 
 def patch_detail_vm(text: str) -> str:
-    if "'ProductionYear': year," not in text:
-        text = replace_once(
-            text,
-            "      if (year != null) 'ProductionYear': year,\n",
-            "      'ProductionYear': year,\n",
-            "detail nullable production year",
-        )
+    text = patch_year(text, "      ", "detail nullable production year")
     if "id: '$itemId:s${season.seasonNumber}'," not in text:
         text = replace_once(
             text,
