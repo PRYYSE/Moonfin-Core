@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -38,16 +38,20 @@ jobs:
             tooling/discovery/apply_personalised_expanded_browse_patch_v3.py \
             tooling/discovery/apply_rotation_persistence_patch.py \
             tooling/discovery/apply_catalogue_index_ui_patch.py \
-            tooling/discovery/apply_smart_lists_patch.py
+            tooling/discovery/apply_smart_lists_patch.py \
+            tooling/discovery/apply_detail_rabbit_holes_patch.py
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
+
+      - name: Apply detail rabbit holes in checkout
+        run: python tooling/discovery/apply_detail_rabbit_holes_patch.py
 
       - name: Validate generated Home Lab catalogue
         run: |
           python tooling/discovery/test_home_lab_discovery_catalogue.py
           python tooling/discovery/generate_home_lab_discovery_catalogue.py --check
 
-      - name: Confirm committed Discovery integrations are present
+      - name: Confirm all Discovery integrations in checkout
         run: |
           python tooling/discovery/apply_discovery_network_patch.py --check
           python tooling/discovery/apply_deep_discovery_ui_patch.py --check
@@ -59,6 +63,7 @@ jobs:
           python tooling/discovery/apply_rotation_persistence_patch.py --check
           python tooling/discovery/apply_catalogue_index_ui_patch.py --check
           python tooling/discovery/apply_smart_lists_patch.py --check
+          python tooling/discovery/apply_detail_rabbit_holes_patch.py --check
 
       - uses: subosito/flutter-action@v2
         with:
@@ -68,13 +73,15 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Check focused Discovery formatting
+      - name: Format exact promotion source
         run: |
-          dart format --output=none --set-exit-if-changed \
+          dart format \
             lib/data/services/seerr/seerr_discovery_*.dart \
+            lib/data/services/seerr/seerr_detail_discovery_adapter.dart \
             lib/data/viewmodels/seerr_discovery_collection_controller.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
             lib/data/viewmodels/seerr_browse_view_model.dart \
+            lib/data/viewmodels/item_detail_view_model.dart \
             lib/data/services/seerr/seerr_http_client.dart \
             lib/data/repositories/seerr_repository.dart \
             lib/di/modules/app_module.dart \
@@ -85,11 +92,13 @@ jobs:
             lib/ui/navigation/app_router.dart \
             lib/ui/navigation/destinations.dart \
             test/data/seerr_discovery_*.dart \
+            test/data/seerr_detail_discovery_adapter_test.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
 
       - name: Analyse deep Discovery integration
         run: |
           flutter analyze \
+            lib/data/services/seerr/seerr_detail_discovery_adapter.dart \
             lib/data/services/seerr/seerr_discovery_catalogue_index.dart \
             lib/data/services/seerr/seerr_discovery_catalogue_service.dart \
             lib/data/services/seerr/seerr_discovery_configured_lists_service.dart \
@@ -99,6 +108,7 @@ jobs:
             lib/data/services/seerr/seerr_discovery_rotation_store.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
             lib/data/viewmodels/seerr_browse_view_model.dart \
+            lib/data/viewmodels/item_detail_view_model.dart \
             lib/di/modules/app_module.dart \
             lib/ui/screens/seerr/seerr_discover_screen.dart \
             lib/ui/screens/seerr/seerr_browse_screen.dart \
@@ -111,7 +121,27 @@ jobs:
         run: |
           flutter test \
             test/data/seerr_discovery_*.dart \
+            test/data/seerr_detail_discovery_adapter_test.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
+
+      - name: Commit exact validated detail rabbit holes
+        if: success()
+        run: |
+          if git diff --quiet -- \
+            lib/data/services/seerr/seerr_detail_discovery_adapter.dart \
+            lib/data/viewmodels/item_detail_view_model.dart \
+            test/data/seerr_detail_discovery_adapter_test.dart; then
+            echo "Detail rabbit holes are already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            lib/data/services/seerr/seerr_detail_discovery_adapter.dart \
+            lib/data/viewmodels/item_detail_view_model.dart \
+            test/data/seerr_detail_discovery_adapter_test.dart
+          git commit -m "feat(discovery): merge Seerr recommendations into detail rabbit holes [skip ci]"
+          git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
