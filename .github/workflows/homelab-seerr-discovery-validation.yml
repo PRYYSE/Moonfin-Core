@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -29,6 +29,21 @@ jobs:
           python tooling/discovery/test_home_lab_discovery_catalogue.py
           python tooling/discovery/generate_home_lab_discovery_catalogue.py --check
 
+      - name: Validate Discovery tooling syntax
+        run: |
+          python -m py_compile \
+            tooling/discovery/home_lab_discovery_compile_live.py \
+            tooling/discovery/home_lab_discovery_verify_live.py \
+            tooling/discovery/apply_discovery_network_patch.py \
+            tooling/discovery/apply_deep_discovery_ui_patch.py \
+            tooling/discovery/cleanup_deep_discovery_legacy_ui.py \
+            tooling/discovery/apply_configured_lists_patch_v2.py \
+            tooling/discovery/apply_rich_browse_filters_patch_v2.py \
+            tooling/discovery/apply_refinement_semantics_fix.py \
+            tooling/discovery/apply_external_list_expansion_patch.py
+          bash -n tooling/discovery/home_lab_discovery_server_job.sh
+          bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
+
       - name: Confirm committed Discovery integrations are present
         run: |
           python tooling/discovery/apply_discovery_network_patch.py --check
@@ -37,9 +52,7 @@ jobs:
           python tooling/discovery/apply_configured_lists_patch_v2.py --check
           python tooling/discovery/apply_rich_browse_filters_patch_v2.py --check
           python tooling/discovery/apply_refinement_semantics_fix.py --check
-
-      - name: Apply validated external-list expansion
-        run: python tooling/discovery/apply_external_list_expansion_patch.py
+          python tooling/discovery/apply_external_list_expansion_patch.py --check
 
       - uses: subosito/flutter-action@v2
         with:
@@ -49,51 +62,43 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Format exact promotion source
+      - name: Check focused Discovery formatting
         run: |
-          dart format \
-            lib/data/services/seerr/seerr_discovery_configured_lists_service.dart \
+          dart format --output=none --set-exit-if-changed \
+            lib/data/services/seerr/seerr_discovery_*.dart \
+            lib/data/viewmodels/seerr_discovery_collection_controller.dart \
+            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
             lib/data/viewmodels/seerr_browse_view_model.dart \
-            lib/ui/screens/seerr/seerr_browse_screen.dart \
+            lib/data/services/seerr/seerr_http_client.dart \
+            lib/data/repositories/seerr_repository.dart \
+            lib/di/modules/app_module.dart \
             lib/ui/screens/seerr/seerr_discover_screen.dart \
-            test/data/seerr_discovery_external_list_expansion_test.dart
+            lib/ui/screens/seerr/seerr_browse_screen.dart \
+            lib/ui/screens/seerr/seerr_discovery_refinement_dialog.dart \
+            lib/ui/navigation/app_router.dart \
+            test/data/seerr_discovery_*.dart \
+            test/data/seerr_deep_discovery_view_model_test.dart
 
-      - name: Analyse external-list expansion
+      - name: Analyse deep Discovery integration
         run: |
           flutter analyze \
+            lib/data/services/seerr/seerr_discovery_catalogue_service.dart \
             lib/data/services/seerr/seerr_discovery_configured_lists_service.dart \
+            lib/data/services/seerr/seerr_discovery_personalisation_service.dart \
+            lib/data/services/seerr/seerr_discovery_browse_refinements.dart \
+            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
             lib/data/viewmodels/seerr_browse_view_model.dart \
+            lib/di/modules/app_module.dart \
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
             lib/ui/screens/seerr/seerr_browse_screen.dart \
-            lib/ui/screens/seerr/seerr_discover_screen.dart
+            lib/ui/screens/seerr/seerr_discovery_refinement_dialog.dart \
+            lib/ui/navigation/app_router.dart
 
       - name: Run focused Discovery tests
         run: |
           flutter test \
             test/data/seerr_discovery_*.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
-
-      - name: Commit exact validated external-list expansion
-        if: success()
-        run: |
-          if git diff --quiet -- \
-            lib/data/services/seerr/seerr_discovery_configured_lists_service.dart \
-            lib/data/viewmodels/seerr_browse_view_model.dart \
-            lib/ui/screens/seerr/seerr_browse_screen.dart \
-            lib/ui/screens/seerr/seerr_discover_screen.dart \
-            test/data/seerr_discovery_external_list_expansion_test.dart; then
-            echo "External-list expansion is already committed."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            lib/data/services/seerr/seerr_discovery_configured_lists_service.dart \
-            lib/data/viewmodels/seerr_browse_view_model.dart \
-            lib/ui/screens/seerr/seerr_browse_screen.dart \
-            lib/ui/screens/seerr/seerr_discover_screen.dart \
-            test/data/seerr_discovery_external_list_expansion_test.dart
-          git commit -m "feat(discovery): commit configured list expanded browse [skip ci]"
-          git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
