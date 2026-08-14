@@ -43,6 +43,25 @@ class CatalogueTests(unittest.TestCase):
         )
         self.assertEqual(sum(counts.values()), 486)
 
+    def test_lists_are_deep_executable_smart_collections(self):
+        catalogue = generator.build()
+        lists = next(tab for tab in catalogue["tabs"] if tab["id"] == "lists")
+        self.assertEqual(len(lists["sections"]), 20)
+        self.assertEqual(lists["poolBudgets"]["smart-collections"], 12)
+        self.assertEqual(lists["poolBudgets"]["configured-lists"], 6)
+        for section in lists["sections"]:
+            query = section["query"]
+            self.assertIn(query["source"], {"discoverMovies", "discoverTv"})
+            self.assertNotEqual(query.get("listProvider"), "server")
+            self.assertNotIn("listId", query)
+            self.assertEqual(section["pool"], "smart-collections")
+            self.assertTrue(section["expandable"])
+        titles = {section["title"] for section in lists["sections"]}
+        self.assertIn("Essential Sci-Fi", titles)
+        self.assertIn("Prestige TV Essentials", titles)
+        self.assertIn("Anime Starter Pack", titles)
+        self.assertIn("Best Anime Movies", titles)
+
     def test_full_synthetic_lookup_compiles_all_authoring_lanes(self):
         keywords, providers = self._lookups()
         catalogue, diagnostics = compiler.compile_catalogue(keywords, providers)
