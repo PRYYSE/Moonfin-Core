@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -89,6 +89,25 @@ jobs:
           flutter test \
             test/data/seerr_discovery_*.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
+
+      - name: Commit exact analysed UI integration
+        if: success()
+        run: |
+          if git diff --quiet -- \
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
+            lib/ui/screens/seerr/seerr_browse_screen.dart \
+            lib/ui/navigation/app_router.dart; then
+            echo "Deep Discovery UI integration is already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
+            lib/ui/screens/seerr/seerr_browse_screen.dart \
+            lib/ui/navigation/app_router.dart
+          git commit -m "feat(discovery): commit analysed deep Discovery UI [skip ci]"
+          git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
