@@ -4,9 +4,14 @@ import 'seerr_discovery_sort_policy.dart';
 
 class SeerrDiscoveryRouteState {
   final String? title;
+  final String? sectionId;
   final SeerrDiscoveryQuery query;
 
-  const SeerrDiscoveryRouteState({required this.query, this.title});
+  const SeerrDiscoveryRouteState({
+    required this.query,
+    this.title,
+    this.sectionId,
+  });
 }
 
 /// Encodes/decodes the single query identity used by both a preview lane and
@@ -15,7 +20,12 @@ abstract final class SeerrDiscoveryRouteCodec {
   static Map<String, String> encode(
     SeerrDiscoveryQuery query, {
     String? title,
-  }) => query.toRouteParameters(title: title);
+    String? sectionId,
+  }) => {
+    ...query.toRouteParameters(title: title),
+    if (sectionId != null && sectionId.trim().isNotEmpty)
+      'sectionId': sectionId.trim(),
+  };
 
   static SeerrDiscoveryRouteState decode(
     Map<String, String> parameters, {
@@ -51,6 +61,7 @@ abstract final class SeerrDiscoveryRouteCodec {
     return SeerrDiscoveryRouteState(
       query: query,
       title: _trimmed(parameters['filterName']),
+      sectionId: _trimmed(parameters['sectionId']),
     );
   }
 
