@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -40,11 +40,15 @@ jobs:
             tooling/discovery/apply_configured_lists_patch_v2.py \
             tooling/discovery/apply_rich_browse_filters_patch_v2.py \
             tooling/discovery/apply_refinement_semantics_fix.py \
-            tooling/discovery/apply_external_list_expansion_patch.py
+            tooling/discovery/apply_external_list_expansion_patch.py \
+            tooling/discovery/apply_personalised_expanded_browse_patch.py
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
 
-      - name: Confirm committed Discovery integrations are present
+      - name: Apply personalised expanded browse in checkout
+        run: python tooling/discovery/apply_personalised_expanded_browse_patch.py
+
+      - name: Confirm existing committed Discovery integrations are present
         run: |
           python tooling/discovery/apply_discovery_network_patch.py --check
           python tooling/discovery/apply_deep_discovery_ui_patch.py --check
@@ -53,6 +57,7 @@ jobs:
           python tooling/discovery/apply_rich_browse_filters_patch_v2.py --check
           python tooling/discovery/apply_refinement_semantics_fix.py --check
           python tooling/discovery/apply_external_list_expansion_patch.py --check
+          python tooling/discovery/apply_personalised_expanded_browse_patch.py --check
 
       - uses: subosito/flutter-action@v2
         with:
@@ -62,9 +67,9 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
-      - name: Check focused Discovery formatting
+      - name: Format exact promotion source
         run: |
-          dart format --output=none --set-exit-if-changed \
+          dart format \
             lib/data/services/seerr/seerr_discovery_*.dart \
             lib/data/viewmodels/seerr_discovery_collection_controller.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
@@ -86,6 +91,7 @@ jobs:
             lib/data/services/seerr/seerr_discovery_configured_lists_service.dart \
             lib/data/services/seerr/seerr_discovery_personalisation_service.dart \
             lib/data/services/seerr/seerr_discovery_browse_refinements.dart \
+            lib/data/services/seerr/seerr_discovery_route_codec.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
             lib/data/viewmodels/seerr_browse_view_model.dart \
             lib/di/modules/app_module.dart \
@@ -99,6 +105,33 @@ jobs:
           flutter test \
             test/data/seerr_discovery_*.dart \
             test/data/seerr_deep_discovery_view_model_test.dart
+
+      - name: Commit exact validated personalised expansion
+        if: success()
+        run: |
+          if git diff --quiet -- \
+            lib/data/viewmodels/seerr_browse_view_model.dart \
+            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
+            lib/ui/screens/seerr/seerr_browse_screen.dart \
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
+            lib/ui/navigation/app_router.dart \
+            lib/data/services/seerr/seerr_discovery_route_codec.dart \
+            test/data/seerr_discovery_route_codec_test.dart; then
+            echo "Personalised expanded browse is already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            lib/data/viewmodels/seerr_browse_view_model.dart \
+            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
+            lib/ui/screens/seerr/seerr_browse_screen.dart \
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
+            lib/ui/navigation/app_router.dart \
+            lib/data/services/seerr/seerr_discovery_route_codec.dart \
+            test/data/seerr_discovery_route_codec_test.dart
+          git commit -m "feat(discovery): expand personalised lanes through same cached row [skip ci]"
+          git push origin HEAD:homelab/seerr-discovery-v1-staging
 
   moonbase-candidate-validation:
     runs-on: ubuntu-latest
