@@ -98,6 +98,7 @@ jobs:
             lib/data/services/seerr/seerr_discovery_catalogue_service.dart \
             lib/data/services/seerr/seerr_discovery_configured_lists_service.dart \
             lib/data/services/seerr/seerr_discovery_personalisation_service.dart \
+            lib/data/services/seerr/seerr_discovery_personal_presentation.dart \
             lib/data/services/seerr/seerr_discovery_browse_refinements.dart \
             lib/data/services/seerr/seerr_discovery_route_codec.dart \
             lib/data/services/seerr/seerr_discovery_rotation_store.dart \
