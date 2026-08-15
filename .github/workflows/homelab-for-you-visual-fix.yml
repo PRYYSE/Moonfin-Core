@@ -1,0 +1,76 @@
+name: Home Lab For You Visual Fix
+
+on:
+  push:
+    branches:
+      - homelab/seerr-discovery-v1-staging
+    paths:
+      - .github/workflows/homelab-for-you-visual-fix.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.44.1'
+
+jobs:
+  promote-fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Apply screenshot-driven For You fix
+        run: |
+          python -m py_compile tooling/discovery/apply_for_you_diversity_fix.py
+          python tooling/discovery/apply_for_you_diversity_fix.py
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Format affected source
+        run: |
+          dart format \
+            lib/data/services/seerr/seerr_discovery_personal_presentation.dart \
+            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
+            test/data/seerr_discovery_personal_presentation_test.dart
+
+      - name: Analyse affected integration
+        run: |
+          flutter analyze \
+            lib/data/services/seerr/seerr_discovery_personal_presentation.dart \
+            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
+            lib/ui/screens/seerr/seerr_discover_screen.dart
+
+      - name: Run focused regression tests
+        run: |
+          flutter test \
+            test/data/seerr_discovery_personal_presentation_test.dart \
+            test/data/seerr_deep_discovery_view_model_test.dart
+
+      - name: Commit exact validated source
+        run: |
+          if git diff --quiet; then
+            echo "No validated source changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            lib/data/services/seerr/seerr_discovery_personal_presentation.dart \
+            lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
+            lib/ui/screens/seerr/seerr_discover_screen.dart \
+            test/data/seerr_discovery_personal_presentation_test.dart
+          git commit -m "fix(discovery): diversify For You rows from live acceptance"
+          git push origin HEAD:homelab/seerr-discovery-v1-staging
