@@ -555,20 +555,20 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
       ),
     ];
     return SizedBox(
-      height: 62 * desktopScale,
+      height: 70 * desktopScale,
       child: LockedFocusRow<SeerrDiscoveryTab>(
         key: _tabRowKey,
         items: tabItems,
         hubKey: 'seerr_deep_discovery_tabs',
         controller: _tabScrollController,
         itemExtent: 150 * desktopScale,
-        itemSpacing: 8 * desktopScale,
-        height: 54 * desktopScale,
+        itemSpacing: 12 * desktopScale,
+        height: 60 * desktopScale,
         padding: EdgeInsets.fromLTRB(
-          20 * desktopScale,
-          4 * desktopScale,
-          20 * desktopScale,
-          4 * desktopScale,
+          24 * desktopScale,
+          5 * desktopScale,
+          24 * desktopScale,
+          5 * desktopScale,
         ),
         onLeftEdge: _onRowLeftEdge,
         onVerticalNavigation: _onTabVerticalNavigation,

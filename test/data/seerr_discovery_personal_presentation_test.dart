@@ -3,11 +3,8 @@ import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_personal_presentation.dart';
 import 'package:moonfin/data/services/seerr/seerr_discovery_schema.dart';
 
-SeerrDiscoverItem _item(int id, String title) => SeerrDiscoverItem(
-  id: id,
-  mediaType: 'movie',
-  title: title,
-);
+SeerrDiscoverItem _item(int id, String title) =>
+    SeerrDiscoverItem(id: id, mediaType: 'movie', title: title);
 
 SeerrDiscoverySection _section(String id, String strategy, String title) =>
     SeerrDiscoverySection(
@@ -25,7 +22,11 @@ SeerrDiscoverySection _section(String id, String strategy, String title) =>
 void main() {
   test('specific generated Home title is preserved', () {
     final used = <String>{};
-    final section = _section('history', 'recent-history', 'Because You Watched');
+    final section = _section(
+      'history',
+      'recent-history',
+      'Because You Watched',
+    );
     expect(
       SeerrDiscoveryPersonalPresentation.displayTitle(
         section,
@@ -39,8 +40,16 @@ void main() {
   test('duplicate generic Home titles become stable neutral unique labels', () {
     final used = <String>{};
     final first = _section('history', 'recent-history', 'Because You Watched');
-    final second = _section('favourites', 'favourites', 'More Like Your Favourites');
-    final third = _section('watchlist', 'watchlist', 'Inspired by Your Watchlist');
+    final second = _section(
+      'favourites',
+      'favourites',
+      'More Like Your Favourites',
+    );
+    final third = _section(
+      'watchlist',
+      'watchlist',
+      'Inspired by Your Watchlist',
+    );
 
     expect(
       SeerrDiscoveryPersonalPresentation.displayTitle(
@@ -87,11 +96,15 @@ void main() {
     );
 
     expect(
-      output.where(
-        (item) =>
-            SeerrDiscoveryPersonalPresentation.familyKey(item.displayTitle) ==
-            'demon slayer',
-      ).length,
+      output
+          .where(
+            (item) =>
+                SeerrDiscoveryPersonalPresentation.familyKey(
+                  item.displayTitle,
+                ) ==
+                'demon slayer',
+          )
+          .length,
       2,
     );
     expect(output.map((item) => item.id), [1, 2, 6, 7, 8, 9]);

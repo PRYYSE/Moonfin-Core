@@ -10,6 +10,7 @@ import '../services/seerr/seerr_discovery_composer.dart';
 import '../services/seerr/seerr_discovery_configured_lists_service.dart';
 import '../services/seerr/seerr_discovery_lane_loader.dart';
 import '../services/seerr/seerr_discovery_personalisation_service.dart';
+import '../services/seerr/seerr_discovery_personal_presentation.dart';
 import '../services/seerr/seerr_discovery_rotation_history.dart';
 import '../services/seerr/seerr_discovery_rotation_store.dart';
 import '../services/seerr/seerr_discovery_schema.dart';
@@ -437,6 +438,8 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
 
     final session = _sessions.putIfAbsent(tab.id, SeerrDiscoverySession.new);
     final rendered = <SeerrDeepDiscoveryRow>[];
+    final usedPersonalTitles = <String>{};
+    final surfacedPersonalFamilies = <String>{};
     for (final candidate in loaded.whereType<SeerrDeepDiscoveryRow>()) {
       if (candidate.error != null) {
         if (candidate.section.isAnchor) rendered.add(candidate);
@@ -452,8 +455,23 @@ class SeerrDeepDiscoveryViewModel extends ChangeNotifier {
           minimumRetained: candidate.section.minItems,
         );
       }
+      if (candidate.isPersonalised && items.isNotEmpty) {
+        items = SeerrDiscoveryPersonalPresentation.diversifyPreview(
+          items,
+          minimumRetained: candidate.section.minItems,
+          previouslySurfacedFamilies: surfacedPersonalFamilies,
+        );
+      }
       if (items.length < candidate.section.minItems) continue;
-      rendered.add(candidate.copyWith(items: items));
+
+      final title = candidate.isPersonalised
+          ? SeerrDiscoveryPersonalPresentation.displayTitle(
+              candidate.section,
+              candidate.title,
+              usedTitles: usedPersonalTitles,
+            )
+          : candidate.title;
+      rendered.add(candidate.copyWith(items: items, title: title));
     }
 
     _rows = rendered;

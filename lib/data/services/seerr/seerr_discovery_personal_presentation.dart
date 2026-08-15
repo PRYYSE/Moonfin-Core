@@ -40,13 +40,7 @@ abstract final class SeerrDiscoveryPersonalPresentation {
     'recent-discovery-context': 'Keep Exploring',
   };
 
-  static const _stopWords = <String>{
-    'a',
-    'an',
-    'and',
-    'of',
-    'the',
-  };
+  static const _stopWords = <String>{'a', 'an', 'and', 'of', 'the'};
 
   /// Returns a truthful display title without allowing adjacent personalised
   /// slots to collapse to the same generic Home label.
