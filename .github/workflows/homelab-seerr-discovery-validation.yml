@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - homelab/seerr-discovery-v1-staging
+      - homelab/seerr-discovery-final-pass-work
   workflow_dispatch:
 
 permissions:
@@ -24,6 +25,11 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Apply deterministic final Discovery presentation polish
+        run: |
+          python tooling/discovery/apply_final_discovery_polish.py
+          python tooling/discovery/apply_final_discovery_polish.py --check
+
       - name: Validate Discovery tooling syntax
         run: |
           python -m py_compile \
@@ -38,7 +44,8 @@ jobs:
             tooling/discovery/apply_personalised_expanded_browse_patch_v3.py \
             tooling/discovery/apply_rotation_persistence_patch.py \
             tooling/discovery/apply_catalogue_index_ui_patch.py \
-            tooling/discovery/apply_smart_lists_patch.py
+            tooling/discovery/apply_smart_lists_patch.py \
+            tooling/discovery/apply_final_discovery_polish.py
           bash -n tooling/discovery/home_lab_discovery_server_job.sh
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
           bash -n tooling/discovery/home_lab_discovery_release_rollout.sh
@@ -65,6 +72,7 @@ jobs:
           python tooling/discovery/apply_rotation_persistence_patch.py --check
           python tooling/discovery/apply_catalogue_index_ui_patch.py --check
           python tooling/discovery/apply_smart_lists_patch.py --check
+          python tooling/discovery/apply_final_discovery_polish.py --check
 
       - uses: subosito/flutter-action@v2
         with:
@@ -104,6 +112,7 @@ jobs:
             lib/data/services/seerr/seerr_discovery_browse_refinements.dart \
             lib/data/services/seerr/seerr_discovery_route_codec.dart \
             lib/data/services/seerr/seerr_discovery_rotation_store.dart \
+            lib/data/services/seerr/seerr_discovery_composer.dart \
             lib/data/viewmodels/seerr_deep_discovery_view_model.dart \
             lib/data/viewmodels/seerr_browse_view_model.dart \
             lib/di/modules/app_module.dart \
