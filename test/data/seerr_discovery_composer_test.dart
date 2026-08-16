@@ -43,6 +43,44 @@ void main() {
     expect(result.map((s) => s.id).toSet().length, result.length);
   });
 
+  test('large anchor sets expose deep pools inside the first screen', () {
+    final tab = SeerrDiscoveryTab(
+      id: 'movies',
+      title: 'Movies',
+      initialLaneBudget: 20,
+      minimumLaneCount: 16,
+      poolBudgets: const {
+        'anchor': 10,
+        'discovery': 2,
+        'runtime': 2,
+        'era': 2,
+        'genre': 2,
+        'theme': 2,
+      },
+      sections: [
+        for (var i = 0; i < 10; i++)
+          _section(
+            'anchor-$i',
+            pool: 'anchor',
+            priority: SeerrDiscoveryPriority.anchor,
+          ),
+        for (final pool in ['discovery', 'runtime', 'era', 'genre', 'theme'])
+          for (var i = 0; i < 3; i++) _section('$pool-$i', pool: pool),
+      ],
+    );
+
+    final result = composer.compose(tab, sessionSeed: 'layered');
+    final firstTwelve = result.take(12).toList();
+
+    expect(result.take(3).every((s) => s.isAnchor), isTrue);
+    expect(firstTwelve.where((s) => !s.isAnchor).length, greaterThanOrEqualTo(4));
+    expect(
+      firstTwelve.where((s) => !s.isAnchor).map((s) => s.pool).toSet().length,
+      greaterThanOrEqualTo(4),
+    );
+    expect(result.where((s) => s.isAnchor).length, 10);
+  });
+
   test('same session seed and nonce produce stable composition', () {
     final tab = SeerrDiscoveryTab(
       id: 'movies',
