@@ -4,10 +4,11 @@ import 'seerr_discovery_schema.dart';
 
 /// Reduces a large Discovery catalogue tab to a stable, useful session.
 ///
-/// Anchors remain predictable. Optional sections are selected deterministically
-/// from weighted pools using the user/session seed and refresh nonce, so a page
-/// does not reshuffle while the user navigates it but can materially change on
-/// a later session or explicit refresh.
+/// Small tabs keep their anchors fully predictable. Larger catalogue tabs keep
+/// a short predictable lead section, then interleave secondary anchors with a
+/// deterministic sample of distinct deep-discovery pools before filling the
+/// remaining budget. This prevents a long block of generic/current rows from
+/// hiding the richer catalogue while preserving stable session composition.
 class SeerrDiscoveryComposer {
   const SeerrDiscoveryComposer();
 
@@ -39,8 +40,16 @@ class SeerrDiscoveryComposer {
       poolCounts.update(section.pool, (count) => count + 1, ifAbsent: () => 1);
     }
 
-    for (final anchor in anchors) {
-      add(anchor);
+    bool poolHasRoom(SeerrDiscoverySection section) {
+      final limit = tab.poolBudgets[section.pool];
+      if (limit == null) return true;
+      return (poolCounts[section.pool] ?? 0) < limit;
+    }
+
+    bool coolingDown(SeerrDiscoverySection section) {
+      if (section.cooldownSessions <= 0) return false;
+      final age = sessionsSinceSeen[section.id];
+      return age != null && age < section.cooldownSessions;
     }
 
     final ranked = [...optional]
@@ -59,19 +68,74 @@ class SeerrDiscoveryComposer {
         return byScore != 0 ? byScore : a.id.compareTo(b.id);
       });
 
-    bool poolHasRoom(SeerrDiscoverySection section) {
-      final limit = tab.poolBudgets[section.pool];
-      if (limit == null) return true;
-      return (poolCounts[section.pool] ?? 0) < limit;
+    // Compact tabs remain exactly anchor-first. Large catalogue tabs only pin
+    // three lead anchors, so Trending/Popular/current context stays familiar
+    // without consuming the whole first screen.
+    final leadAnchorCount = anchors.length > 6 ? 3 : anchors.length;
+    final leadAnchors = anchors.take(leadAnchorCount);
+    final secondaryAnchors = anchors.skip(leadAnchorCount).toList();
+    for (final anchor in leadAnchors) {
+      add(anchor);
     }
 
-    bool coolingDown(SeerrDiscoverySection section) {
-      if (section.cooldownSessions <= 0) return false;
-      final age = sessionsSinceSeen[section.id];
-      return age != null && age < section.cooldownSessions;
+    if (secondaryAnchors.isNotEmpty && optional.isNotEmpty) {
+      // Pick the strongest currently-eligible candidate from each optional
+      // pool. Pool order follows catalogue authoring order, while the lane
+      // within each pool remains session-weighted and deterministic.
+      final poolOrder = <String>[];
+      final seenPools = <String>{};
+      for (final section in optional) {
+        if (seenPools.add(section.pool)) poolOrder.add(section.pool);
+      }
+
+      final poolSeeds = <SeerrDiscoverySection>[];
+      for (final pool in poolOrder) {
+        for (final section in ranked) {
+          if (section.pool != pool || coolingDown(section)) continue;
+          poolSeeds.add(section);
+          break;
+        }
+      }
+
+      // Build a mixed front window. The first few rows remain familiar, then
+      // the page starts exposing discovery/runtimes/eras/genres/themes/etc.
+      // Secondary anchors are woven between those deeper lanes instead of
+      // appearing as one long generic block.
+      final frontWindow = math.min(12, budget);
+      var seedIndex = 0;
+      var anchorIndex = 0;
+      while (selected.length < frontWindow &&
+          (seedIndex < poolSeeds.length ||
+              anchorIndex < secondaryAnchors.length)) {
+        if (seedIndex < poolSeeds.length) {
+          final seed = poolSeeds[seedIndex++];
+          if (!selectedIds.contains(seed.id) && poolHasRoom(seed)) add(seed);
+        }
+        if (selected.length >= frontWindow) break;
+        if (anchorIndex < secondaryAnchors.length) {
+          add(secondaryAnchors[anchorIndex++]);
+        }
+      }
+
+      // Preserve every anchor that still fits the configured landing budget.
+      for (; anchorIndex < secondaryAnchors.length; anchorIndex++) {
+        add(secondaryAnchors[anchorIndex]);
+      }
+
+      // Any remaining pool seeds get first chance before the generic weighted
+      // fill, further improving category breadth on larger sessions.
+      for (; seedIndex < poolSeeds.length; seedIndex++) {
+        final seed = poolSeeds[seedIndex];
+        if (coolingDown(seed) || !poolHasRoom(seed)) continue;
+        add(seed);
+      }
+    } else {
+      for (final anchor in secondaryAnchors) {
+        add(anchor);
+      }
     }
 
-    // Strict pass: honour both cooldowns and per-pool budgets.
+    // Strict fill: honour both cooldowns and per-pool budgets.
     for (final section in ranked) {
       if (selected.length >= budget) break;
       if (coolingDown(section) || !poolHasRoom(section)) continue;
