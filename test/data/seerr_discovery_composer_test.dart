@@ -71,14 +71,13 @@ void main() {
 
     final result = composer.compose(tab, sessionSeed: 'layered');
     final firstTwelve = result.take(12).toList();
+    final deepRows = firstTwelve.where((section) => !section.isAnchor).toList();
+    final deepPools = deepRows.map((section) => section.pool).toSet();
 
-    expect(result.take(3).every((s) => s.isAnchor), isTrue);
-    expect(firstTwelve.where((s) => !s.isAnchor).length, greaterThanOrEqualTo(4));
-    expect(
-      firstTwelve.where((s) => !s.isAnchor).map((s) => s.pool).toSet().length,
-      greaterThanOrEqualTo(4),
-    );
-    expect(result.where((s) => s.isAnchor).length, 10);
+    expect(result.take(3).every((section) => section.isAnchor), isTrue);
+    expect(deepRows.length, greaterThanOrEqualTo(4));
+    expect(deepPools.length, greaterThanOrEqualTo(4));
+    expect(result.where((section) => section.isAnchor).length, 10);
   });
 
   test('same session seed and nonce produce stable composition', () {
