@@ -307,6 +307,7 @@ DIAGNOSTICS="$CONTROL/discovery.compile.diagnostics.json"
   python3 "$WORKTREE/tooling/discovery/home_lab_discovery_compile_live.py" \
     --output "$CANDIDATE_CATALOGUE" \
     --diagnostics "$DIAGNOSTICS"
+"${P[@]}" chown "$(id -u):$(id -g)" "$CANDIDATE_CATALOGUE" "$DIAGNOSTICS"
 CANDIDATE_LANES="$(python3 - "$CANDIDATE_CATALOGUE" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding='utf-8') as handle:
