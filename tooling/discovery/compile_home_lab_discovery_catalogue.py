@@ -47,6 +47,10 @@ def load_lookup(path: Path | None) -> dict[str, int]:
     raise ValueError(f"Unsupported lookup shape in {path}")
 
 
+# Aliases are deliberately conservative. Every candidate is still resolved by
+# an exact-normalised Seerr/TMDb keyword result. They only bridge author-friendly
+# labels/plurals to equivalent upstream taxonomy names; they never permit fuzzy
+# first-result selection.
 KEYWORD_ALIASES = {
     "space deep space": ("space", "outer space"),
     "robots androids": ("robot", "android"),
@@ -56,6 +60,20 @@ KEYWORD_ALIASES = {
     "mystery detective": ("detective", "mystery"),
     "cooking food": ("cooking", "food"),
     "music bands": ("music", "band"),
+    "post apocalyptic": ("post-apocalyptic future", "post apocalypse"),
+    "post apocalyptic series": ("post-apocalyptic future", "post apocalypse"),
+    "dystopian futures": ("dystopia", "dystopian future"),
+    "serial killers": ("serial killer",),
+    "survival stories": ("survival",),
+    "based on a true story": ("based on true story",),
+    "based on true events": ("based on true story",),
+    "road movies": ("road movie",),
+    "superheroes": ("superhero",),
+    "video games": ("video game",),
+    "sports": ("sport",),
+    "superpowers": ("super power", "superpower"),
+    "idols": ("idol",),
+    "academy award": ("academy awards",),
 }
 
 PROVIDER_ALIASES = {
