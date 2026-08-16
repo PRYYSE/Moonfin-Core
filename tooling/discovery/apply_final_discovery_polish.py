@@ -28,18 +28,31 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 def patch_screen(text: str) -> str:
     text = replace_once(
         text,
-        "        itemSpacing: 12 * desktopScale,\n",
-        "        itemSpacing: 16 * desktopScale,\n",
+        "        itemExtent: 150 * desktopScale,\n"
+        "        itemSpacing: 12 * desktopScale,\n"
+        "        height: 60 * desktopScale,\n",
+        "        itemExtent: 150 * desktopScale,\n"
+        "        itemSpacing: 16 * desktopScale,\n"
+        "        height: 60 * desktopScale,\n",
         "Discovery tab inter-pill spacing",
     )
     text = replace_once(
         text,
-        "            alignment: Alignment.center,\n            child: Row(\n",
+        "            alignment: Alignment.center,\n"
+        "            child: Row(\n"
+        "              mainAxisAlignment: MainAxisAlignment.center,\n"
+        "              mainAxisSize: MainAxisSize.min,\n"
+        "              children: [\n"
+        "                if (browseAll) ...[\n",
         "            alignment: Alignment.center,\n"
         "            padding: EdgeInsets.symmetric(\n"
         "              horizontal: 16 * desktopScale,\n"
         "            ),\n"
-        "            child: Row(\n",
+        "            child: Row(\n"
+        "              mainAxisAlignment: MainAxisAlignment.center,\n"
+        "              mainAxisSize: MainAxisSize.min,\n"
+        "              children: [\n"
+        "                if (browseAll) ...[\n",
         "Discovery tab internal horizontal padding",
     )
     return text
