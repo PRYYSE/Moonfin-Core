@@ -76,6 +76,42 @@ class CatalogueTests(unittest.TestCase):
                 self.assertNotIn("excludeKeywordNames", query)
                 self.assertNotIn("providerNames", query)
 
+    def test_semantic_aliases_still_require_exact_upstream_names(self):
+        lookup = {
+            "serial killer": 101,
+            "post apocalyptic future": 102,
+            "based on true story": 103,
+            "video game": 104,
+            "superhero": 105,
+        }
+        self.assertEqual(
+            compiler.resolve_one("Serial Killers", lookup, compiler.KEYWORD_ALIASES),
+            101,
+        )
+        self.assertEqual(
+            compiler.resolve_one("Post-Apocalyptic", lookup, compiler.KEYWORD_ALIASES),
+            102,
+        )
+        self.assertEqual(
+            compiler.resolve_one("Based on True Events", lookup, compiler.KEYWORD_ALIASES),
+            103,
+        )
+        self.assertEqual(
+            compiler.resolve_one("Video Games", lookup, compiler.KEYWORD_ALIASES),
+            104,
+        )
+        self.assertEqual(
+            compiler.resolve_one("Superheroes", lookup, compiler.KEYWORD_ALIASES),
+            105,
+        )
+        self.assertIsNone(
+            compiler.resolve_one(
+                "Medical Drama",
+                {"hospital": 999},
+                compiler.KEYWORD_ALIASES,
+            )
+        )
+
     def test_provider_compilation_uses_current_seerr_pipe_semantics(self):
         keywords, providers = self._lookups()
         catalogue, _ = compiler.compile_catalogue(keywords, providers)
