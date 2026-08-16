@@ -50,7 +50,9 @@ jobs:
           bash -n tooling/discovery/run_home_lab_discovery_server_job.sh
           bash -n tooling/discovery/home_lab_discovery_release_rollout.sh
           bash -n tooling/discovery/home_lab_for_you_hotfix_rollout.sh
+          bash -n tooling/discovery/home_lab_discovery_final_pass_rollout.sh
           bash tooling/discovery/home_lab_for_you_hotfix_rollout.sh --self-test
+          bash tooling/discovery/home_lab_discovery_final_pass_rollout.sh --self-test
 
       - name: Self-test immutable public rollout candidate
         run: bash tooling/discovery/home_lab_discovery_release_rollout.sh --self-test
