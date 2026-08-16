@@ -45,9 +45,7 @@ def patch_screen(text: str) -> str:
         "              children: [\n"
         "                if (browseAll) ...[\n",
         "            alignment: Alignment.center,\n"
-        "            padding: EdgeInsets.symmetric(\n"
-        "              horizontal: 16 * desktopScale,\n"
-        "            ),\n"
+        "            padding: EdgeInsets.symmetric(horizontal: 16 * desktopScale),\n"
         "            child: Row(\n"
         "              mainAxisAlignment: MainAxisAlignment.center,\n"
         "              mainAxisSize: MainAxisSize.min,\n"
