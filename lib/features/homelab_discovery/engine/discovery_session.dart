@@ -17,10 +17,14 @@ class HomeLabDiscoverySession {
     final list = items.toList(growable: false);
     if (list.isEmpty) return const [];
 
-    final seen = _seenByGroup.putIfAbsent(group, () => <String>{});
+    final seen = record
+        ? _seenByGroup.putIfAbsent(group, () => <String>{})
+        : (_seenByGroup[group] ?? const <String>{});
     final sharedSeen = sharedGroup == null || sharedGroup == group
         ? null
-        : _seenByGroup.putIfAbsent(sharedGroup, () => <String>{});
+        : record
+        ? _seenByGroup.putIfAbsent(sharedGroup, () => <String>{})
+        : (_seenByGroup[sharedGroup] ?? const <String>{});
     final fresh = <T>[];
     final repeats = <T>[];
 
