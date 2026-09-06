@@ -31,19 +31,29 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      - name: Persist Dart formatter output during bootstrap
+      - name: Persist bootstrap formatting and route overlay
         if: github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
           dart format lib/features/homelab_discovery test/homelab_discovery
-          if ! git diff --quiet -- lib/features/homelab_discovery test/homelab_discovery; then
+          python3 tooling/homelab-discovery-v2/apply_route_overlay.py --apply
+          if ! git diff --quiet -- \
+            lib/features/homelab_discovery \
+            test/homelab_discovery \
+            lib/ui/navigation/app_router.dart; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add lib/features/homelab_discovery test/homelab_discovery
-            git commit -m 'style(discovery-v2): apply Dart formatter'
+            git add \
+              lib/features/homelab_discovery \
+              test/homelab_discovery \
+              lib/ui/navigation/app_router.dart
+            git commit -m 'chore(discovery-v2): persist generated bootstrap changes'
             git push origin HEAD:homelab/discovery-v2
           fi
+
+      - name: Route integration gate
+        run: python3 tooling/homelab-discovery-v2/apply_route_overlay.py --check
 
       - name: Authoring catalogue gate
         run: |
@@ -56,8 +66,12 @@ jobs:
             lib/features/homelab_discovery \
             test/homelab_discovery
 
-      - name: Analyse feature
-        run: flutter analyze lib/features/homelab_discovery test/homelab_discovery
+      - name: Analyse overlay
+        run: |
+          flutter analyze \
+            lib/features/homelab_discovery \
+            lib/ui/navigation/app_router.dart \
+            test/homelab_discovery
 
       - name: Focused tests
         run: flutter test test/homelab_discovery
@@ -72,7 +86,7 @@ jobs:
           printf '%s\n' "${changed[@]}"
           for path in "${changed[@]}"; do
             case "$path" in
-              lib/features/homelab_discovery/*|test/homelab_discovery/*|docs/homelab-discovery-v2/*|.github/workflows/homelab-discovery-v2.yml|tooling/homelab-discovery-v2/*)
+              lib/features/homelab_discovery/*|test/homelab_discovery/*|docs/homelab-discovery-v2/*|.github/workflows/homelab-discovery-v2.yml|tooling/homelab-discovery-v2/*|lib/ui/navigation/app_router.dart)
                 ;;
               *)
                 echo "Unexpected v2 scope change: $path" >&2
