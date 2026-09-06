@@ -42,7 +42,7 @@ import '../screens/detail/item_list_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/seerr/seerr_browse_screen.dart';
 import '../screens/seerr/seerr_collection_screen.dart';
-import '../screens/seerr/seerr_discover_screen.dart';
+import '../../features/homelab_discovery/ui/homelab_discovery_entry_screen.dart';
 import '../screens/seerr/seerr_person_screen.dart';
 import '../screens/seerr/seerr_requests_screen.dart';
 import '../screens/livetv/live_tv_channel_player_loader.dart';
@@ -784,7 +784,7 @@ final appRouter = GoRouter(
     // Seerr
     GoRoute(
       path: Destinations.seerrDiscover,
-      builder: (context, state) => const SeerrDiscoverScreen(),
+      builder: (context, state) => const HomeLabDiscoveryEntryScreen(),
     ),
     GoRoute(
       path: Destinations.seerrRequests,
