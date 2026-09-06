@@ -1,7 +1,6 @@
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../bridge/moonfin_discovery_bridge.dart';
 import '../catalogue/discovery_catalogue.dart';
-import '../engine/discovery_personal_presentation.dart';
 import '../engine/discovery_personalisation.dart';
 import '../engine/discovery_session.dart';
 import 'discovery_paginator.dart';
@@ -37,8 +36,6 @@ class HomeLabDiscoveryLaneLoader {
   final HomeLabDiscoverySession? session;
   final String? sharedDedupGroup;
   final HomeLabDiscoveryPersonalisation? personalisation;
-  final Set<String>? personalUsedTitles;
-  final Set<String>? personalSurfacedFamilies;
   final int maxPagesPerScan;
 
   const HomeLabDiscoveryLaneLoader({
@@ -47,8 +44,6 @@ class HomeLabDiscoveryLaneLoader {
     this.session,
     this.sharedDedupGroup,
     this.personalisation,
-    this.personalUsedTitles,
-    this.personalSurfacedFamilies,
     this.maxPagesPerScan = 6,
   });
 
@@ -99,24 +94,13 @@ class HomeLabDiscoveryLaneLoader {
         .toList(growable: false);
     items = _applySessionDedup(section, items);
 
-    final families = personalSurfacedFamilies;
-    if (families != null && items.isNotEmpty) {
-      items = HomeLabDiscoveryPersonalPresentation.diversifyPreview(
-        items,
-        minimumRetained: section.minItems,
-        previouslySurfacedFamilies: families,
-      );
-    }
-
-    final title = HomeLabDiscoveryPersonalPresentation.displayTitle(
-      section,
-      loaded.title,
-      usedTitles: personalUsedTitles ?? <String>{},
-    );
-
+    // Cross-row title/family presentation is deliberately applied later by the
+    // tab controller in catalogue order. Lane fetches may run concurrently, so
+    // doing that work here would make the visible result depend on network race
+    // order instead of the deterministic catalogue composition.
     return HomeLabDiscoveryLaneLoadResult(
       section: section,
-      displayTitle: title,
+      displayTitle: loaded.title,
       items: items,
       throughPage: loaded.page.page,
       totalPages: loaded.page.totalPages,
