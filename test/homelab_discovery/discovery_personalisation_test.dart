@@ -12,18 +12,17 @@ AggregatedItem media(
   List<String> genres = const [],
   List<String> tags = const [],
   String? language,
-}) => AggregatedItem(
-  id: '$localId',
-  serverId: 'server-1',
-  rawData: {
+}) {
+  final raw = <String, dynamic>{
     'Name': name ?? 'Item $localId',
     'Type': type,
     'ProviderIds': {'Tmdb': '$tmdb'},
     'Genres': genres,
     'Tags': tags,
-    if (language != null) 'OriginalLanguage': language,
-  },
-);
+  };
+  if (language != null) raw['OriginalLanguage'] = language;
+  return AggregatedItem(id: '$localId', serverId: 'server-1', rawData: raw);
+}
 
 HomeLabDiscoverySection section(
   String strategy, {
