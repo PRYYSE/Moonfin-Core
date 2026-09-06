@@ -4,10 +4,8 @@ import '../../../data/services/row_data_source.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../catalogue/discovery_catalogue.dart';
 
-typedef HomeLabDiscoveryPersonalRowLoader = Future<HomeRow> Function(
-  String serverId,
-  int rowIndex,
-);
+typedef HomeLabDiscoveryPersonalRowLoader =
+    Future<HomeRow> Function(String serverId, int rowIndex);
 
 typedef HomeLabDiscoveryPersonalLoadMore =
     Future<(List<AggregatedItem>, int)> Function({
@@ -66,7 +64,9 @@ class HomeLabDiscoveryPersonalisation {
       _rows[section.id] = row;
     }
 
-    final filtered = row.items.where((item) => _matches(section, item)).toList();
+    final filtered = row.items
+        .where((item) => _matches(section, item))
+        .toList();
     final total = filtered.length;
     final totalPages = total == 0 ? 0 : (total + pageSize - 1) ~/ pageSize;
     final start = (safePage - 1) * pageSize;
@@ -169,7 +169,8 @@ class HomeLabDiscoveryPersonalisation {
     final fromJapan = item.productionLocations.any(
       (value) => value.toLowerCase() == 'japan',
     );
-    final japanese = language == 'ja' || language == 'jpn' || language == 'japanese';
+    final japanese =
+        language == 'ja' || language == 'jpn' || language == 'japanese';
     return isAnimated && (japanese || fromJapan);
   }
 

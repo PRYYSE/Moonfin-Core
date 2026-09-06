@@ -71,12 +71,7 @@ void main() {
       media(1, 101, type: 'Series'),
       media(2, 102, type: 'Series'),
     ];
-    final all = [
-      ...first,
-      media(3, 103),
-      media(4, 104),
-      media(5, 105),
-    ];
+    final all = [...first, media(3, 103), media(4, 104), media(5, 105)];
     var loadMoreCalls = 0;
     final service = HomeLabDiscoveryPersonalisation.forTesting(
       serverId: 'server-1',
@@ -110,13 +105,7 @@ void main() {
         title: 'Recommended For You',
         rowType: HomeRowType.latestMedia,
         items: [
-          media(
-            1,
-            201,
-            type: 'Series',
-            genres: ['Animation'],
-            language: 'ja',
-          ),
+          media(1, 201, type: 'Series', genres: ['Animation'], language: 'ja'),
           media(2, 202, type: 'Series', genres: ['Animation']),
           media(3, 203, type: 'Series', tags: ['Anime']),
         ],

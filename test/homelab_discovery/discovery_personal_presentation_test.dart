@@ -37,16 +37,13 @@ void main() {
   });
 
   test('Demon Slayer family is softly capped at two in preview', () {
-    final result = HomeLabDiscoveryPersonalPresentation.diversifyPreview(
-      [
-        item(1, 'Demon Slayer: Kimetsu no Yaiba'),
-        item(2, 'Demon Slayer: Mugen Train'),
-        item(3, 'Demon Slayer: Entertainment District'),
-        item(4, 'Frieren: Beyond Journey’s End'),
-        item(5, 'Vinland Saga'),
-      ],
-      minimumRetained: 4,
-    );
+    final result = HomeLabDiscoveryPersonalPresentation.diversifyPreview([
+      item(1, 'Demon Slayer: Kimetsu no Yaiba'),
+      item(2, 'Demon Slayer: Mugen Train'),
+      item(3, 'Demon Slayer: Entertainment District'),
+      item(4, 'Frieren: Beyond Journey’s End'),
+      item(5, 'Vinland Saga'),
+    ], minimumRetained: 4);
 
     expect(
       result
@@ -64,16 +61,13 @@ void main() {
   });
 
   test('Mortal Kombat clustering cannot crowd out unrelated titles', () {
-    final result = HomeLabDiscoveryPersonalPresentation.diversifyPreview(
-      [
-        item(1, 'Mortal Kombat'),
-        item(2, 'Mortal Kombat Legends: Scorpion’s Revenge'),
-        item(3, 'Mortal Kombat Legends: Snow Blind'),
-        item(4, 'The Raid'),
-        item(5, 'John Wick'),
-      ],
-      minimumRetained: 4,
-    );
+    final result = HomeLabDiscoveryPersonalPresentation.diversifyPreview([
+      item(1, 'Mortal Kombat'),
+      item(2, 'Mortal Kombat Legends: Scorpion’s Revenge'),
+      item(3, 'Mortal Kombat Legends: Snow Blind'),
+      item(4, 'The Raid'),
+      item(5, 'John Wick'),
+    ], minimumRetained: 4);
 
     expect(
       result
@@ -105,12 +99,15 @@ void main() {
     expect(result.take(2).map((value) => value.id), [2, 3]);
   });
 
-  test('full ranking remains unchanged when presentation policy is bypassed', () {
-    final full = [
-      item(1, 'Demon Slayer: Kimetsu no Yaiba'),
-      item(2, 'Demon Slayer: Mugen Train'),
-      item(3, 'Demon Slayer: Entertainment District'),
-    ];
-    expect(full.map((value) => value.id), [1, 2, 3]);
-  });
+  test(
+    'full ranking remains unchanged when presentation policy is bypassed',
+    () {
+      final full = [
+        item(1, 'Demon Slayer: Kimetsu no Yaiba'),
+        item(2, 'Demon Slayer: Mugen Train'),
+        item(3, 'Demon Slayer: Entertainment District'),
+      ];
+      expect(full.map((value) => value.id), [1, 2, 3]);
+    },
+  );
 }
