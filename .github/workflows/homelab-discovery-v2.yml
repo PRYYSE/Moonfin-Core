@@ -1,0 +1,61 @@
+name: Home Lab Discovery v2
+
+on:
+  push:
+    branches:
+      - homelab/discovery-v2
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.1'
+
+jobs:
+  focused-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format gate
+        run: |
+          dart format --output=none --set-exit-if-changed \
+            lib/features/homelab_discovery \
+            test/homelab_discovery
+
+      - name: Analyse feature
+        run: flutter analyze lib/features/homelab_discovery test/homelab_discovery
+
+      - name: Focused tests
+        run: flutter test test/homelab_discovery
+
+      - name: Verify custom scope stays narrow
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='f18c45b1fbf9b63871b4f93237179f9706154763'
+          git cat-file -e "$base^{commit}"
+          mapfile -t changed < <(git diff --name-only "$base"...HEAD)
+          printf '%s\n' "${changed[@]}"
+          for path in "${changed[@]}"; do
+            case "$path" in
+              lib/features/homelab_discovery/*|test/homelab_discovery/*|docs/homelab-discovery-v2/*|.github/workflows/homelab-discovery-v2.yml|tooling/homelab-discovery-v2/*)
+                ;;
+              *)
+                echo "Unexpected v2 scope change: $path" >&2
+                exit 1
+                ;;
+            esac
+          done
