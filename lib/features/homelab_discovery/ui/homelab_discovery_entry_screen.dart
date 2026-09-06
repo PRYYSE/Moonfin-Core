@@ -9,10 +9,8 @@ import '../catalogue/discovery_catalogue_loader.dart';
 import 'homelab_discovery_screen.dart';
 
 typedef HomeLabDiscoveryLoad = Future<HomeLabDiscoveryLoadResult> Function();
-typedef HomeLabDiscoveryBuilder = Widget Function(
-  BuildContext context,
-  HomeLabDiscoveryCatalogue catalogue,
-);
+typedef HomeLabDiscoveryBuilder =
+    Widget Function(BuildContext context, HomeLabDiscoveryCatalogue catalogue);
 
 class HomeLabDiscoveryEntryScreen extends StatefulWidget {
   final HomeLabDiscoveryLoad? load;
@@ -83,7 +81,8 @@ class _HomeLabDiscoveryEntryScreenState
 
         final catalogue = snapshot.data?.catalogue;
         if (catalogue != null) {
-          final builder = widget.discoveryBuilder ??
+          final builder =
+              widget.discoveryBuilder ??
               (context, catalogue) =>
                   HomeLabDiscoveryScreen(catalogue: catalogue);
           return builder(context, catalogue);

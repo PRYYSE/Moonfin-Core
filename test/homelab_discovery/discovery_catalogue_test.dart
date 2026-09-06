@@ -46,7 +46,8 @@ void main() {
 
   test('unsupported schema fails closed', () {
     expect(
-      () => HomeLabDiscoveryCatalogue.fromJson(validCatalogue(schemaVersion: 99)),
+      () =>
+          HomeLabDiscoveryCatalogue.fromJson(validCatalogue(schemaVersion: 99)),
       throwsFormatException,
     );
   });
@@ -64,7 +65,9 @@ void main() {
 
   test('duplicate section ids are rejected across tabs', () {
     final json = validCatalogue();
-    final originalTab = Map<String, dynamic>.from((json['tabs'] as List).single as Map);
+    final originalTab = Map<String, dynamic>.from(
+      (json['tabs'] as List).single as Map,
+    );
     final second = Map<String, dynamic>.from(originalTab)
       ..['id'] = 'series'
       ..['title'] = 'Series';

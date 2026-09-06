@@ -6,13 +6,7 @@ import 'package:moonfin/features/homelab_discovery/ui/homelab_discovery_entry_sc
 
 const catalogue = HomeLabDiscoveryCatalogue(
   schemaVersion: 2,
-  tabs: [
-    HomeLabDiscoveryTab(
-      id: 'movies',
-      title: 'Movies',
-      sections: [],
-    ),
-  ],
+  tabs: [HomeLabDiscoveryTab(id: 'movies', title: 'Movies', sections: [])],
 );
 
 Widget appFor(HomeLabDiscoveryLoad load) {

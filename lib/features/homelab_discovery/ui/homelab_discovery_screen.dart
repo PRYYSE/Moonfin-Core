@@ -10,10 +10,7 @@ import '../catalogue/discovery_catalogue.dart';
 class HomeLabDiscoveryScreen extends StatelessWidget {
   final HomeLabDiscoveryCatalogue catalogue;
 
-  const HomeLabDiscoveryScreen({
-    super.key,
-    required this.catalogue,
-  });
+  const HomeLabDiscoveryScreen({super.key, required this.catalogue});
 
   @override
   Widget build(BuildContext context) {

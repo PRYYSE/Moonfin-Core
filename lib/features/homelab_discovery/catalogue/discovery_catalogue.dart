@@ -22,11 +22,7 @@ enum HomeLabDiscoveryAvailabilityMode {
   unwatched,
 }
 
-T _enumValue<T extends Enum>(
-  List<T> values,
-  Object? raw,
-  String field,
-) {
+T _enumValue<T extends Enum>(List<T> values, Object? raw, String field) {
   if (raw is! String || raw.isEmpty) {
     throw FormatException('Discovery field $field must be a non-empty string');
   }
@@ -49,9 +45,7 @@ Map<String, String> _stringMap(Object? raw, String field) {
   if (raw is! Map) {
     throw FormatException('Discovery field $field must be an object');
   }
-  return raw.map(
-    (key, value) => MapEntry(key.toString(), value.toString()),
-  );
+  return raw.map((key, value) => MapEntry(key.toString(), value.toString()));
 }
 
 List<String> _stringList(Object? raw, String field) {
@@ -189,9 +183,7 @@ class HomeLabDiscoverySection {
       id: _requiredString(json, 'id'),
       title: _requiredString(json, 'title'),
       subtitle: json['subtitle']?.toString(),
-      query: HomeLabDiscoveryQuery.fromJson(
-        Map<String, dynamic>.from(query),
-      ),
+      query: HomeLabDiscoveryQuery.fromJson(Map<String, dynamic>.from(query)),
       presentation: json['presentation'] == null
           ? HomeLabDiscoveryPresentation.carousel
           : _enumValue(

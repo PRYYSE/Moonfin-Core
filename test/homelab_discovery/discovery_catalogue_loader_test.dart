@@ -31,10 +31,7 @@ String validRaw({int schema = 2}) => jsonEncode({
         {
           'id': 'popular',
           'title': 'Popular',
-          'query': {
-            'source': 'discoverMovies',
-            'mediaType': 'movie',
-          },
+          'query': {'source': 'discoverMovies', 'mediaType': 'movie'},
         },
       ],
     },
@@ -76,20 +73,23 @@ void main() {
     expect(result.networkError, isA<StateError>());
   });
 
-  test('invalid network response does not replace valid cached catalogue', () async {
-    final cached = validRaw();
-    final cache = MemoryCache()..value = cached;
-    final loader = HomeLabDiscoveryCatalogueLoader(
-      baseUrl: 'http://server:8096',
-      cache: cache,
-      fetcher: (_) async => '{"schemaVersion":99,"tabs":[]}',
-    );
+  test(
+    'invalid network response does not replace valid cached catalogue',
+    () async {
+      final cached = validRaw();
+      final cache = MemoryCache()..value = cached;
+      final loader = HomeLabDiscoveryCatalogueLoader(
+        baseUrl: 'http://server:8096',
+        cache: cache,
+        fetcher: (_) async => '{"schemaVersion":99,"tabs":[]}',
+      );
 
-    final result = await loader.load();
+      final result = await loader.load();
 
-    expect(result.source, HomeLabDiscoveryCatalogueSource.cache);
-    expect(cache.value, cached);
-  });
+      expect(result.source, HomeLabDiscoveryCatalogueSource.cache);
+      expect(cache.value, cached);
+    },
+  );
 
   test('network and cache failures fail closed without throwing', () async {
     final cache = MemoryCache()..failRead = true;
