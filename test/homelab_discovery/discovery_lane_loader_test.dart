@@ -94,41 +94,47 @@ void main() {
     },
   );
 
-  test('personalised lane uses stock recommendation adapter and unique title', () async {
-    final personalisation = HomeLabDiscoveryPersonalisation.forTesting(
-      serverId: 'server-1',
-      loadRow: (_, slot) async => HomeRow(
-        id: 'sinceYouWatched$slot',
-        title: 'Top Picks For You',
-        rowType: HomeRowType.latestMedia,
-        items: [
-          personalItem(1, 101, 'Demon Slayer: Kimetsu no Yaiba'),
-          personalItem(2, 102, 'Demon Slayer: Mugen Train'),
-          personalItem(3, 103, 'Demon Slayer: Entertainment District'),
-          personalItem(4, 104, 'Pluto'),
-        ],
-        totalCount: 4,
-      ),
-      loadMore: ({required row, required serverId, offset}) async =>
-          (row.items, row.totalCount),
-    );
-    final usedTitles = <String>{'top picks for you'};
-    final surfacedFamilies = <String>{};
-    final loader = HomeLabDiscoveryLaneLoader(
-      personalisation: personalisation,
-      personalUsedTitles: usedTitles,
-      personalSurfacedFamilies: surfacedFamilies,
-      fetchPage: (_, _) async => throw StateError('raw bridge should not run'),
-    );
+  test(
+    'personalised lane uses stock recommendation adapter and unique title',
+    () async {
+      final personalisation = HomeLabDiscoveryPersonalisation.forTesting(
+        serverId: 'server-1',
+        loadRow: (_, slot) async => HomeRow(
+          id: 'sinceYouWatched$slot',
+          title: 'Top Picks For You',
+          rowType: HomeRowType.latestMedia,
+          items: [
+            personalItem(1, 101, 'Demon Slayer: Kimetsu no Yaiba'),
+            personalItem(2, 102, 'Demon Slayer: Mugen Train'),
+            personalItem(3, 103, 'Demon Slayer: Entertainment District'),
+            personalItem(4, 104, 'Pluto'),
+          ],
+          totalCount: 4,
+        ),
+        loadMore: ({required row, required serverId, offset}) async =>
+            (row.items, row.totalCount),
+      );
+      final usedTitles = <String>{'top picks for you'};
+      final surfacedFamilies = <String>{};
+      final loader = HomeLabDiscoveryLaneLoader(
+        personalisation: personalisation,
+        personalUsedTitles: usedTitles,
+        personalSurfacedFamilies: surfacedFamilies,
+        fetchPage: (_, _) async =>
+            throw StateError('raw bridge should not run'),
+      );
 
-    final result = await loader.load(personalSection('favourites'));
+      final result = await loader.load(personalSection('favourites'));
 
-    expect(result.hasError, isFalse);
-    expect(result.displayTitle, 'More Picks For You');
-    expect(result.items.map((item) => item.id), contains(104));
-    expect(
-      result.items.where((item) => item.displayTitle.startsWith('Demon Slayer')).length,
-      lessThanOrEqualTo(2),
-    );
-  });
+      expect(result.hasError, isFalse);
+      expect(result.displayTitle, 'More Picks For You');
+      expect(result.items.map((item) => item.id), contains(104));
+      expect(
+        result.items
+            .where((item) => item.displayTitle.startsWith('Demon Slayer'))
+            .length,
+        lessThanOrEqualTo(2),
+      );
+    },
+  );
 }
