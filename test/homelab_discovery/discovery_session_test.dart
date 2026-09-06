@@ -4,7 +4,10 @@ import 'package:moonfin/features/homelab_discovery/engine/discovery_session.dart
 void main() {
   test('prefers unseen items across lane and shared tab scopes', () {
     final session = HomeLabDiscoverySession();
-    session.markSeen('first', ['movie:1', 'movie:2'], sharedGroup: 'tab:movies');
+    session.markSeen('first', [
+      'movie:1',
+      'movie:2',
+    ], sharedGroup: 'tab:movies');
 
     final result = session.filterFresh<int>(
       group: 'second',

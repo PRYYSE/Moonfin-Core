@@ -50,17 +50,20 @@ void main() {
     expect(result.items.length, greaterThanOrEqualTo(2));
   });
 
-  test('sparse successful lane is hidden rather than treated as error', () async {
-    final loader = HomeLabDiscoveryLaneLoader(
-      fetchPage: (_, _) async => const SeerrDiscoverPage(
-        page: 1,
-        totalPages: 1,
-        results: [SeerrDiscoverItem(id: 1, mediaType: 'movie')],
-      ),
-    );
+  test(
+    'sparse successful lane is hidden rather than treated as error',
+    () async {
+      final loader = HomeLabDiscoveryLaneLoader(
+        fetchPage: (_, _) async => const SeerrDiscoverPage(
+          page: 1,
+          totalPages: 1,
+          results: [SeerrDiscoverItem(id: 1, mediaType: 'movie')],
+        ),
+      );
 
-    final result = await loader.load(section(minItems: 2));
-    expect(result.hasError, isFalse);
-    expect(result.shouldHide, isTrue);
-  });
+      final result = await loader.load(section(minItems: 2));
+      expect(result.hasError, isFalse);
+      expect(result.shouldHide, isTrue);
+    },
+  );
 }

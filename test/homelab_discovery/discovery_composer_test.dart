@@ -160,7 +160,11 @@ void main() {
   });
 
   test('empty and fully filtered tabs fail closed without throwing', () {
-    const empty = HomeLabDiscoveryTab(id: 'empty', title: 'Empty', sections: []);
+    const empty = HomeLabDiscoveryTab(
+      id: 'empty',
+      title: 'Empty',
+      sections: [],
+    );
     expect(composer.compose(empty, sessionSeed: 'x'), isEmpty);
 
     final filtered = HomeLabDiscoveryTab(

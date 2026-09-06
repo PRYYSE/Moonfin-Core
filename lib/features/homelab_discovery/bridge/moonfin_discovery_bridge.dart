@@ -12,10 +12,7 @@ typedef HomeLabDiscoveryPageFetcher =
     Future<SeerrDiscoverPage> Function(HomeLabDiscoveryQuery query, int page);
 
 abstract interface class HomeLabDiscoveryBridge {
-  Future<SeerrDiscoverPage> fetchPage(
-    HomeLabDiscoveryQuery query,
-    int page,
-  );
+  Future<SeerrDiscoverPage> fetchPage(HomeLabDiscoveryQuery query, int page);
 }
 
 /// Narrow anti-corruption adapter between Home Lab Discovery and stock Moonfin.

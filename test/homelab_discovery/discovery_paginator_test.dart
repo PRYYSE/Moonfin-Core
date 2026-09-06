@@ -24,11 +24,7 @@ void main() {
         totalPages: 3,
         results: [item(2), item(3), item(4)],
       ),
-      3: SeerrDiscoverPage(
-        page: 3,
-        totalPages: 3,
-        results: [item(5)],
-      ),
+      3: SeerrDiscoverPage(page: 3, totalPages: 3, results: [item(5)]),
     };
     final paginator = HomeLabDiscoveryPaginator(
       query: query,
@@ -52,7 +48,11 @@ void main() {
       fetchPage: (_, _) async => SeerrDiscoverPage(
         page: 1,
         totalPages: 1,
-        results: [item(1), item(2, mediaType: 'tv'), item(3)],
+        results: [
+          item(1),
+          item(2, mediaType: 'tv'),
+          item(3),
+        ],
       ),
       include: (value) => value.id != 3,
     );
