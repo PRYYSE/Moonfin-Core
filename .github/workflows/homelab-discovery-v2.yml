@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FLUTTER_VERSION: '3.44.1'
@@ -31,21 +31,10 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      # Bootstrap-only convenience while this new branch is being constructed.
-      # Once the feature settles, this is replaced by a strict no-diff format gate.
-      - name: Format feature and persist formatter output
-        if: github.event_name == 'push'
-        shell: bash
+      - name: Authoring catalogue gate
         run: |
-          set -euo pipefail
-          dart format lib/features/homelab_discovery test/homelab_discovery
-          if ! git diff --quiet -- lib/features/homelab_discovery test/homelab_discovery; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add lib/features/homelab_discovery test/homelab_discovery
-            git commit -m 'style(discovery-v2): apply Dart formatter'
-            git push origin HEAD:homelab/discovery-v2
-          fi
+          python3 tooling/homelab-discovery-v2/generate_home_lab_discovery_catalogue.py --check
+          python3 tooling/homelab-discovery-v2/test_home_lab_discovery_catalogue.py
 
       - name: Format gate
         run: |
