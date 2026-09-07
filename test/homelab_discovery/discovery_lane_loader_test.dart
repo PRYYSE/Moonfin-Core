@@ -5,7 +5,6 @@ import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue.dart';
 import 'package:moonfin/features/homelab_discovery/data/discovery_lane_loader.dart';
 import 'package:moonfin/features/homelab_discovery/engine/discovery_personalisation.dart';
-import 'package:moonfin/features/homelab_discovery/engine/discovery_session.dart';
 
 HomeLabDiscoverySection section({int minItems = 2}) => HomeLabDiscoverySection(
   id: 'lane',
@@ -54,12 +53,8 @@ void main() {
     expect(result.items, isEmpty);
   });
 
-  test('session dedup prefers novelty but backfills usable row', () async {
-    final session = HomeLabDiscoverySession()
-      ..markSeen('tab', ['movie:1', 'movie:2']);
+  test('lane load preserves raw preview order for post-fetch policy', () async {
     final loader = HomeLabDiscoveryLaneLoader(
-      session: session,
-      sharedDedupGroup: 'tab',
       fetchPage: (_, _) async => const SeerrDiscoverPage(
         page: 1,
         totalPages: 1,
@@ -73,8 +68,7 @@ void main() {
 
     final result = await loader.load(section());
     expect(result.hasError, isFalse);
-    expect(result.items.first.id, 3);
-    expect(result.items.length, greaterThanOrEqualTo(2));
+    expect(result.items.map((item) => item.id), [1, 2, 3]);
   });
 
   test(
