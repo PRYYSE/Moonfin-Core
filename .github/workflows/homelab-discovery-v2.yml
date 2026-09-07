@@ -82,3 +82,93 @@ jobs:
                 ;;
             esac
           done
+
+  build-candidate-artifacts:
+    name: build Web + mobile-beta + androidTv-beta
+    needs: focused-validation
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[full-build]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Build Web candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build web --release
+          test -f build/web/index.html
+
+      - name: Build Android mobile beta candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --release \
+            --flavor mobile-beta \
+            --dart-define=DISTRIBUTION_CHANNEL=apk
+          apk="$(find build/app/outputs/flutter-apk -maxdepth 1 -type f -iname '*mobile-beta*release.apk' -print -quit)"
+          test -n "$apk"
+          test -f "$apk"
+          printf '%s\n' "$apk" > /tmp/mobile-apk-path
+
+      - name: Build Android TV beta candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --release \
+            --flavor androidTv-beta \
+            --dart-define=MOONFIN_FORCE_TV=true \
+            --dart-define=DISTRIBUTION_CHANNEL=android_tv_apk
+          apk="$(find build/app/outputs/flutter-apk -maxdepth 1 -type f -iname '*androidtv-beta*release.apk' -print -quit)"
+          test -n "$apk"
+          test -f "$apk"
+          printf '%s\n' "$apk" > /tmp/tv-apk-path
+
+      - name: Package candidate artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          short_sha="${GITHUB_SHA:0:12}"
+          mkdir -p artifacts
+          tar -C build/web -czf "artifacts/Moonfin_HomeLab_Web_${short_sha}.tar.gz" .
+          cp "$(cat /tmp/mobile-apk-path)" "artifacts/Moonfin_HomeLab_Android_${short_sha}.apk"
+          cp "$(cat /tmp/tv-apk-path)" "artifacts/Moonfin_HomeLab_AndroidTV_${short_sha}.apk"
+          version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
+          tv_version="$(awk '/android_tv_version:/{print $2; exit}' pubspec.yaml)"
+          tv_build="$(awk '/android_tv_build_number:/{print $2; exit}' pubspec.yaml)"
+          cat > artifacts/BUILD_INFO.txt <<EOF
+          source_sha=${GITHUB_SHA}
+          flutter=${FLUTTER_VERSION}
+          app_version=${version}
+          android_tv_version=${tv_version}
+          android_tv_build_number=${tv_build}
+          web=release
+          mobile_flavor=mobile-beta
+          android_tv_flavor=androidTv-beta
+          android_ci_signing=debug-fallback-not-for-deployment
+          production_android_signing=preserve-existing-homelab-certificate
+          EOF
+          (cd artifacts && sha256sum Moonfin_HomeLab_* > SHA256SUMS.txt)
+          cat artifacts/BUILD_INFO.txt
+          cat artifacts/SHA256SUMS.txt
+
+      - name: Upload candidate bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: homelab-discovery-v2-candidates-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
