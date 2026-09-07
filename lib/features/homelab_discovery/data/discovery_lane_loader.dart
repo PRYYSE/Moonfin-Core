@@ -16,7 +16,7 @@ class HomeLabDiscoveryLaneLoadResult {
   final int totalPages;
   final Object? error;
 
-  const HomeLabDiscoveryLaneLoadResult({
+  HomeLabDiscoveryLaneLoadResult({
     required this.section,
     String? displayTitle,
     this.items = const [],

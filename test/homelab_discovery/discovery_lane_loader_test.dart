@@ -95,7 +95,7 @@ void main() {
   );
 
   test(
-    'personalised lane uses stock recommendation adapter and unique title',
+    'personalised lane uses stock adapter without race-order presentation',
     () async {
       final personalisation = HomeLabDiscoveryPersonalisation.forTesting(
         serverId: 'server-1',
@@ -114,12 +114,8 @@ void main() {
         loadMore: ({required row, required serverId, offset}) async =>
             (row.items, row.totalCount),
       );
-      final usedTitles = <String>{'top picks for you'};
-      final surfacedFamilies = <String>{};
       final loader = HomeLabDiscoveryLaneLoader(
         personalisation: personalisation,
-        personalUsedTitles: usedTitles,
-        personalSurfacedFamilies: surfacedFamilies,
         fetchPage: (_, _) async =>
             throw StateError('raw bridge should not run'),
       );
@@ -127,14 +123,8 @@ void main() {
       final result = await loader.load(personalSection('favourites'));
 
       expect(result.hasError, isFalse);
-      expect(result.displayTitle, 'More Picks For You');
-      expect(result.items.map((item) => item.id), contains(104));
-      expect(
-        result.items
-            .where((item) => item.displayTitle.startsWith('Demon Slayer'))
-            .length,
-        lessThanOrEqualTo(2),
-      );
+      expect(result.displayTitle, 'Top Picks For You');
+      expect(result.items.map((item) => item.id), [101, 102, 103, 104]);
     },
   );
 }
