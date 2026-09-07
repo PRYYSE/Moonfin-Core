@@ -68,11 +68,7 @@ void main() {
     tester,
   ) async {
     var seeAllCount = 0;
-    await pumpLane(
-      tester,
-      onOpen: (_) {},
-      onSeeAll: () => seeAllCount += 1,
-    );
+    await pumpLane(tester, onOpen: (_) {}, onSeeAll: () => seeAllCount += 1);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
