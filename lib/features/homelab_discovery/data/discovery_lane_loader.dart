@@ -2,7 +2,6 @@ import '../../../data/services/seerr/seerr_api_models.dart';
 import '../bridge/moonfin_discovery_bridge.dart';
 import '../catalogue/discovery_catalogue.dart';
 import '../engine/discovery_personalisation.dart';
-import '../engine/discovery_session.dart';
 import 'discovery_paginator.dart';
 
 typedef HomeLabDiscoveryLanePredicate =
@@ -30,19 +29,20 @@ class HomeLabDiscoveryLaneLoadResult {
   bool get shouldHide => !hasError && !isUsable;
 }
 
+/// Fetches one Discovery lane without mutating cross-row presentation state.
+///
+/// Lane loads may run concurrently. Session novelty, shared deduplication and
+/// personalised title/family presentation therefore belong to the deterministic
+/// post-fetch tab presentation stage, not here.
 class HomeLabDiscoveryLaneLoader {
   final HomeLabDiscoveryPageFetcher fetchPage;
   final HomeLabDiscoveryLanePredicate? include;
-  final HomeLabDiscoverySession? session;
-  final String? sharedDedupGroup;
   final HomeLabDiscoveryPersonalisation? personalisation;
   final int maxPagesPerScan;
 
   const HomeLabDiscoveryLaneLoader({
     required this.fetchPage,
     this.include,
-    this.session,
-    this.sharedDedupGroup,
     this.personalisation,
     this.maxPagesPerScan = 6,
   });
@@ -63,10 +63,9 @@ class HomeLabDiscoveryLaneLoader {
         include: include == null ? null : (item) => include!(section, item),
       );
       final window = await paginator.loadNext();
-      var items = window.items
+      final items = window.items
           .take(section.previewLimit)
           .toList(growable: false);
-      items = _applySessionDedup(section, items);
 
       return HomeLabDiscoveryLaneLoadResult(
         section: section,
@@ -88,37 +87,17 @@ class HomeLabDiscoveryLaneLoader {
     }
 
     final loaded = await service.load(section);
-    var items = loaded.page.results
+    final items = loaded.page.results
         .where((item) => include?.call(section, item) ?? true)
         .take(section.previewLimit)
         .toList(growable: false);
-    items = _applySessionDedup(section, items);
 
-    // Cross-row title/family presentation is deliberately applied later by the
-    // tab controller in catalogue order. Lane fetches may run concurrently, so
-    // doing that work here would make the visible result depend on network race
-    // order instead of the deterministic catalogue composition.
     return HomeLabDiscoveryLaneLoadResult(
       section: section,
       displayTitle: loaded.title,
       items: items,
       throughPage: loaded.page.page,
       totalPages: loaded.page.totalPages,
-    );
-  }
-
-  List<SeerrDiscoverItem> _applySessionDedup(
-    HomeLabDiscoverySection section,
-    List<SeerrDiscoverItem> items,
-  ) {
-    if (!section.sessionDedup || session == null || items.isEmpty) return items;
-    return session!.filterFresh<SeerrDiscoverItem>(
-      group: section.dedupGroup,
-      sharedGroup: sharedDedupGroup,
-      items: items,
-      identity: (item) =>
-          '${item.mediaType ?? section.query.mediaType}:${item.id}',
-      minimumRetained: section.minItems,
     );
   }
 }
