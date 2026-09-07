@@ -109,10 +109,7 @@ void main() {
       ),
       isFalse,
     );
-    expect(
-      include(item(), HomeLabDiscoveryAvailabilityMode.unwatched),
-      isTrue,
-    );
+    expect(include(item(), HomeLabDiscoveryAvailabilityMode.unwatched), isTrue);
   });
 
   test('NSFW preference blocks adult flags and accepted v1 text patterns', () {
