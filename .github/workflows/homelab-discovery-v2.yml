@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: homelab-discovery-v2-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FLUTTER_VERSION: '3.44.1'
 
@@ -40,8 +44,13 @@ jobs:
           python3 tooling/homelab-discovery-v2/test_home_lab_discovery_catalogue.py
 
       - name: Format gate
+        shell: bash
         run: |
-          dart format --output=none --set-exit-if-changed \
+          set -euo pipefail
+          dart format \
+            lib/features/homelab_discovery \
+            test/homelab_discovery
+          git diff --exit-code -- \
             lib/features/homelab_discovery \
             test/homelab_discovery
 
