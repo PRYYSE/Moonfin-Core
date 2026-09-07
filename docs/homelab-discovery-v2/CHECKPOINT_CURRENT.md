@@ -113,84 +113,87 @@ Authoring catalogue remains:
 
 Accepted live 481/486 remains the semantic regression reference. Never invent unsafe semantics merely to report 486/486.
 
-## Verified reproducible client candidate milestone
+## First reproducible client candidate milestone
 
-**Verified product source:** `cc4f03b1e9e4d80314f83a764944670460dd6c58`  
-**Workflow:** `34086546081`  
+Verified product source: `cc4f03b1e9e4d80314f83a764944670460dd6c58`  
+Workflow: `34086546081` — GREEN
+
+This first full-build milestone proved Web, `mobile-beta` and `androidTv-beta` could be built and packaged reproducibly. Its artifact remains historical evidence; the newer TV-focus candidate below supersedes it for current product testing.
+
+CI Android artifacts use debug fallback signing and are build-validation candidates only. Deployment must use the preserved Home Lab certificate above.
+
+## Current Moonfin milestone — TV focus, deep browse and rebuilt candidates
+
+**Verified product source:** `86acba1246ea5e9424fcc96c9729c1e474359c53`  
+**Workflow:** `34104075134` / run **#62**  
 **Result:** GREEN
 
-Both jobs passed:
+Focused validation passed every gate: route overlay, 486-lane catalogue, format, analysis, focused tests and narrow custom-scope verification.
 
-- focused validation: route overlay, 486-lane catalogue, format, analysis, focused tests, narrow custom-scope
-- candidate build: Web release, `mobile-beta`, `androidTv-beta`, packaging and artifact upload
+The completed interaction slice is feature-local and keeps Web/mobile pointer/touch behaviour on the normal Moonfin path:
 
-Artifact:
+- TV landing rows use current upstream focus primitives rather than a custom pointer patch;
+- initial TV focus is scheduled only for the active visible tab;
+- row focus memory is restored after returning from media details or `See All`;
+- deep `See All` uses a deterministic TV grid with one focus owner;
+- D-pad left/right/up/down, partial final-row clamping, select and Back are covered;
+- near-end deep paging fires once per item set;
+- grid focus memory restores after rebuild;
+- pointer taps remain covered;
+- selected cards use normal Moonfin `MediaCard` visuals via externally-driven focus.
 
-- GitHub artifact ID: `10005927276`
-- name: `homelab-discovery-v2-candidates-cc4f03b1e9e4d80314f83a764944670460dd6c58`
-- artifact digest: `sha256:2baccfb03a43bfb61ec5d82b7a5f9e75a63bea6630613b6652b167b045632713`
-- source version: `2.5.1+30000149`
+The same source was rebuilt successfully for all current Flutter clients:
+
+- GitHub artifact ID: `10012562778`
+- name: `homelab-discovery-v2-candidates-86acba1246ea5e9424fcc96c9729c1e474359c53`
+- artifact digest: `sha256:1853f6960394fe902e8ac9b72d0d4709bd2ddfe87265bf64b2ea3695de4083e4`
+- app version: `2.5.1+30000149`
 - Android TV version/build: `2.5.1` / `2000016`
 
-Files were downloaded and independently checksum-verified after CI:
+Packaged file checksums recorded by the green build:
 
-- Android TV beta APK: `a81e091f5fa458711a233983f495657dd9a01157bfa7de0b806cf58cdbda1df8`
-- Android mobile beta APK: `f732133d4bdbb4a90bc429091760448e772c5a20e5bfc63cd6878da455bb194c`
-- Web tarball: `469bc0acdf9179726683c58e29a7061767585873e8d934a8c8a4e481fbe6d78f`
+- Android TV beta APK: `a56ccc1a12e9e7e34fa54ade4725d96e4979ec544f68f0cc5f5e2d2997092a71`
+- Android mobile beta APK: `ab18aebdb5bbbf8a3ba3192960937c77850bbf9fbefe4ff0bb615083d9c579c0`
+- Web tarball: `ec8ec792b32c6e4c1bdd69af0efbf2a26983bf544cb4c8aaddd3ad9dff1730a2`
 
-The Web archive opens and contains the expected built application assets. Both APK files are structurally recognised as Android packages.
+**Important:** the two CI APKs are still debug-fallback signed. They prove build compatibility only and are not deployment candidates.
 
-**Important:** CI Android artifacts use debug fallback signing and are build-validation candidates only. They are not deployment candidates. Production/beta deployment must use the preserved Home Lab certificate above.
-
-## Latest verified Moonfin milestone — TV focus hardening
-
-**Verified source:** `a8be4622657a5355abc0e369fcfa4c7ada967759`  
-**Workflow:** `34101228326` / run **#57**  
-**Result:** GREEN
-
-This source includes the feature-local Android TV Discovery row/focus slice:
-
-- current upstream `LockedFocusRow` reused for TV-only Discovery rows;
-- Web/mobile retain the normal pointer/touch row implementation;
-- selected cards receive `externalIsFocused` rather than a custom pointer/focus patch;
-- D-pad left/right selection and right-edge `See All` behaviour are covered;
-- vertical up/down delegation between built Discovery lanes is covered;
-- pointer taps remain covered even when the TV-focused card path exists;
-- the test harness now loads Moonfin `AppLocalizations`, fixing run #56's test-only `SeerrMediaTypeBadge` null-localisation failure.
-
-Run #57 passed route overlay, catalogue generation, format, analysis, focused tests and narrow-scope validation. Its full client-build job correctly skipped because this commit did not request a full build. No live server or deployment was changed.
-
-## Verified webOS v2 service/build foundation
+## Current webOS Discovery v2 engine/package milestone
 
 Branch: `PRYYSE/Smart-TV:homelab/webos-discovery-v2`  
-Verified service/package source: `eb6b4ad409a76134745263cfcfc5eefbb8789272`  
-Workflow: `34089074388` / run **#4**  
-Result: **GREEN**  
-Current documentation checkpoint head: `84bc92402a3cb457692c85b950f758cabd559435`
+**Verified source:** `439e64f7d396aca9c9774f8fcbea8af413ebfaaf`  
+**Workflow:** `34106116784` / run **#7**  
+**Result:** GREEN
 
-Verified foundation:
+Verified isolated v2 foundation now includes:
 
 - fail-closed catalogue query planner mirroring Moonfin-Core filter/sort/date-token policy;
 - network-first server-scoped catalogue/LKG loader;
 - narrow authenticated Moonbase Seerr proxy client with path/query allow-lists;
-- focused Discovery service tests;
-- catalogue capability/fallback gate;
+- membership filtering and feature-local lane loading;
+- catalogue composition and deterministic tab loading;
+- focused service/controller tests;
 - isolated webOS package build;
 - preserved `org.moonfin.webos` identity and 2.7.0 baseline metadata verification;
 - isolated candidate artifact upload without publishing over the known-good v1 candidate.
 
-The preserved `homelab/webos-v1-staging` branch/tag remains untouched.
+Current webOS v2 artifact:
+
+- GitHub artifact ID: `10012493825`
+- name: `Moonfin-HomeLab-webOS-DiscoveryV2-439e64f7d396aca9c9774f8fcbea8af413ebfaaf`
+- artifact digest: `sha256:d60f07fe926baa240152c58057c9a0650351759a0055ad2f22dc9e50ce20d7a9`
+
+The preserved `homelab/webos-v1-staging` branch/tag remains untouched. The current v2 artifact proves the service/package foundation, not the final six-tab Discovery UI and not physical-TV acceptance.
 
 ## Exact next work
 
-1. Finish the Flutter TV interaction slice by verifying/strengthening initial focus, focus return and deep `See All` grid/back behaviour without changing Web/mobile pointer/touch behaviour.
-2. Rebuild Web, `mobile-beta` and `androidTv-beta` from the completed focus source and verify the resulting artifact bundle.
-3. Build the six-tab catalogue-driven webOS Discovery UI behind guarded fallback to the existing stock Smart-TV Seerr Discover screen, including remote focus/back and deep browse.
-4. Determine the correct webOS personalisation implementation from existing Jellyfin capabilities; do not fake unsupported `personalised` semantics.
-5. Rebuild and verify a separate webOS IPK without changing app identity.
-6. Run semantic regression accounting against the accepted 481-lane legacy reference; explicitly explain every genuinely unsupported lane.
-7. Prepare atomic server build/cutover/rollback scripts and `SERVER_RUNBOOK.md` for stock Moonbase + external Web root + catalogue.
-8. Do not change live until replacement artifacts pass code/build gates and the user is available for controlled server/device acceptance.
+1. Build the six-tab catalogue-driven webOS Discovery UI behind guarded fallback to the existing Smart-TV `SeerrDiscover` screen, reusing Enact Spotlight and current card/navigation patterns.
+2. Add webOS remote focus/back, deterministic row movement and deep `See All` browsing while preserving the existing route/detail/request behaviour.
+3. Determine a real supported webOS/Jellyfin personalisation path; until proven, unsupported `personalised` lanes must fail closed rather than be fabricated.
+4. Rebuild and verify the isolated webOS IPK without changing `org.moonfin.webos` or publishing over the v1 candidate.
+5. Run semantic regression accounting against the accepted legacy 481/486 result and explicitly explain every genuinely unsupported lane.
+6. Prepare atomic server build/cutover/rollback scripts and `SERVER_RUNBOOK.md` for stock Moonbase + external Web root + catalogue.
+7. Do not change live until replacement artifacts pass code/build gates and the user is available for controlled server/device acceptance.
 
 ## Cutover gates
 
