@@ -2,6 +2,7 @@ import '../../../data/utils/bounded_concurrency.dart';
 import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_lane_loader.dart';
 import 'discovery_composer.dart';
+import 'discovery_rotation_history.dart';
 import 'discovery_session.dart';
 import 'discovery_tab_presentation.dart';
 
@@ -9,6 +10,8 @@ typedef HomeLabDiscoveryLaneLoad =
     Future<HomeLabDiscoveryLaneLoadResult> Function(
       HomeLabDiscoverySection section,
     );
+
+typedef HomeLabDiscoveryRotationPersist = Future<void> Function();
 
 class HomeLabDiscoveryTabLoadResult {
   final List<HomeLabDiscoverySection> selectedSections;
@@ -34,17 +37,19 @@ class HomeLabDiscoveryTabLoadResult {
 /// Selection is deterministic. Lane I/O is bounded and concurrent, but every
 /// result is keyed by section ID and all cross-row/session presentation is
 /// applied only after the concurrent work completes, in selected catalogue
-/// order.
+/// order. Rotation cooldown state is committed only for rows that actually
+/// surfaced and may be persisted independently of content/session novelty.
 class HomeLabDiscoveryTabController {
   final HomeLabDiscoveryTab tab;
   final HomeLabDiscoveryLaneLoad loadLane;
   final String sessionSeed;
   final HomeLabDiscoveryComposer composer;
   final HomeLabDiscoverySession session;
+  final HomeLabDiscoveryRotationHistory rotationHistory;
+  final HomeLabDiscoveryRotationPersist? persistRotationHistory;
   final String sharedDedupGroup;
   final int maxConcurrentLoads;
 
-  final Map<String, int> _sessionsSinceSeen = <String, int>{};
   int _refreshNonce = 0;
 
   HomeLabDiscoveryTabController({
@@ -53,10 +58,13 @@ class HomeLabDiscoveryTabController {
     required this.sessionSeed,
     HomeLabDiscoveryComposer? composer,
     HomeLabDiscoverySession? session,
+    HomeLabDiscoveryRotationHistory? rotationHistory,
+    this.persistRotationHistory,
     String? sharedDedupGroup,
     int maxConcurrentLoads = 6,
   }) : composer = composer ?? const HomeLabDiscoveryComposer(),
        session = session ?? HomeLabDiscoverySession(),
+       rotationHistory = rotationHistory ?? HomeLabDiscoveryRotationHistory(),
        sharedDedupGroup = sharedDedupGroup ?? 'tab:${tab.id}',
        maxConcurrentLoads = maxConcurrentLoads < 1 ? 1 : maxConcurrentLoads;
 
@@ -69,7 +77,7 @@ class HomeLabDiscoveryTabController {
       tab,
       sessionSeed: sessionSeed,
       refreshNonce: _refreshNonce,
-      sessionsSinceSeen: Map.unmodifiable(_sessionsSinceSeen),
+      sessionsSinceSeen: rotationHistory.sessionsSinceSeen,
     );
     final resultsBySectionId = <String, HomeLabDiscoveryLaneLoadResult>{};
 
@@ -95,7 +103,10 @@ class HomeLabDiscoveryTabController {
       session: session,
       sharedDedupGroup: sharedDedupGroup,
     );
-    _advanceSelectionHistory(selected);
+    rotationHistory.commitSession(
+      lanes.where((lane) => lane.isUsable).map((lane) => lane.section.id),
+    );
+    await _persistRotationHistory();
 
     return HomeLabDiscoveryTabLoadResult(
       selectedSections: List.unmodifiable(selected),
@@ -107,16 +118,17 @@ class HomeLabDiscoveryTabController {
 
   void resetSession() {
     _refreshNonce = 0;
-    _sessionsSinceSeen.clear();
+    rotationHistory.clear();
     session.reset();
   }
 
-  void _advanceSelectionHistory(List<HomeLabDiscoverySection> selected) {
-    for (final id in _sessionsSinceSeen.keys.toList(growable: false)) {
-      _sessionsSinceSeen[id] = _sessionsSinceSeen[id]! + 1;
-    }
-    for (final section in selected) {
-      _sessionsSinceSeen[section.id] = 0;
+  Future<void> _persistRotationHistory() async {
+    final persist = persistRotationHistory;
+    if (persist == null) return;
+    try {
+      await persist();
+    } catch (_) {
+      // Optional novelty persistence must never fail the Discovery tab load.
     }
   }
 }

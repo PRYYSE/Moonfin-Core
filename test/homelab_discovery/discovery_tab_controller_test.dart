@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue.dart';
 import 'package:moonfin/features/homelab_discovery/data/discovery_lane_loader.dart';
+import 'package:moonfin/features/homelab_discovery/engine/discovery_rotation_history.dart';
 import 'package:moonfin/features/homelab_discovery/engine/discovery_tab_controller.dart';
 
 HomeLabDiscoverySection section(String id) => HomeLabDiscoverySection(
@@ -129,8 +130,47 @@ void main() {
     );
   });
 
+  test('rotation history records only rows that actually surface', () async {
+    final first = section('first');
+    final failed = section('failed');
+    final sparse = section('sparse');
+    final history = HomeLabDiscoveryRotationHistory();
+    var persistCalls = 0;
+    final controller = HomeLabDiscoveryTabController(
+      tab: HomeLabDiscoveryTab(
+        id: 'movies',
+        title: 'Movies',
+        sections: [first, failed, sparse],
+        initialLaneBudget: 3,
+        minimumLaneCount: 3,
+      ),
+      sessionSeed: 'server:user',
+      rotationHistory: history,
+      persistRotationHistory: () async {
+        persistCalls++;
+      },
+      loadLane: (candidate) async {
+        if (candidate.id == failed.id) throw StateError('boom');
+        if (candidate.id == sparse.id) return loaded(candidate, const []);
+        return loaded(candidate, [1]);
+      },
+    );
+
+    final result = await controller.load();
+
+    expect(result.usableLanes.map((value) => value.section.id), ['first']);
+    expect(result.failedLanes.map((value) => value.section.id), ['failed']);
+    expect(result.hiddenLanes.map((value) => value.section.id), ['sparse']);
+    expect(history.sessionNumber, 1);
+    expect(history.sessionsSinceSeen['first'], 0);
+    expect(history.sessionsSinceSeen.containsKey('failed'), isFalse);
+    expect(history.sessionsSinceSeen.containsKey('sparse'), isFalse);
+    expect(persistCalls, 1);
+  });
+
   test('refresh rotates nonce while reset starts a fresh session', () async {
     final only = section('only');
+    final history = HomeLabDiscoveryRotationHistory();
     final controller = HomeLabDiscoveryTabController(
       tab: HomeLabDiscoveryTab(
         id: 'movies',
@@ -140,14 +180,18 @@ void main() {
         minimumLaneCount: 1,
       ),
       sessionSeed: 'server:user',
+      rotationHistory: history,
       loadLane: (section) async => loaded(section, [1, 2]),
     );
 
     await controller.load();
     expect(controller.refreshNonce, 0);
+    expect(history.sessionsSinceSeen, isNotEmpty);
     await controller.refresh();
     expect(controller.refreshNonce, 1);
     controller.resetSession();
     expect(controller.refreshNonce, 0);
+    expect(history.sessionNumber, 0);
+    expect(history.sessionsSinceSeen, isEmpty);
   });
 }

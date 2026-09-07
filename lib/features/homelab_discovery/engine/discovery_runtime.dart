@@ -9,6 +9,8 @@ import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_lane_loader.dart';
 import '../data/discovery_membership_policy.dart';
 import 'discovery_personalisation.dart';
+import 'discovery_rotation_history.dart';
+import 'discovery_rotation_store.dart';
 import 'discovery_see_all_controller.dart';
 import 'discovery_tab_controller.dart';
 
@@ -72,12 +74,20 @@ class HomeLabDiscoveryRuntime {
     final userKey = activeClient.userId?.trim();
     final sessionSeed =
         '${activeClient.baseUrl}|${userKey?.isEmpty ?? true ? 'anonymous' : userKey}';
+    final rotationStore = HomeLabDiscoveryRotationStore();
+    final rotationHistories = await rotationStore.load(sessionSeed);
     final controllers = <String, HomeLabDiscoveryTabController>{
       for (final tab in catalogue.tabs)
         tab.id: HomeLabDiscoveryTabController(
           tab: tab,
           loadLane: loader.load,
           sessionSeed: sessionSeed,
+          rotationHistory: rotationHistories.putIfAbsent(
+            tab.id,
+            () => HomeLabDiscoveryRotationHistory(),
+          ),
+          persistRotationHistory: () =>
+              rotationStore.save(sessionSeed, rotationHistories),
         ),
     };
 
