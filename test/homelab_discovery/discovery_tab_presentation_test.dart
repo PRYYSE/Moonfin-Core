@@ -81,10 +81,10 @@ void main() {
     final b = HomeLabDiscoveryTabPresentation.compose(tab, reverse);
 
     expect(a.map((value) => value.section.id), ['first', 'second']);
-    expect(
-      a.map((value) => value.displayTitle),
-      ['Top Picks For You', 'More Picks For You'],
-    );
+    expect(a.map((value) => value.displayTitle), [
+      'Top Picks For You',
+      'More Picks For You',
+    ]);
     expect(
       b.map((value) => value.displayTitle).toList(),
       a.map((value) => value.displayTitle).toList(),
@@ -112,7 +112,12 @@ void main() {
       item(11, 'Only One'),
     ]);
     final error = StateError('boom');
-    final brokenResult = result(broken, 'Broken source title', const [], error: error);
+    final brokenResult = result(
+      broken,
+      'Broken source title',
+      const [],
+      error: error,
+    );
 
     final composed = HomeLabDiscoveryTabPresentation.compose(tab, {
       broken.id: brokenResult,
