@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:server_core/server_core.dart';
 
 import '../../../data/repositories/seerr_repository.dart';
-import '../../../data/services/media_server_client_factory.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_request_plan.dart';
@@ -23,12 +23,12 @@ abstract interface class HomeLabDiscoveryBridge {
 /// those custom filters out of Moonfin's core repository/client surface.
 class MoonfinHomeLabDiscoveryBridge implements HomeLabDiscoveryBridge {
   final SeerrRepository repository;
-  final MediaServerClientFactory clientFactory;
+  final MediaServerClient client;
   final Dio _dio;
 
   MoonfinHomeLabDiscoveryBridge({
     required this.repository,
-    required this.clientFactory,
+    required this.client,
     Dio? dio,
   }) : _dio =
            dio ??
@@ -59,7 +59,6 @@ class MoonfinHomeLabDiscoveryBridge implements HomeLabDiscoveryBridge {
       throw StateError('Seerr is not available for the active Moonfin user');
     }
 
-    final client = clientFactory.getActiveClient();
     final token = client.accessToken;
     if (token == null || token.isEmpty) {
       throw StateError('Active Moonfin server session has no access token');

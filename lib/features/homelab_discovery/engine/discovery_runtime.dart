@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:server_core/server_core.dart';
 
 import '../../../data/repositories/seerr_repository.dart';
 import '../../../data/services/media_server_client_factory.dart';
@@ -43,11 +44,11 @@ class HomeLabDiscoveryRuntime {
   ) async {
     final getIt = GetIt.instance;
     final clientFactory = getIt<MediaServerClientFactory>();
-    final activeClient = clientFactory.getActiveClient();
+    final activeClient = getIt<MediaServerClient>();
     final repository = await getIt.getAsync<SeerrRepository>();
     final bridge = MoonfinHomeLabDiscoveryBridge(
       repository: repository,
-      clientFactory: clientFactory,
+      client: activeClient,
     );
     final personalisation = HomeLabDiscoveryPersonalisation(
       serverId: activeClient.baseUrl,
@@ -58,7 +59,8 @@ class HomeLabDiscoveryRuntime {
       personalisation: personalisation,
     );
     final userKey = activeClient.userId?.trim();
-    final sessionSeed = '${activeClient.baseUrl}|${userKey?.isEmpty ?? true ? 'anonymous' : userKey}';
+    final sessionSeed =
+        '${activeClient.baseUrl}|${userKey?.isEmpty ?? true ? 'anonymous' : userKey}';
     final controllers = <String, HomeLabDiscoveryTabController>{
       for (final tab in catalogue.tabs)
         tab.id: HomeLabDiscoveryTabController(

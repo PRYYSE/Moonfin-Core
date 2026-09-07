@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../data/services/seerr/seerr_api_models.dart';
-import '../../../ui/navigation/app_router.dart';
 import '../../../ui/navigation/destinations.dart';
 import '../../../ui/widgets/media_card.dart';
 import '../../../ui/widgets/navigation_layout.dart';
@@ -40,6 +39,10 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
     final runtime = await (widget.runtimeLoad ?? HomeLabDiscoveryRuntime.create)(
       widget.catalogue,
     );
+    if (!mounted) {
+      runtime.dispose();
+      return runtime;
+    }
     _runtime = runtime;
     return runtime;
   }
@@ -62,9 +65,7 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
       future: _runtimeFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _shell(
-            const Center(child: CircularProgressIndicator()),
-          );
+          return _shell(const Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasError || snapshot.data == null) {
           return _shell(
@@ -141,10 +142,7 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
 class _HomeLabDiscoveryTabView extends StatefulWidget {
   final HomeLabDiscoveryTabController controller;
 
-  const _HomeLabDiscoveryTabView({
-    super.key,
-    required this.controller,
-  });
+  const _HomeLabDiscoveryTabView({super.key, required this.controller});
 
   @override
   State<_HomeLabDiscoveryTabView> createState() =>

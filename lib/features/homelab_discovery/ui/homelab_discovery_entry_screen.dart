@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:server_core/server_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../data/services/media_server_client_factory.dart';
 import '../../../ui/screens/seerr/seerr_discover_screen.dart';
 import '../catalogue/discovery_catalogue.dart';
 import '../catalogue/discovery_catalogue_loader.dart';
@@ -41,9 +41,7 @@ class _HomeLabDiscoveryEntryScreenState
 
   Future<HomeLabDiscoveryLoadResult> _loadDefault() async {
     try {
-      final baseUrl = GetIt.instance<MediaServerClientFactory>()
-          .getActiveClient()
-          .baseUrl;
+      final baseUrl = GetIt.instance<MediaServerClient>().baseUrl;
       if (baseUrl.trim().isEmpty) {
         return const HomeLabDiscoveryLoadResult(
           catalogue: null,
