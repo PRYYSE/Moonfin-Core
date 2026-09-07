@@ -10,7 +10,9 @@ class HomeLabDiscoveryRotationStore {
 
   Future<void> _saveTail = Future<void>.value();
 
-  Future<Map<String, HomeLabDiscoveryRotationHistory>> load(String scope) async {
+  Future<Map<String, HomeLabDiscoveryRotationHistory>> load(
+    String scope,
+  ) async {
     try {
       final preferences = await SharedPreferences.getInstance();
       final key = _key(scope);
@@ -72,7 +74,9 @@ class HomeLabDiscoveryRotationStore {
 
   String _key(String scope) {
     final normalised = scope.trim().isEmpty ? 'default' : scope.trim();
-    final encoded = base64UrlEncode(utf8.encode(normalised)).replaceAll('=', '');
+    final encoded = base64UrlEncode(
+      utf8.encode(normalised),
+    ).replaceAll('=', '');
     return '$_keyPrefix$encoded';
   }
 }
