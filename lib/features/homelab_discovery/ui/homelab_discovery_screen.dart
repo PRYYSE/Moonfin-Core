@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../data/services/seerr/seerr_api_models.dart';
 import '../../../ui/navigation/destinations.dart';
-import '../../../ui/widgets/media_card.dart';
 import '../../../ui/widgets/navigation_layout.dart';
 import '../../../util/platform_detection.dart';
 import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_lane_loader.dart';
 import '../engine/discovery_runtime.dart';
 import '../engine/discovery_tab_controller.dart';
+import 'discovery_media_card.dart';
+import 'homelab_discovery_see_all_screen.dart';
 
 class HomeLabDiscoveryScreen extends StatefulWidget {
   final HomeLabDiscoveryCatalogue catalogue;
@@ -115,6 +114,7 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
                                 'homelab-discovery-${tab.id}',
                               ),
                               controller: runtime.controllerFor(tab.id),
+                              runtime: runtime,
                             ),
                         ],
                       ),
@@ -142,8 +142,13 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
 
 class _HomeLabDiscoveryTabView extends StatefulWidget {
   final HomeLabDiscoveryTabController controller;
+  final HomeLabDiscoveryRuntime runtime;
 
-  const _HomeLabDiscoveryTabView({super.key, required this.controller});
+  const _HomeLabDiscoveryTabView({
+    super.key,
+    required this.controller,
+    required this.runtime,
+  });
 
   @override
   State<_HomeLabDiscoveryTabView> createState() =>
@@ -175,6 +180,15 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
     final next = widget.controller.refresh();
     setState(() => _loadFuture = next);
     await next;
+  }
+
+  void _openSeeAll(HomeLabDiscoveryLaneLoadResult lane) {
+    final controller = widget.runtime.seeAllControllerFor(lane.section);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => HomeLabDiscoverySeeAllScreen(controller: controller),
+      ),
+    );
   }
 
   @override
@@ -231,7 +245,13 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
                   ),
                 );
               }
-              return _DiscoveryLane(lane: lanes[index]);
+              final lane = lanes[index];
+              return _DiscoveryLane(
+                lane: lane,
+                onSeeAll: lane.section.expandable
+                    ? () => _openSeeAll(lane)
+                    : null,
+              );
             },
           ),
         );
@@ -241,11 +261,10 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
 }
 
 class _DiscoveryLane extends StatelessWidget {
-  static const _tmdbPosterBase = 'https://image.tmdb.org/t/p/w342';
-
   final HomeLabDiscoveryLaneLoadResult lane;
+  final VoidCallback? onSeeAll;
 
-  const _DiscoveryLane({required this.lane});
+  const _DiscoveryLane({required this.lane, this.onSeeAll});
 
   @override
   Widget build(BuildContext context) {
@@ -265,24 +284,38 @@ class _DiscoveryLane extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  lane.displayTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                if (subtitle != null && subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lane.displayTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      if (subtitle != null && subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
                   ),
-                ],
+                ),
+                if (onSeeAll != null)
+                  TextButton.icon(
+                    onPressed: onSeeAll,
+                    iconAlignment: IconAlignment.end,
+                    icon: const Icon(Icons.chevron_right),
+                    label: const Text('See all'),
+                  ),
               ],
             ),
           ),
@@ -294,59 +327,17 @@ class _DiscoveryLane extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               itemCount: lane.items.length,
               separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final item = lane.items[index];
-                return SizedBox(
+              itemBuilder: (context, index) => SizedBox(
+                width: cardWidth,
+                child: HomeLabDiscoveryMediaCard(
+                  item: lane.items[index],
                   width: cardWidth,
-                  child: MediaCard(
-                    title: item.displayTitle,
-                    subtitle: _subtitleFor(item),
-                    imageUrl: _posterUrl(item.posterPath),
-                    width: cardWidth,
-                    aspectRatio: 2 / 3,
-                    seerrMediaType: item.mediaType,
-                    seerrStatus: item.mediaInfo?.status,
-                    onTap: () => _openItem(context, item),
-                  ),
-                );
-              },
+                ),
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  String? _posterUrl(String? path) {
-    final trimmed = path?.trim();
-    if (trimmed == null || trimmed.isEmpty) return null;
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    return '$_tmdbPosterBase$trimmed';
-  }
-
-  String? _subtitleFor(SeerrDiscoverItem item) {
-    final parts = <String>[];
-    final date = item.releaseDate ?? item.firstAirDate;
-    if (date != null && date.length >= 4) parts.add(date.substring(0, 4));
-    final rating = item.voteAverage;
-    if (rating != null && rating > 0) {
-      parts.add(rating.toStringAsFixed(1));
-    }
-    final status = item.mediaInfo?.status;
-    if (status == 4 || status == 5) {
-      parts.add('Available');
-    } else if (status == 2 || status == 3) {
-      parts.add('Requested');
-    }
-    return parts.isEmpty ? null : parts.join('  ');
-  }
-
-  void _openItem(BuildContext context, SeerrDiscoverItem item) {
-    final mediaType = item.mediaType == 'tv' ? 'tv' : 'movie';
-    context.push(
-      Destinations.seerrMedia(item.id.toString(), mediaType: mediaType),
     );
   }
 }

@@ -9,6 +9,7 @@ import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_lane_loader.dart';
 import '../data/discovery_membership_policy.dart';
 import 'discovery_personalisation.dart';
+import 'discovery_see_all_controller.dart';
 import 'discovery_tab_controller.dart';
 
 typedef HomeLabDiscoveryRuntimeLoad =
@@ -24,20 +25,24 @@ typedef HomeLabDiscoveryRuntimeLoad =
 class HomeLabDiscoveryRuntime {
   final HomeLabDiscoveryCatalogue catalogue;
   final Map<String, HomeLabDiscoveryTabController> _controllers;
+  final HomeLabDiscoveryLaneLoader? _loader;
   final void Function()? _onDispose;
   bool _disposed = false;
 
   HomeLabDiscoveryRuntime._({
     required this.catalogue,
     required Map<String, HomeLabDiscoveryTabController> controllers,
+    required HomeLabDiscoveryLaneLoader loader,
     void Function()? onDispose,
   }) : _controllers = Map.unmodifiable(controllers),
+       _loader = loader,
        _onDispose = onDispose;
 
   HomeLabDiscoveryRuntime.forTesting({
     required this.catalogue,
     required Map<String, HomeLabDiscoveryTabController> controllers,
   }) : _controllers = Map.unmodifiable(controllers),
+       _loader = null,
        _onDispose = null;
 
   static Future<HomeLabDiscoveryRuntime> create(
@@ -79,6 +84,7 @@ class HomeLabDiscoveryRuntime {
     return HomeLabDiscoveryRuntime._(
       catalogue: catalogue,
       controllers: controllers,
+      loader: loader,
       onDispose: () {
         personalisation.clear();
         bridge.close();
@@ -87,9 +93,7 @@ class HomeLabDiscoveryRuntime {
   }
 
   HomeLabDiscoveryTabController controllerFor(String tabId) {
-    if (_disposed) {
-      throw StateError('Home Lab Discovery runtime has been disposed');
-    }
+    _assertOpen();
     final controller = _controllers[tabId];
     if (controller == null) {
       throw StateError('No Discovery controller registered for tab $tabId');
@@ -97,9 +101,29 @@ class HomeLabDiscoveryRuntime {
     return controller;
   }
 
+  HomeLabDiscoverySeeAllController seeAllControllerFor(
+    HomeLabDiscoverySection section,
+  ) {
+    _assertOpen();
+    final loader = _loader;
+    if (loader == null) {
+      throw StateError('Deep Discovery is unavailable in this test runtime');
+    }
+    return HomeLabDiscoverySeeAllController(
+      section: section,
+      loadPage: loader.loadPage,
+    );
+  }
+
   void dispose() {
     if (_disposed) return;
     _disposed = true;
     _onDispose?.call();
+  }
+
+  void _assertOpen() {
+    if (_disposed) {
+      throw StateError('Home Lab Discovery runtime has been disposed');
+    }
   }
 }
