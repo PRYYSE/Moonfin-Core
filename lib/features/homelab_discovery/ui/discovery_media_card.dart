@@ -66,9 +66,12 @@ class HomeLabDiscoveryMediaCard extends StatelessWidget {
   }
 }
 
-void openHomeLabDiscoveryItem(BuildContext context, SeerrDiscoverItem item) {
+Future<void> openHomeLabDiscoveryItem(
+  BuildContext context,
+  SeerrDiscoverItem item,
+) async {
   final mediaType = item.mediaType == 'tv' ? 'tv' : 'movie';
-  context.push(
+  await context.push<void>(
     Destinations.seerrMedia(item.id.toString(), mediaType: mediaType),
   );
 }

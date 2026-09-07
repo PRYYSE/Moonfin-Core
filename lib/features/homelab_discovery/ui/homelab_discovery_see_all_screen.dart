@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../data/services/seerr/seerr_api_models.dart';
 import '../../../ui/navigation/destinations.dart';
 import '../../../ui/widgets/navigation_layout.dart';
 import '../../../util/platform_detection.dart';
@@ -21,6 +22,8 @@ class _HomeLabDiscoverySeeAllScreenState
     extends State<HomeLabDiscoverySeeAllScreen> {
   late Future<HomeLabDiscoverySeeAllState> _initialFuture;
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<HomeLabDiscoveryTvGridState> _tvGridKey =
+      GlobalKey<HomeLabDiscoveryTvGridState>();
   HomeLabDiscoverySeeAllState? _state;
   bool _loadingMore = false;
 
@@ -85,6 +88,20 @@ class _HomeLabDiscoverySeeAllScreenState
     setState(() {
       _state = state;
       _loadingMore = false;
+    });
+    _restoreTvGridFocus();
+  }
+
+  Future<void> _openTvItem(SeerrDiscoverItem item) async {
+    await openHomeLabDiscoveryItem(context, item);
+    _restoreTvGridFocus();
+  }
+
+  void _restoreTvGridFocus() {
+    if (!mounted || !PlatformDetection.isTV) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _tvGridKey.currentState?.requestFocusFromMemory();
     });
   }
 
@@ -250,10 +267,11 @@ class _HomeLabDiscoverySeeAllScreenState
           child: RefreshIndicator(
             onRefresh: _refresh,
             child: HomeLabDiscoveryTvGrid(
+              key: _tvGridKey,
               hubKey: 'homelab-discovery:see-all:${state.section.id}',
               items: state.items,
               autofocus: true,
-              onOpenItem: (item) => openHomeLabDiscoveryItem(context, item),
+              onOpenItem: _openTvItem,
               onNearEnd: _loadMore,
               onBack: () => Navigator.of(context).maybePop(),
             ),

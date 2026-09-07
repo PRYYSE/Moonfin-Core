@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../data/services/seerr/seerr_api_models.dart';
 import '../../../ui/navigation/destinations.dart';
 import '../../../ui/widgets/navigation_layout.dart';
 import '../../../util/platform_detection.dart';
@@ -109,12 +110,13 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
                     Expanded(
                       child: TabBarView(
                         children: [
-                          for (final tab in tabs)
+                          for (var index = 0; index < tabs.length; index++)
                             _HomeLabDiscoveryTabView(
                               key: PageStorageKey<String>(
-                                'homelab-discovery-${tab.id}',
+                                'homelab-discovery-${tabs[index].id}',
                               ),
-                              controller: runtime.controllerFor(tab.id),
+                              tabIndex: index,
+                              controller: runtime.controllerFor(tabs[index].id),
                               runtime: runtime,
                             ),
                         ],
@@ -142,11 +144,13 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
 }
 
 class _HomeLabDiscoveryTabView extends StatefulWidget {
+  final int tabIndex;
   final HomeLabDiscoveryTabController controller;
   final HomeLabDiscoveryRuntime runtime;
 
   const _HomeLabDiscoveryTabView({
     super.key,
+    required this.tabIndex,
     required this.controller,
     required this.runtime,
   });
@@ -187,6 +191,25 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
     await next;
   }
 
+  Future<void> _restoreLaneFocus(
+    GlobalKey<HomeLabDiscoveryTvLaneState> laneKey,
+  ) async {
+    if (!mounted || !PlatformDetection.isTV) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      laneKey.currentState?.requestFocusFromMemory();
+    });
+  }
+
+  Future<void> _openTvItem(
+    HomeLabDiscoveryLaneLoadResult lane,
+    SeerrDiscoverItem item,
+  ) async {
+    final laneKey = _tvLaneKey(lane.section.id);
+    await openHomeLabDiscoveryItem(context, item);
+    await _restoreLaneFocus(laneKey);
+  }
+
   Future<void> _openSeeAll(HomeLabDiscoveryLaneLoadResult lane) async {
     final controller = widget.runtime.seeAllControllerFor(lane.section);
     final laneKey = _tvLaneKey(lane.section.id);
@@ -195,11 +218,7 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
         builder: (_) => HomeLabDiscoverySeeAllScreen(controller: controller),
       ),
     );
-    if (!mounted || !PlatformDetection.isTV) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      laneKey.currentState?.requestFocusFromMemory();
-    });
+    await _restoreLaneFocus(laneKey);
   }
 
   GlobalKey<HomeLabDiscoveryTvLaneState> _tvLaneKey(String sectionId) {
@@ -210,9 +229,11 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
   }
 
   void _scheduleInitialTvFocus(List<HomeLabDiscoveryLaneLoadResult> lanes) {
+    final tabController = DefaultTabController.of(context);
     if (!PlatformDetection.isTV ||
         _didRequestInitialTvFocus ||
         lanes.isEmpty ||
+        tabController.index != widget.tabIndex ||
         !TickerMode.of(context)) {
       return;
     }
@@ -318,7 +339,7 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
                   key: _tvLaneKey(lane.section.id),
                   tabId: widget.controller.tab.id,
                   lane: lane,
-                  onOpenItem: (item) => openHomeLabDiscoveryItem(context, item),
+                  onOpenItem: (item) => _openTvItem(lane, item),
                   onSeeAll: onSeeAll,
                   onVerticalNavigation: (isUp) =>
                       _moveTvFocus(lanes, index, isUp),

@@ -86,10 +86,17 @@ class HomeLabDiscoveryTvGridState extends State<HomeLabDiscoveryTvGrid> {
       _focusedIndex = 0;
     } else {
       _focusedIndex = _focusedIndex.clamp(0, widget.items.length - 1);
+      if (!identical(oldWidget.items, widget.items)) {
+        _lastNearEndItemCount = null;
+      }
     }
     _syncItemKeys();
     if (_hasFocus) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToFocused());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scrollToFocused();
+        _maybeNotifyNearEnd();
+      });
     }
   }
 
