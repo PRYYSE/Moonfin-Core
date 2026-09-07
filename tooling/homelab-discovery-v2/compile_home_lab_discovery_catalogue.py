@@ -2,8 +2,9 @@
 """Compile the Home Lab Discovery authoring catalogue to executable schema v2.
 
 Keyword/provider names are resolved from current server-produced lookup maps.
-Unresolved semantic lanes fail closed and are omitted with diagnostics instead
-of silently becoming broad, misleading discovery queries.
+Reviewed semantic external-list placeholders are converted to normal executable
+Discovery queries. Anything unresolved fails closed and is omitted with
+explicit diagnostics instead of silently becoming a broad/misleading query.
 
 Expected lookup inputs may be either:
   {"name": 123, ...}
@@ -20,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import generate_home_lab_discovery_catalogue as authoring
+import resolve_home_lab_discovery_external_lists as external_lists
 
 
 def normalise(value: str) -> str:
@@ -40,7 +42,11 @@ def load_lookup(path: Path | None) -> dict[str, int]:
         return lookup
     if isinstance(raw, list):
         for item in raw:
-            if not isinstance(item, dict) or item.get("name") is None or item.get("id") is None:
+            if (
+                not isinstance(item, dict)
+                or item.get("name") is None
+                or item.get("id") is None
+            ):
                 continue
             lookup[normalise(str(item["name"]))] = int(item["id"])
         return lookup
@@ -85,7 +91,11 @@ PROVIDER_ALIASES = {
 }
 
 
-def resolve_one(name: str, lookup: dict[str, int], aliases: dict[str, tuple[str, ...]]) -> int | None:
+def resolve_one(
+    name: str,
+    lookup: dict[str, int],
+    aliases: dict[str, tuple[str, ...]],
+) -> int | None:
     key = normalise(name)
     candidates = (key, *aliases.get(key, ()))
     for candidate in candidates:
@@ -111,6 +121,23 @@ def resolve_many(
     return ids, unresolved
 
 
+def _resolve_external_section(section: dict[str, Any]) -> str | None:
+    query = section["query"]
+    if query.get("source") != "externalList":
+        return None
+
+    list_id = query.get("listId")
+    resolution = external_lists.resolve(list_id)
+    if resolution is None:
+        return f"externalList:{list_id or 'missing-id'}"
+
+    title = resolution.get("title")
+    if isinstance(title, str) and title.strip():
+        section["title"] = title.strip()
+    section["query"] = resolution["query"]
+    return "resolved"
+
+
 def compile_catalogue(
     keyword_lookup: dict[str, int],
     provider_lookup: dict[str, int],
@@ -120,19 +147,33 @@ def compile_catalogue(
         "droppedSections": [],
         "resolvedKeywordSections": 0,
         "resolvedProviderSections": 0,
+        "resolvedExternalListSections": 0,
         "remainingSections": {},
     }
 
     for tab in catalogue["tabs"]:
         compiled_sections: list[dict[str, Any]] = []
         for section in tab["sections"]:
+            external_state = _resolve_external_section(section)
+            if external_state not in (None, "resolved"):
+                diagnostics["droppedSections"].append(
+                    {"id": section["id"], "unresolved": [external_state]}
+                )
+                continue
+            if external_state == "resolved":
+                diagnostics["resolvedExternalListSections"] += 1
+
             query = section["query"]
             filters = dict(query.get("filters") or {})
             unresolved: list[str] = []
 
             keyword_names = list(query.get("keywordNames") or [])
             if keyword_names:
-                ids, missing = resolve_many(keyword_names, keyword_lookup, KEYWORD_ALIASES)
+                ids, missing = resolve_many(
+                    keyword_names,
+                    keyword_lookup,
+                    KEYWORD_ALIASES,
+                )
                 unresolved.extend(f"keyword:{name}" for name in missing)
                 if not missing:
                     filters["keywords"] = ",".join(str(value) for value in ids)
@@ -141,21 +182,36 @@ def compile_catalogue(
 
             exclude_names = list(query.get("excludeKeywordNames") or [])
             if exclude_names:
-                ids, missing = resolve_many(exclude_names, keyword_lookup, KEYWORD_ALIASES)
+                ids, missing = resolve_many(
+                    exclude_names,
+                    keyword_lookup,
+                    KEYWORD_ALIASES,
+                )
                 unresolved.extend(f"excludeKeyword:{name}" for name in missing)
                 if not missing:
-                    filters["excludeKeywords"] = ",".join(str(value) for value in ids)
+                    filters["excludeKeywords"] = ",".join(
+                        str(value) for value in ids
+                    )
                 query.pop("excludeKeywordNames", None)
 
             provider_names = list(query.get("providerNames") or [])
             if provider_names:
-                ids, missing = resolve_many(provider_names, provider_lookup, PROVIDER_ALIASES)
+                ids, missing = resolve_many(
+                    provider_names,
+                    provider_lookup,
+                    PROVIDER_ALIASES,
+                )
                 unresolved.extend(f"provider:{name}" for name in missing)
                 if not missing:
                     # Current Seerr WatchProviderSelector serialises multiple
                     # provider IDs with `|` and pairs them with watchRegion.
-                    filters["watchProviders"] = "|".join(str(value) for value in ids)
-                    filters.setdefault("watchRegion", catalogue.get("defaultRegion", "AU"))
+                    filters["watchProviders"] = "|".join(
+                        str(value) for value in ids
+                    )
+                    filters.setdefault(
+                        "watchRegion",
+                        catalogue.get("defaultRegion", "AU"),
+                    )
                     diagnostics["resolvedProviderSections"] += 1
                 query.pop("providerNames", None)
 
@@ -187,6 +243,9 @@ def compile_catalogue(
     catalogue["compileDiagnostics"] = {
         "resolvedKeywordSections": diagnostics["resolvedKeywordSections"],
         "resolvedProviderSections": diagnostics["resolvedProviderSections"],
+        "resolvedExternalListSections": diagnostics[
+            "resolvedExternalListSections"
+        ],
         "droppedSectionCount": len(diagnostics["droppedSections"]),
     }
     _validate_compiled(catalogue)
@@ -204,14 +263,30 @@ def _validate_compiled(catalogue: dict[str, Any]) -> None:
                 raise ValueError(f"Duplicate compiled section id: {section_id}")
             section_ids.add(section_id)
             query = section["query"]
-            if query.get("keywordNames") or query.get("excludeKeywordNames") or query.get("providerNames"):
+            if (
+                query.get("keywordNames")
+                or query.get("excludeKeywordNames")
+                or query.get("providerNames")
+            ):
                 raise ValueError(f"Unresolved semantic fields remain in {section_id}")
+            if query.get("source") == "externalList":
+                raise ValueError(f"Unresolved externalList remains in {section_id}")
+            if query.get("listProvider") or query.get("listId"):
+                raise ValueError(f"Opaque list metadata remains in {section_id}")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--keyword-map", type=Path, help="Current exact Seerr/TMDb keyword name-to-id map")
-    parser.add_argument("--provider-map", type=Path, help="Current AU watch-provider name-to-id map")
+    parser.add_argument(
+        "--keyword-map",
+        type=Path,
+        help="Current exact Seerr/TMDb keyword name-to-id map",
+    )
+    parser.add_argument(
+        "--provider-map",
+        type=Path,
+        help="Current AU watch-provider name-to-id map",
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--diagnostics", type=Path)
     parser.add_argument("--check", action="store_true")
@@ -227,10 +302,16 @@ def main() -> int:
         return 0
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(catalogue, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(catalogue, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     if args.diagnostics:
         args.diagnostics.parent.mkdir(parents=True, exist_ok=True)
-        args.diagnostics.write_text(json.dumps(diagnostics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        args.diagnostics.write_text(
+            json.dumps(diagnostics, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
     return 0
 
 

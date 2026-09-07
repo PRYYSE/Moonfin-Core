@@ -4,6 +4,7 @@ import unittest
 
 import compile_home_lab_discovery_catalogue as compiler
 import generate_home_lab_discovery_catalogue as generator
+import resolve_home_lab_discovery_external_lists as external_lists
 
 
 class CatalogueTests(unittest.TestCase):
@@ -17,6 +18,9 @@ class CatalogueTests(unittest.TestCase):
                 keyword_names.extend(query.get("keywordNames") or [])
                 keyword_names.extend(query.get("excludeKeywordNames") or [])
                 provider_names.extend(query.get("providerNames") or [])
+        external_keywords, external_providers = external_lists.semantic_names()
+        keyword_names.extend(external_keywords)
+        provider_names.extend(external_providers)
         keywords = {
             compiler.normalise(name): index + 1000
             for index, name in enumerate(dict.fromkeys(keyword_names))
@@ -62,12 +66,26 @@ class CatalogueTests(unittest.TestCase):
         self.assertIn("Anime Starter Pack", titles)
         self.assertIn("Best Anime Movies", titles)
 
+    def test_all_reviewed_external_list_placeholders_have_resolutions(self):
+        catalogue = generator.build()
+        list_ids = {
+            section["query"].get("listId")
+            for tab in catalogue["tabs"]
+            for section in tab["sections"]
+            if section["query"].get("source") == "externalList"
+        }
+        self.assertEqual(len(list_ids), 23)
+        self.assertNotIn(None, list_ids)
+        self.assertEqual(list_ids, set(external_lists.EXTERNAL_LIST_RESOLUTIONS))
+        self.assertIsNone(external_lists.resolve("unknown-home-lab-list"))
+
     def test_full_synthetic_lookup_compiles_all_authoring_lanes(self):
         keywords, providers = self._lookups()
         catalogue, diagnostics = compiler.compile_catalogue(keywords, providers)
         counts = {tab["id"]: len(tab["sections"]) for tab in catalogue["tabs"]}
         self.assertEqual(sum(counts.values()), 486)
         self.assertEqual(diagnostics["droppedSections"], [])
+        self.assertEqual(diagnostics["resolvedExternalListSections"], 23)
 
         for tab in catalogue["tabs"]:
             for section in tab["sections"]:
@@ -75,6 +93,34 @@ class CatalogueTests(unittest.TestCase):
                 self.assertNotIn("keywordNames", query)
                 self.assertNotIn("excludeKeywordNames", query)
                 self.assertNotIn("providerNames", query)
+                self.assertNotEqual(query["source"], "externalList")
+                self.assertNotIn("listProvider", query)
+                self.assertNotIn("listId", query)
+
+    def test_external_list_resolution_uses_truthful_executable_queries(self):
+        keywords, providers = self._lookups()
+        catalogue, _ = compiler.compile_catalogue(keywords, providers)
+        sections = {
+            section["id"]: section
+            for tab in catalogue["tabs"]
+            for section in tab["sections"]
+        }
+
+        ghibli = sections["anime-studio-studio-ghibli-films"]
+        self.assertEqual(ghibli["query"]["source"], "discoverMovies")
+        self.assertEqual(ghibli["query"]["filters"]["studio"], "10342")
+
+        sunrise = sections["anime-studio-sunrise-spotlight"]
+        self.assertEqual(sunrise["title"], "Classic Mecha Anime Spotlight")
+        self.assertEqual(sunrise["query"]["source"], "discoverTv")
+        self.assertIn("keywords", sunrise["query"]["filters"])
+
+        international = sections["anime-global-influenced"]
+        self.assertEqual(
+            international["title"],
+            "English-Language Animation Spotlight",
+        )
+        self.assertEqual(international["query"]["filters"]["language"], "en")
 
     def test_semantic_aliases_still_require_exact_upstream_names(self):
         lookup = {
@@ -85,23 +131,43 @@ class CatalogueTests(unittest.TestCase):
             "superhero": 105,
         }
         self.assertEqual(
-            compiler.resolve_one("Serial Killers", lookup, compiler.KEYWORD_ALIASES),
+            compiler.resolve_one(
+                "Serial Killers",
+                lookup,
+                compiler.KEYWORD_ALIASES,
+            ),
             101,
         )
         self.assertEqual(
-            compiler.resolve_one("Post-Apocalyptic", lookup, compiler.KEYWORD_ALIASES),
+            compiler.resolve_one(
+                "Post-Apocalyptic",
+                lookup,
+                compiler.KEYWORD_ALIASES,
+            ),
             102,
         )
         self.assertEqual(
-            compiler.resolve_one("Based on True Events", lookup, compiler.KEYWORD_ALIASES),
+            compiler.resolve_one(
+                "Based on True Events",
+                lookup,
+                compiler.KEYWORD_ALIASES,
+            ),
             103,
         )
         self.assertEqual(
-            compiler.resolve_one("Video Games", lookup, compiler.KEYWORD_ALIASES),
+            compiler.resolve_one(
+                "Video Games",
+                lookup,
+                compiler.KEYWORD_ALIASES,
+            ),
             104,
         )
         self.assertEqual(
-            compiler.resolve_one("Superheroes", lookup, compiler.KEYWORD_ALIASES),
+            compiler.resolve_one(
+                "Superheroes",
+                lookup,
+                compiler.KEYWORD_ALIASES,
+            ),
             105,
         )
         self.assertIsNone(
