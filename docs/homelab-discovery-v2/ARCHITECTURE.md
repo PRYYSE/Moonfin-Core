@@ -1,187 +1,161 @@
 # Home Lab Moonfin — Base + Discovery v2 Architecture
 
-**Decision date:** 2026-09-06
+**Decision date:** 2026-09-06  
+**Updated:** 2026-09-07
 
 ## 1. Decision
 
-The production development model is now:
+Production development model:
 
 > **Official stable Moonfin + a deliberately small Home Lab Discovery overlay + server-driven Discovery catalogue.**
 
-The current broad Home Lab fork is retained only as a rollback/reference source while the replacement is built and validated.
+The broad legacy Home Lab fork remains only as rollback/reference while the replacement is built and validated.
 
 Maintained clients:
 
-- Web
-- Android mobile/tablet
-- Google TV / Android TV
+1. Web
+2. Android mobile/tablet
+3. Google TV / Android TV
+4. LG TV / webOS
 
-Retired:
+LG webOS was temporarily considered retired during the pivot, but that decision was reversed on 2026-09-07. It is a first-class maintained target.
 
-- LG webOS
+## 2. Quality principle
 
-## 2. Why this replaces the old model
+The v2 architecture exists to improve maintainability without sacrificing Discovery quality. Do not choose a smaller or faster implementation merely because it is quicker. Prefer the implementation that is correct, polished, testable and resilient to upstream updates.
 
-The accepted legacy Web source (`a9c789...`) sits 346 commits ahead of the old fork base and changes broad upstream areas, including Home, navigation, Seerr repository/client, DI, browse presentation and deployment tooling.
+Earlier work may be replaced when there is a concrete correctness, UX, architecture or maintainability improvement.
 
-Current official Moonfin now contains much of the platform, Seerr, TV-focus and UI capability that the old project had to build itself. Continuing the old branch would make every upstream release a porting project rather than a small compatibility update.
+## 3. Why this replaces the old model
 
-The new design preserves the unique Discovery product while returning everything else to upstream ownership.
+The accepted legacy Web source `a9c789fff317b41bba268d3a213439e23b8d1af5` accumulated broad changes across Home, navigation, Seerr integration, DI, browse presentation and deployment tooling. Current official Moonfin now owns much of the platform/UI/Seerr/TV capability the old fork had to build itself.
 
-## 3. Upstream policy
+V2 keeps the unique Discovery product while returning unrelated behaviour to upstream ownership.
 
-At the architecture decision point:
+## 4. Upstream policy
 
-- Moonfin stable: `2.5.1`
-- stable commit: `f18c45b1fbf9b63871b4f93237179f9706154763`
-- upstream `main`: `508f052f4da725b1f520f4a73b64330d43c86f92`
-- Moonbase stable: `2.2.0`
-- Flutter for Moonfin 2.5.1: `3.44.1`
+Selected production baseline:
 
-Production is always based on a stable release tag.
+- Moonfin stable 2.5.1
+- stable commit `f18c45b1fbf9b63871b4f93237179f9706154763`
+- upstream `main` at decision `508f052f4da725b1f520f4a73b64330d43c86f92`
+- Moonbase stable 2.2.0
+- Flutter 3.44.1
 
-Upstream `main` may be replayed in CI as a compatibility canary but never auto-deployed.
+Production follows stable release tags. Upstream `main` is compatibility-canary only and is never auto-deployed.
 
-## 4. Git topology
+## 5. Git topology
+
+### Moonfin Flutter client
 
 Repository: `PRYYSE/Moonfin-Core`
 
-- `main` — exact mirror of official upstream `main`.
-- `homelab/discovery-v2` — production Home Lab overlay based on latest selected stable tag.
-- optional `homelab/discovery-v2-canary` — warning-only compatibility replay on upstream `main`.
-- `archive/*` — immutable historical references.
+- `main`: mirror of official upstream main.
+- `homelab/discovery-v2`: Home Lab overlay based on selected stable tag.
+- `archive/*`: immutable recovery refs.
+- legacy Home Lab branches remain available as historical/reference sources.
 
-Custom work must never land directly on `main`.
+Custom work does not land directly on `main`.
 
-## 5. Client code boundary
+### LG webOS wrapper
 
-All Home Lab product code should live under:
+Repository: `PRYYSE/Smart-TV`
 
-```text
-lib/features/homelab_discovery/
-```
+- maintained branch `homelab/webos-v1-staging`
+- current candidate source `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`
+- candidate tag `homelab-webos-v1-candidate` -> same commit
+- beta tag `homelab-webos-beta-latest` -> `264988874b330b11b5ca54fbf2115e42b5662d34`
 
-Preferred structure:
+Do not collapse the Smart-TV wrapper into Moonfin-Core merely for convenience. It is a separate platform package with different compatibility constraints.
 
-```text
-lib/features/homelab_discovery/
-├── bridge/
-│   └── moonfin_discovery_bridge.dart
-├── catalogue/
-│   ├── discovery_catalogue.dart
-│   ├── discovery_catalogue_loader.dart
-│   └── discovery_catalogue_validator.dart
-├── engine/
-│   ├── discovery_composer.dart
-│   ├── discovery_dedup.dart
-│   ├── discovery_rotation.dart
-│   └── discovery_personalisation.dart
-├── data/
-│   ├── discovery_lane_loader.dart
-│   └── discovery_paginator.dart
-├── ui/
-│   ├── homelab_discovery_entry_screen.dart
-│   ├── homelab_discovery_screen.dart
-│   ├── discovery_catalogue_screen.dart
-│   └── discovery_refinement_sheet.dart
-└── README.md
-```
+## 6. Flutter client code boundary
 
-### Anti-corruption bridge
+Home Lab Flutter product code lives under:
 
-Most custom code should depend on one narrow bridge instead of importing many Moonfin internals directly.
+`lib/features/homelab_discovery/`
 
-The bridge exposes only capabilities Discovery genuinely needs, for example:
+Preferred responsibilities:
 
-- current Seerr availability/session state;
-- trending/top/upcoming/search/discover movie/TV calls;
-- similar/recommendation/person/collection calls where needed;
-- current media details/request state;
-- official route helpers for media details and requests;
-- Jellyfin/session identity needed for per-user local caching.
+- `catalogue/`: schema, validation, loading/cache;
+- `engine/`: deterministic composition, session policy, personalisation/presentation;
+- `data/`: lane loading, request plans, pagination;
+- `bridge/`: narrow adapter into stock Moonfin/Seerr capabilities;
+- `ui/`: Discovery entry, landing tabs/lanes and deep browse.
 
-If upstream changes internal APIs, the bridge should absorb the change first.
-
-## 6. Upstream files allowed to differ
-
-Target is one mandatory upstream integration change plus very small build/release integration if needed.
-
-### Mandatory
+The only mandatory core Moonfin product integration point is:
 
 `lib/ui/navigation/app_router.dart`
 
-Change only the Seerr Discovery route from stock `SeerrDiscoverScreen` to a guarded `HomeLabDiscoveryEntryScreen`.
+The Seerr Discovery route is replaced with guarded `HomeLabDiscoveryEntryScreen`. The route change is generated/checkable by `tooling/homelab-discovery-v2/apply_route_overlay.py`.
 
-### Optional and only if proven necessary
+Optional non-feature changes are limited to small build/release integration that is proven necessary.
 
-- update-feed repository build-time selection;
-- Home Lab beta version/build metadata;
-- CI workflow files.
+Do not modify stock Home, player, themes, generic navigation, standard Seerr repository/client or DI merely to implement Discovery.
 
-Do not modify official Home, navigation bars, player, standard Seerr repository/client, DI, themes or generic browse screens merely to implement Discovery.
+## 7. Anti-corruption bridge
 
-## 7. Guarded fallback is mandatory
+Discovery depends on a narrow bridge rather than broad Moonfin internals. The bridge absorbs upstream API churn and exposes only what Discovery needs: authenticated Seerr access, request-plan execution, active server/session identity, media details/request routing and other proven capabilities.
 
-The Home Lab route must fail safe.
+Stock Moonfin remains authoritative for:
 
-At startup:
-
-1. load the Discovery catalogue;
-2. validate schema/capabilities;
-3. if valid, render Home Lab Discovery;
-4. if missing, invalid, unsupported or unavailable, render official `SeerrDiscoverScreen`.
-
-Individual bad lanes should be omitted/fallback-filled rather than breaking the entire page.
-
-This means a catalogue outage or future schema incompatibility does not remove Seerr discovery from the app.
-
-## 8. What official Moonfin owns
-
-Use upstream implementations for:
-
-- Jellyfin connection/session state;
-- Seerr auth/session/bootstrap;
-- requests and request status;
-- media detail screens/routes;
-- cards/artwork where suitable;
+- Jellyfin session/auth;
+- Seerr bootstrap/session/request handling;
+- media detail routes;
+- playback/downloads;
+- cards/design system where suitable;
 - platform detection;
 - touch/keyboard input;
-- Android TV D-pad/focus primitives;
-- standard browse/filter capability where sufficient;
-- themes;
-- playback;
-- downloads;
-- general Home and navigation.
+- Android TV focus/D-pad primitives;
+- themes and general navigation.
 
-Do not port old modified copies of these systems unless a concrete gap is demonstrated.
+## 8. Guarded fallback
 
-## 9. What Home Lab Discovery retains
+The custom route must fail safe:
 
-Preserve the unique product behaviour from the legacy system:
+1. load catalogue;
+2. validate schema/capabilities;
+3. valid -> render Home Lab Discovery;
+4. missing/invalid/unsupported/unavailable -> render stock `SeerrDiscoverScreen`.
+
+Individual bad lanes fail independently. A bad catalogue or one failed lane must not remove stock Seerr discovery from the app.
+
+## 9. Discovery product behaviour retained
+
+Preserve and improve the useful legacy behaviour:
 
 - 486-lane authoring catalogue;
-- 481-lane accepted compiled semantic baseline;
-- safe semantic compiler;
-- For You / Movies / Series / Anime / New & Upcoming / Lists / All Categories;
-- deep rows -> See All -> pagination;
-- personalised lanes;
+- accepted 481-lane semantic regression baseline;
+- For You, Movies, Series, Anime, New & Upcoming, Lists;
+- Jellyfin-driven personalisation;
+- deterministic session composition/rotation;
+- cross-row novelty/dedup with graceful backfill;
+- personalised row-title uniqueness;
 - title-family diversification;
-- cross-row and session deduplication;
-- deterministic session rotation;
-- safe backfill;
-- genre/theme/keyword/runtime/year/language/country/provider-style discovery where supported;
-- curated/external lists;
-- catalogue index/refinement/rabbit-hole navigation;
-- request/availability overlays;
-- local Jellyfin routing.
+- landing previews plus deep `See All` pagination;
+- curated filters/lists where semantically supported;
+- request/availability status;
+- local Jellyfin routing;
+- catalogue index/refinement/rabbit-hole navigation where it improves discovery.
 
 Port behaviour and tests, not old integration history.
 
-## 10. Server-driven catalogue
+## 10. Deterministic concurrency rule
 
-The compiled Discovery catalogue is configuration/data, not client source.
+Lane network/personalisation fetches may execute concurrently. Cross-row presentation state must never be mutated inside those concurrent fetches.
 
-Canonical server root:
+Required sequence:
+
+1. deterministic composer selects lane order;
+2. lane fetches execute, potentially concurrently;
+3. results are stored by section ID;
+4. a pure post-fetch stage walks the selected catalogue order;
+5. title uniqueness/family diversity/cross-row presentation is applied there.
+
+Visible output must not depend on network completion order.
+
+## 11. Server-driven catalogue
+
+Canonical future root:
 
 ```text
 /srv/appdata/moonfin/
@@ -198,170 +172,146 @@ Canonical server root:
     └── tv/
 ```
 
-The Web release should include/copy the current compiled catalogue to:
+Web exposes the current compiled catalogue at:
 
-```text
-homelab/discovery.catalogue.json
-```
+`/Moonfin/Web/homelab/discovery.catalogue.json`
 
-which becomes available at:
+Catalogue data contains no secrets or per-user personal data. Client validates it, keeps per-server last-known-good data and falls back to stock Discovery if no valid catalogue exists.
 
-```text
-/Moonfin/Web/homelab/discovery.catalogue.json
-```
+Catalogue-only edits should not require rebuilding clients.
 
-The JSON contains no secrets and no per-user personal data.
+## 12. Moonbase
 
-Recommended metadata fields:
+Return to official stock Moonbase. Use official `MOONFIN_WEB_ROOT` to serve an external persistent Web release rather than maintaining a custom Moonbase frontend fork.
 
-- `schemaVersion`
-- `catalogueRevision`
-- `generatedAt`
-- optional `minimumDiscoveryCapability`
+Cutover must retain:
 
-Client behaviour:
+- previous Web releases;
+- exact current symlink target;
+- official bundled Web emergency fallback;
+- one-command rollback.
 
-- validate before use;
-- keep a last-known-good validated cache;
-- background refresh;
-- use cached catalogue during temporary server failure;
-- fall back to stock Discovery if no valid custom catalogue exists.
+## 13. Android mobile + Android TV
 
-Catalogue-only edits should not require rebuilding Web/mobile/TV.
+Official flavours:
 
-## 11. Moonbase
-
-Return to official stock Moonbase.
-
-Official Moonbase supports `MOONFIN_WEB_ROOT`; use it rather than patching Moonbase to host a custom frontend.
-
-Target Compose behaviour:
-
-- bind `/srv/appdata/moonfin/web` into the Jellyfin/Moonbase container read-only;
-- point `MOONFIN_WEB_ROOT` at the `current` release directory;
-- keep each previous Web release intact for rollback;
-- retain official bundled Web as emergency fallback.
-
-No custom Moonbase catalogue endpoint should exist unless static serving later proves insufficient.
-
-## 12. Android mobile + Google TV
-
-Use official flavours:
-
-- Android mobile/tablet: `mobile-beta`
+- mobile/tablet: `mobile-beta`
 - Google TV / Android TV: `androidTv-beta`
 
-Never use the mobile APK as the final Google TV release.
+Never use the mobile APK as the final TV package.
 
-Preserve the existing Home Lab signing key at `/srv/appdata/moonfin/android-signing` and its existing certificate. Never regenerate it.
+Preserve signing root `/srv/appdata/moonfin/android-signing` and certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`. Never regenerate signing. Version code must increase from accepted baseline `30000147`.
 
-Version codes must increase from the accepted Home Lab Android baseline `30000147`.
+## 14. LG webOS architecture
 
-The official production Moonfin app may remain installed side-by-side as an emergency fallback because Home Lab builds use the beta namespace.
+webOS remains in `PRYYSE/Smart-TV`, not Flutter Moonfin-Core.
 
-## 13. Update strategy
+Recovered candidate facts:
 
-For each new official stable release:
+- branch/tag commit `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`
+- tree SHA of that commit `7424826381c91d3293f44bd1d41e65024c595fb9`
+- app ID `org.moonfin.webos`
+- version 2.7.0
+- build package `packages/build-webos/`
+- existing Home Lab CI produces `Moonfin_HomeLab_webOS.ipk` plus checksum/manifest and publishes the staging candidate prerelease
+- `appinfo.json` retains `disableBackHistoryAPI: true` and `handlesRelaunch: true`.
 
-1. fetch official release tag and paired Moonbase stable release;
-2. create/update integration branch from that client tag;
-3. replay/rebase the small Discovery overlay;
-4. run upstream tests plus Home Lab Discovery tests;
-5. build Web, `mobile-beta`, `androidTv-beta`;
-6. perform three-client acceptance gates;
-7. promote only exact tested artefacts.
+Preservation rules:
 
-If an update creates broad conflicts, do not solve it by expanding the fork. Shrink/rework the integration boundary.
+- do not change `org.moonfin.webos` merely to make deployment easier;
+- do not regenerate an incompatible package/update identity;
+- retain existing launch/install route and candidate release path;
+- treat legacy WebKit/rendering, remote focus, Back, relaunch/resume and playback behaviour as platform-specific gates;
+- real-device acceptance on the LG OLED65C6PSA is required before promotion.
 
-## 14. APK updater caveat
+The replacement webOS package may consume the new Web/Discovery experience only through an integration compatible with this wrapper architecture. Do not assume Android TV behaviour proves webOS behaviour.
 
-The official APK updater currently targets official Moonfin release assets. A Home Lab beta should not silently replace itself with an official-production APK.
+## 15. CI policy
 
-Initial safe behaviour: suppress/avoid upstream APK update prompts for Home Lab builds.
+Discovery v2 CI is a validator, not a source mutator.
 
-Preferred final implementation: make update repository/feed a build-time setting with official upstream as the default and PRYYSE/Home Lab release assets for custom beta builds.
+Required source gates:
 
-Keep this patch generic and tiny; consider upstreaming it later.
+- route overlay check;
+- authoring catalogue generation/check + tests;
+- Dart format check;
+- focused analysis;
+- focused Discovery tests;
+- narrow custom-scope check against stable base.
 
-## 15. CI gates
+CI uses read-only contents permission. Formatting and generated route changes must be committed deliberately before CI.
 
-Before deployment:
+Later release pipelines add reproducible Web, `mobile-beta`, `androidTv-beta` and webOS package builds without weakening the focused source gates.
 
-### Source/upstream
-
-- exact upstream stable tag recorded;
-- custom diff narrow and explainable;
-- no unexpected changes outside feature/integration files;
-- no secrets committed.
-
-### Discovery
-
-- schema validation;
-- missing/invalid catalogue fallback test;
-- semantic compiler diagnostics;
-- no unexplained lane regression below accepted 481 baseline;
-- personalisation/dedup/family tests;
-- pagination/See All tests;
-- deterministic composition tests.
+## 16. Client acceptance
 
 ### Web
 
-- pointer/touch tab activation;
-- keyboard activation;
-- all Discovery destinations;
-- See All/deep browse;
-- request route;
-- local media route;
-- stock fallback.
+- mouse/touch/keyboard tabs and cards;
+- responsive layout;
+- deep See All;
+- details/request/local media routes;
+- stock fallback;
+- back/refresh behaviour.
 
-### Android mobile
+### Android mobile/tablet
 
-- same signing certificate;
-- higher versionCode;
-- touch navigation;
+- touch/scroll;
+- portrait/landscape;
+- back gesture/button;
+- background/resume;
 - details/request/playback;
-- resume/background;
-- catalogue + fallback.
+- catalogue/fallback.
 
-### Google TV
+### Google TV / Android TV
 
 - correct TV flavour/launcher;
-- D-pad navigation;
+- D-pad focus traversal;
 - no focus traps;
 - focus restoration/back;
-- horizontal rows;
-- Discovery tabs and See All grids;
-- request route;
-- playback validation.
+- horizontal rows and See All grids;
+- request/details/playback.
 
-### Upgrade/rollback
+### LG webOS
 
-- previous Web release retained;
-- previous APKs retained;
-- Moonbase/config backup;
-- exact current symlink recorded;
-- one-command Web rollback;
-- bundled stock Web fallback retained.
+- package installs/upgrades under existing app ID;
+- remote navigation and visible focus;
+- Back semantics;
+- app launch/relaunch/resume;
+- Web rendering compatibility;
+- auth persistence;
+- Discovery tabs/rows/deep browse;
+- request/details/playback behaviour.
 
-## 16. Migration order
+## 17. Upgrade strategy
 
-1. Archive/freeze legacy Git and artefact references.
-2. Synchronise fork `main` to official upstream.
-3. Create stable-tag `homelab/discovery-v2` branch.
-4. Build keep/adapt/drop matrix.
-5. Prove clean current stock baseline in CI.
-6. Port isolated Discovery feature.
-7. Add guarded fallback.
-8. Move catalogue to server-driven static model.
-9. Validate Web.
-10. Build/validate Android mobile beta.
-11. Build/validate Android TV beta.
-12. Prepare official Moonbase + `MOONFIN_WEB_ROOT` cutover.
-13. Execute controlled server migration only when user is available to run commands.
-14. Publish/retain exact artefacts and update handover.
+For each new official stable Moonfin release:
 
-## 17. Long-term ideal
+1. record exact client tag and paired Moonbase stable;
+2. replay/rebase the narrow Discovery overlay onto the stable client;
+3. run source/catalogue/Discovery tests;
+4. build Web, `mobile-beta`, `androidTv-beta`;
+5. feed the tested compatible Web experience into the preserved Smart-TV webOS packaging path;
+6. perform four-client acceptance;
+7. promote only exact tested artefacts.
 
-Make the custom catalogue integration generic enough to upstream.
+If an upstream update causes broad conflicts, reduce/rework the integration boundary instead of expanding the fork.
 
-If official Moonfin eventually supports a compatible server-driven custom Discovery catalogue, Home Lab can move to fully stock client binaries and retain only server-side catalogue/configuration.
+## 18. Migration order
+
+1. Preserve legacy refs/artefacts.
+2. Keep fork main aligned with upstream.
+3. Build/verify Discovery v2 on stable tag.
+4. Complete controller/data integration and polished UI.
+5. Complete See All/deep browse and semantic regression testing.
+6. Build/validate Web.
+7. Build/validate Android mobile beta.
+8. Build/validate Android TV beta.
+9. Integrate/build/validate webOS candidate through Smart-TV wrapper.
+10. Prepare stock Moonbase + external Web-root cutover and rollback.
+11. Execute controlled server migration only when the user is available.
+12. Perform physical-client acceptance before retiring the legacy live installation.
+
+## 19. Long-term ideal
+
+Keep the Discovery integration generic and narrow enough that upstream could eventually support the same server-driven catalogue contract. The best end state is fully stock client binaries plus Home Lab server-side catalogue/configuration, but only if that preserves the desired Discovery product quality.
