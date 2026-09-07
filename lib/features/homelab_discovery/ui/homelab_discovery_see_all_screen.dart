@@ -5,6 +5,7 @@ import '../../../ui/widgets/navigation_layout.dart';
 import '../../../util/platform_detection.dart';
 import '../engine/discovery_see_all_controller.dart';
 import 'discovery_media_card.dart';
+import 'discovery_tv_grid.dart';
 
 class HomeLabDiscoverySeeAllScreen extends StatefulWidget {
   final HomeLabDiscoverySeeAllController controller;
@@ -135,6 +136,8 @@ class _HomeLabDiscoverySeeAllScreenState
   }
 
   Widget _buildGrid(HomeLabDiscoverySeeAllState state) {
+    if (PlatformDetection.isTV) return _buildTvGrid(state);
+
     return RefreshIndicator(
       onRefresh: _refresh,
       child: CustomScrollView(
@@ -165,7 +168,7 @@ class _HomeLabDiscoverySeeAllScreenState
             sliver: SliverLayoutBuilder(
               builder: (context, constraints) {
                 const spacing = 12.0;
-                final targetWidth = PlatformDetection.isTV ? 168.0 : 142.0;
+                const targetWidth = 142.0;
                 final columns =
                     ((constraints.crossAxisExtent + spacing) /
                             (targetWidth + spacing))
@@ -219,6 +222,60 @@ class _HomeLabDiscoverySeeAllScreenState
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTvGrid(HomeLabDiscoverySeeAllState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                state.title,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${state.items.length} loaded',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: HomeLabDiscoveryTvGrid(
+              hubKey: 'homelab-discovery:see-all:${state.section.id}',
+              items: state.items,
+              autofocus: true,
+              onOpenItem: (item) => openHomeLabDiscoveryItem(context, item),
+              onNearEnd: _loadMore,
+              onBack: () => Navigator.of(context).maybePop(),
+            ),
+          ),
+        ),
+        if (_loadingMore)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 18),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (state.hasError)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+            child: Center(
+              child: FilledButton.icon(
+                onPressed: _retryMore,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry loading more'),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -159,6 +159,7 @@ class _HomeLabDiscoveryTabView extends StatefulWidget {
 class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
   late Future<HomeLabDiscoveryTabLoadResult> _loadFuture;
   final Map<String, GlobalKey<HomeLabDiscoveryTvLaneState>> _tvLaneKeys = {};
+  bool _didRequestInitialTvFocus = false;
 
   @override
   void initState() {
@@ -171,6 +172,7 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       _tvLaneKeys.clear();
+      _didRequestInitialTvFocus = false;
       _loadFuture = widget.controller.load();
     }
   }
@@ -185,13 +187,19 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
     await next;
   }
 
-  void _openSeeAll(HomeLabDiscoveryLaneLoadResult lane) {
+  Future<void> _openSeeAll(HomeLabDiscoveryLaneLoadResult lane) async {
     final controller = widget.runtime.seeAllControllerFor(lane.section);
-    Navigator.of(context).push(
+    final laneKey = _tvLaneKey(lane.section.id);
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => HomeLabDiscoverySeeAllScreen(controller: controller),
       ),
     );
+    if (!mounted || !PlatformDetection.isTV) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      laneKey.currentState?.requestFocusFromMemory();
+    });
   }
 
   GlobalKey<HomeLabDiscoveryTvLaneState> _tvLaneKey(String sectionId) {
@@ -199,6 +207,30 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
       sectionId,
       () => GlobalKey<HomeLabDiscoveryTvLaneState>(),
     );
+  }
+
+  void _scheduleInitialTvFocus(List<HomeLabDiscoveryLaneLoadResult> lanes) {
+    if (!PlatformDetection.isTV ||
+        _didRequestInitialTvFocus ||
+        lanes.isEmpty ||
+        !TickerMode.of(context)) {
+      return;
+    }
+
+    _didRequestInitialTvFocus = true;
+    final laneKey = _tvLaneKey(lanes.first.section.id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !TickerMode.of(context)) {
+        _didRequestInitialTvFocus = false;
+        return;
+      }
+      final laneState = laneKey.currentState;
+      if (laneState == null) {
+        _didRequestInitialTvFocus = false;
+        return;
+      }
+      laneState.requestFocusFromMemory();
+    });
   }
 
   bool _moveTvFocus(
@@ -247,6 +279,8 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
           );
         }
 
+        _scheduleInitialTvFocus(lanes);
+
         return RefreshIndicator(
           onRefresh: _refresh,
           child: ListView.builder(
@@ -288,6 +322,7 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
                   onSeeAll: onSeeAll,
                   onVerticalNavigation: (isUp) =>
                       _moveTvFocus(lanes, index, isUp),
+                  autofocus: index == 0,
                 );
               }
 
