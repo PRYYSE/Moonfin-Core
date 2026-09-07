@@ -3,9 +3,11 @@ import 'package:server_core/server_core.dart';
 
 import '../../../data/repositories/seerr_repository.dart';
 import '../../../data/services/row_data_source.dart';
+import '../../../preference/seerr_preferences.dart';
 import '../bridge/moonfin_discovery_bridge.dart';
 import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_lane_loader.dart';
+import '../data/discovery_membership_policy.dart';
 import 'discovery_personalisation.dart';
 import 'discovery_tab_controller.dart';
 
@@ -44,6 +46,7 @@ class HomeLabDiscoveryRuntime {
     final getIt = GetIt.instance;
     final activeClient = getIt<MediaServerClient>();
     final repository = await getIt.getAsync<SeerrRepository>();
+    final preferences = getIt<SeerrPreferences>();
     final bridge = MoonfinHomeLabDiscoveryBridge(
       repository: repository,
       client: activeClient,
@@ -55,6 +58,11 @@ class HomeLabDiscoveryRuntime {
     final loader = HomeLabDiscoveryLaneLoader(
       fetchPage: bridge.fetchPage,
       personalisation: personalisation,
+      include: (section, item) => HomeLabDiscoveryMembershipPolicy.include(
+        item,
+        section.availabilityMode,
+        blockNsfw: preferences.blockNsfw,
+      ),
     );
     final userKey = activeClient.userId?.trim();
     final sessionSeed =
