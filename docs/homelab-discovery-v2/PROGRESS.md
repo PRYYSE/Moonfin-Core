@@ -49,21 +49,31 @@ Fix sequence:
 - `f42629138787fd2c71cb901719ca7ef757689ad0` added `HomeLabDiscoveryTabController`: deterministic selection, concurrent lane I/O keyed by section ID, isolated failures, then deterministic post-fetch presentation.
 - `1c3a9fd5196c04bdb6a7ae2249d347e6f9755822` added controller tests including deliberately reversed async completion, isolated lane exceptions and refresh/reset behaviour.
 
-The first strict run correctly rejected three formatting differences. CI was improved, without granting write permission, to run formatting in the ephemeral checkout then show an exact `git diff` and to cancel superseded branch runs. Exact formatter output was committed deliberately.
+Verified controller milestone: head `48e10844a4773b71e6aa444921b131b9c269911d`, workflow `34077891738`, GREEN across route/catalogue/format/analysis/tests/narrow-scope.
 
-Verified final controller milestone:
+## Runtime + real landing UI — 2026-09-07
 
-- head `48e10844a4773b71e6aa444921b131b9c269911d`
-- workflow run `34077891738`
-- result **GREEN**
-- route integration PASS
-- 486-lane authoring catalogue PASS
-- format PASS
-- focused analysis PASS
-- focused tests PASS
-- narrow custom-scope PASS
+The temporary section-name shell was replaced with real runtime wiring and lane rendering.
 
-This is stronger than the previous implementation: neither item novelty/dedup nor personal presentation can now be changed by async lane completion order.
+- `720ac29f023c653c618c7ec0283ebbba4d6a7882`: added feature-local runtime, bounded controller I/O and real tab/lane/loading/error/refresh UI.
+- expert review caught a multi-server correctness defect before release: `MediaServerClientFactory.getActiveClient()` is last-loaded-client based, so Discovery must use the authoritative registered `MediaServerClient`.
+- `8c371c610b2ca20687e65d75133dfac64d62bd1c`: bridge, runtime and catalogue entry bound to the authoritative active client; late runtime resolution after unmount is disposed.
+- `c363e9a6940b0dc8040e4bf8b7928ba3c8151e88`: removed stale factory dependency.
+- run `34079062788` correctly rejected one formatter drift before analysis/tests.
+- `56daef893ac3baa010532dcd33e7a35c5b411a31`: applied exact formatter output and removed a potential hash-based flaky identity from the bounded-concurrency test.
+- workflow `34079224788`: **GREEN** route, 486-lane catalogue, format, focused analysis, focused tests and narrow custom-scope.
+
+Current landing behaviour now has real Moonfin `MediaCard` rows, stock Seerr media-detail navigation, partial-failure handling and refresh. It remains pre-release: focus polish, external-list execution, availability membership and deep `See All` are still open.
+
+## Expert-review gaps recorded — 2026-09-07
+
+Review against the accepted v1 implementation identified concrete gaps rather than treating a green compile as completion:
+
+- v2 schema `availabilityMode` is currently not enforced because runtime lane loading has no membership predicate;
+- curated `externalList` queries are deliberately unsupported by the generic Seerr request planner and need an explicit adapter or explicit compile-time exclusion;
+- `See All` needs independent deep paging so preview-only family/session diversification never corrupts the full list;
+- current landing uses pointer-safe standard tabs but still needs selective upstream TV/keyboard focus primitives;
+- accepted v1 persisted rotation history; v2 currently keeps selection history only for the runtime lifetime.
 
 ## webOS scope restored — 2026-09-07
 
@@ -85,7 +95,7 @@ The Smart-TV wrapper remains separate from Flutter Moonfin-Core. Preserve app id
 
 ## CI hardening — 2026-09-07
 
-Discovery v2 CI is now strict read-only validation:
+Discovery v2 CI is strict read-only validation:
 
 - `permissions: contents: read`;
 - no formatter/route bot commit or branch push;
@@ -94,13 +104,12 @@ Discovery v2 CI is now strict read-only validation:
 - superseded branch runs are cancelled via workflow concurrency;
 - catalogue, analysis, tests and narrow-scope gates remain mandatory.
 
-Run `34077891738` proves this strict workflow green on the controller milestone.
-
 ## Still open
 
-- integrate the verified controller into `HomeLabDiscoveryScreen`;
-- replace temporary shell with polished Moonfin-native rows/cards/loading/error/empty states;
+- availability/NSFW membership policy;
+- executable curated external-list strategy or explicit fail-closed compilation policy;
 - full `See All` deep paging/refinement/back behaviour;
+- persistent cross-launch rotation decision/implementation;
 - semantic regression validation against accepted 481-lane live baseline;
 - Web mouse/touch/keyboard acceptance;
 - Android mobile touch/back/resume acceptance;

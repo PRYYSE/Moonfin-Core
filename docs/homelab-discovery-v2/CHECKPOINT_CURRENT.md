@@ -100,45 +100,63 @@ Future server root: `/srv/appdata/moonfin/`; stock Moonbase serves persistent ex
 
 Authoring catalogue: For You 16, Movies 130, Series 140, Anime 160, New & Upcoming 20, Lists 20. Accepted live 481/486 remains the semantic regression reference. Never invent unsafe semantics to force 486/486.
 
-## Latest verified milestone — deterministic controller
+## Verified deterministic-controller milestone
 
-During expert review on 2026-09-07, a real race-order defect was found in earlier code: shared session novelty/deduplication was still being mutated inside concurrent lane loaders. That could make visible items depend on network completion order even after personal title/family presentation had been fixed.
+Expert review found and fixed a race-order defect in earlier code: shared session novelty/deduplication was being mutated inside concurrent lane loaders. The corrected architecture is:
 
-It was corrected at the architecture boundary:
+`deterministic section selection -> bounded concurrent lane I/O -> results keyed by section ID -> catalogue-order novelty/dedup -> catalogue-order personal title/family presentation`
+
+Key commits:
 
 - `79a4130b24c512c653e00c70992034f917cf6ed4`: concurrent lane loader made presentation/session-pure.
-- `4caacb23697a436385f8cd6c4fa3f5dd87a76179`: session novelty/shared dedup moved to deterministic post-fetch presentation.
-- `fa89efb72c09f7cbd0d2b63a638dd726fc691820`: regression test proves shared novelty follows catalogue order.
-- `f42629138787fd2c71cb901719ca7ef757689ad0`: added feature-local `HomeLabDiscoveryTabController` for deterministic selection -> concurrent lane loads keyed by section ID -> pure catalogue-order presentation.
-- `1c3a9fd5196c04bdb6a7ae2249d347e6f9755822`: controller tests deliberately reverse async completion and verify deterministic output, lane failure isolation, refresh nonce and session reset.
+- `4caacb23697a436385f8cd6c4fa3f5dd87a76179`: novelty/shared dedup moved post-fetch.
+- `fa89efb72c09f7cbd0d2b63a638dd726fc691820`: catalogue-order novelty regression proof.
+- `f42629138787fd2c71cb901719ca7ef757689ad0`: feature-local tab controller.
+- `1c3a9fd5196c04bdb6a7ae2249d347e6f9755822`: reverse-completion/failure/refresh/reset controller tests.
 
-Strict CI was also improved:
+Strict CI is read-only, shows exact formatter drift and cancels superseded runs.
 
-- GitHub token remains `contents: read`;
-- no source commits/pushes from CI;
-- formatter runs in ephemeral checkout and `git diff --exit-code` shows exact formatting drift;
-- superseded branch runs cancel automatically;
-- route/catalogue/format/analyse/test/narrow-scope gates remain mandatory.
+## Latest verified milestone — runtime + real landing UI
 
-**Verified green source head before this checkpoint:** `48e10844a4773b71e6aa444921b131b9c269911d`  
-**Workflow:** `34077891738`  
+The temporary section-name shell has now been replaced by a real feature-local runtime and landing-page implementation without broadening Moonfin's core DI.
+
+Implemented:
+
+- feature-local `HomeLabDiscoveryRuntime` consumes stock `MediaServerClient`, async `SeerrRepository` and `RowDataSource` registrations;
+- one tab controller per catalogue tab;
+- lane I/O is bounded with Moonfin's existing `mapBounded` utility while final presentation remains deterministic;
+- controller test proves the concurrency cap without depending on unstable hash identities;
+- runtime/entry/bridge bind to the authoritative active `MediaServerClient`, not `MediaServerClientFactory.getActiveClient()`/last-loaded-client ordering;
+- runtime creation disposes a late result if the screen has already unmounted;
+- landing screen now renders loading, retry, empty, partial-failure and refresh states plus real horizontal `MediaCard` rows;
+- item taps use stock Seerr media-detail routing;
+- stock catalogue fallback remains unchanged.
+
+**Verified source head:** `56daef893ac3baa010532dcd33e7a35c5b411a31`  
+**Workflow:** `34079224788`  
 **Result:** GREEN — route, 486-lane catalogue, format, focused analysis, focused tests and narrow custom-scope all passed.
 
-This is stronger than the earlier implementation: neither shared item novelty/dedup nor personal title/family presentation can depend on concurrent request completion order.
+No live server, Android signing or webOS identity was changed.
 
-## Current exact work position
+## Expert-review findings still to resolve
 
-The data/engine/controller foundation is now coherent and verified. `HomeLabDiscoveryScreen` is still the temporary shell that lists section names only. The next product slice is to connect the verified controller to real runtime dependencies and replace that shell with actual Moonfin-native Discovery lanes and states.
+The runtime/UI milestone is green, but it is not yet a release candidate. Review against the accepted v1 behaviour exposed material gaps that must be solved rather than hidden:
+
+1. `availabilityMode` exists in the v2 schema but the new runtime currently supplies no lane predicate, so requestable/available/requested/not-owned/unwatched membership is not yet enforced.
+2. The authoring catalogue contains `externalList` lanes. The generic Seerr request planner deliberately does not execute `externalList`, so those lanes need an explicit feature-local external-list adapter or deliberate compile-time exclusion. Do not silently let curated lanes fail at runtime.
+3. `See All` is not implemented yet. It needs its own deep paging state and must not reuse preview-only family/session diversification.
+4. The first real landing UI deliberately uses simple Flutter tab/horizontal scrolling primitives. Before final polish, selectively reuse upstream Moonfin focus/row primitives where they materially improve TV/keyboard behaviour without reviving the old broad fork or the old pointer/touch regression.
+5. Rotation history is currently runtime-local. Persistent cross-launch rotation from the accepted v1 implementation should be evaluated before release so catalogue variety does not regress after app restarts.
 
 ## Exact next work
 
-1. Resolve feature-local runtime construction using existing official session/Seerr/DI services without broad DI patches.
-2. Integrate one controller per Discovery tab into `HomeLabDiscoveryScreen`.
-3. Implement loading, partial-success, empty, retry and refresh behaviour; hide sparse lanes while retaining lane-level failure isolation.
-4. Render polished native horizontal media lanes/cards using upstream Moonfin card/theme/focus/navigation primitives.
-5. Add widget/controller integration tests including Web pointer/touch/keyboard and TV focus foundations where testable.
-6. Implement `See All` as a real deep browse route with paginator/refinement/back state; do not apply preview-only family/session presentation to the full deep result list.
-7. Validate compiled semantics against accepted 481-lane reference.
+1. Restore feature-local availability/NSFW membership policy with tests and wire it into landing + deep browse.
+2. Decide and implement executable `externalList` behaviour from supported official/current services; fail closed for unsupported server placeholders rather than pretending they work.
+3. Implement a feature-local `See All` controller with deep paging, dedup, personal-page support, load-more failure recovery and reset/refresh tests.
+4. Integrate `See All` into Web/mobile/TV navigation with back behaviour and a Moonfin-native media grid.
+5. Harden landing focus/keyboard/D-pad behaviour using current upstream primitives while retaining standard pointer/touch-safe tabs.
+6. Validate compiled semantics against the accepted 481-lane reference and explicitly account for every dropped/unsupported lane.
+7. Add automated Web pointer/touch/keyboard and TV focus regression coverage where Flutter tests can prove behaviour.
 8. Build reproducible Web, `mobile-beta`, `androidTv-beta` artefacts and preserve Android signing/version rules.
 9. Feed the compatible tested Web experience through preserved `PRYYSE/Smart-TV` webOS packaging, preserving `org.moonfin.webos`; real TV acceptance remains manual.
 10. Create server build/cutover/rollback scripts plus `SERVER_RUNBOOK.md`/handover.
