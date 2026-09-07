@@ -140,7 +140,9 @@ class HomeLabDiscoveryLaneLoader {
     HomeLabDiscoverySection section,
   ) async {
     final loaded = await loadPage(section);
-    final items = loaded.items.take(section.previewLimit).toList(growable: false);
+    final items = loaded.items
+        .take(section.previewLimit)
+        .toList(growable: false);
 
     return HomeLabDiscoveryLaneLoadResult(
       section: section,

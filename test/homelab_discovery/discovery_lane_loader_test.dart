@@ -122,45 +122,49 @@ void main() {
     },
   );
 
-  test('deep personalised page honours requested page and force refresh', () async {
-    var loadRowCalls = 0;
-    final personalisation = HomeLabDiscoveryPersonalisation.forTesting(
-      serverId: 'server-1',
-      loadRow: (_, slot) async {
-        loadRowCalls++;
-        return HomeRow(
-          id: 'sinceYouWatched$slot',
-          title: 'Personal Deep Picks',
-          rowType: HomeRowType.latestMedia,
-          items: List.generate(
-            35,
-            (index) => personalItem(index, 1000 + index, 'Item $index'),
-          ),
-          totalCount: 35,
-        );
-      },
-      loadMore: ({required row, required serverId, offset}) async =>
-          (row.items, row.totalCount),
-    );
-    final loader = HomeLabDiscoveryLaneLoader(
-      personalisation: personalisation,
-      fetchPage: (_, _) async => throw StateError('raw bridge should not run'),
-    );
-    final personal = personalSection('favourites');
+  test(
+    'deep personalised page honours requested page and force refresh',
+    () async {
+      var loadRowCalls = 0;
+      final personalisation = HomeLabDiscoveryPersonalisation.forTesting(
+        serverId: 'server-1',
+        loadRow: (_, slot) async {
+          loadRowCalls++;
+          return HomeRow(
+            id: 'sinceYouWatched$slot',
+            title: 'Personal Deep Picks',
+            rowType: HomeRowType.latestMedia,
+            items: List.generate(
+              35,
+              (index) => personalItem(index, 1000 + index, 'Item $index'),
+            ),
+            totalCount: 35,
+          );
+        },
+        loadMore: ({required row, required serverId, offset}) async =>
+            (row.items, row.totalCount),
+      );
+      final loader = HomeLabDiscoveryLaneLoader(
+        personalisation: personalisation,
+        fetchPage: (_, _) async =>
+            throw StateError('raw bridge should not run'),
+      );
+      final personal = personalSection('favourites');
 
-    final second = await loader.loadPage(personal, page: 2);
-    expect(second.displayTitle, 'Personal Deep Picks');
-    expect(second.page, 2);
-    expect(second.items.length, 15);
-    expect(second.items.first.id, 1015);
-    expect(loadRowCalls, 1);
+      final second = await loader.loadPage(personal, page: 2);
+      expect(second.displayTitle, 'Personal Deep Picks');
+      expect(second.page, 2);
+      expect(second.items.length, 15);
+      expect(second.items.first.id, 1015);
+      expect(loadRowCalls, 1);
 
-    final refreshed = await loader.loadPage(
-      personal,
-      page: 1,
-      forceRefresh: true,
-    );
-    expect(refreshed.page, 1);
-    expect(loadRowCalls, 2);
-  });
+      final refreshed = await loader.loadPage(
+        personal,
+        page: 1,
+        forceRefresh: true,
+      );
+      expect(refreshed.page, 1);
+      expect(loadRowCalls, 2);
+    },
+  );
 }

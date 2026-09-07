@@ -32,41 +32,49 @@ HomeLabDiscoveryPageLoadResult page(
 );
 
 void main() {
-  test('initial deep load reads ahead across membership-filtered empty page', () async {
-    final requested = <int>[];
-    final controller = HomeLabDiscoverySeeAllController(
-      section: section,
-      loadPage: (_, {page = 1, forceRefresh = false}) async {
-        requested.add(page);
-        return page == 1 ? pageResult(page, const []) : pageResult(page, [1, 2]);
-      },
-    );
+  test(
+    'initial deep load reads ahead across membership-filtered empty page',
+    () async {
+      final requested = <int>[];
+      final controller = HomeLabDiscoverySeeAllController(
+        section: section,
+        loadPage: (_, {page = 1, forceRefresh = false}) async {
+          requested.add(page);
+          return page == 1
+              ? pageResult(page, const [])
+              : pageResult(page, [1, 2]);
+        },
+      );
 
-    final state = await controller.loadInitial();
+      final state = await controller.loadInitial();
 
-    expect(requested, [1, 2]);
-    expect(state.throughPage, 2);
-    expect(state.items.map((value) => value.id), [1, 2]);
-  });
+      expect(requested, [1, 2]);
+      expect(state.throughPage, 2);
+      expect(state.items.map((value) => value.id), [1, 2]);
+    },
+  );
 
-  test('deep paging deduplicates exact media without preview diversification', () async {
-    final controller = HomeLabDiscoverySeeAllController(
-      section: section,
-      maxEmptyPageReadAhead: 1,
-      loadPage: (_, {page = 1, forceRefresh = false}) async => switch (page) {
-        1 => pageResult(1, [1, 2]),
-        2 => pageResult(2, [2, 3]),
-        _ => pageResult(page, const [], totalPages: 2),
-      },
-    );
+  test(
+    'deep paging deduplicates exact media without preview diversification',
+    () async {
+      final controller = HomeLabDiscoverySeeAllController(
+        section: section,
+        maxEmptyPageReadAhead: 1,
+        loadPage: (_, {page = 1, forceRefresh = false}) async => switch (page) {
+          1 => pageResult(1, [1, 2]),
+          2 => pageResult(2, [2, 3]),
+          _ => pageResult(page, const [], totalPages: 2),
+        },
+      );
 
-    await controller.loadInitial();
-    final state = await controller.loadMore();
+      await controller.loadInitial();
+      final state = await controller.loadMore();
 
-    expect(state.items.map((value) => value.id), [1, 2, 3]);
-    expect(state.throughPage, 2);
-    expect(state.hasMore, isFalse);
-  });
+      expect(state.items.map((value) => value.id), [1, 2, 3]);
+      expect(state.throughPage, 2);
+      expect(state.hasMore, isFalse);
+    },
+  );
 
   test('load-more failure preserves items and retries the same page', () async {
     var secondPageAttempts = 0;
@@ -94,25 +102,28 @@ void main() {
     expect(retried.items.map((value) => value.id), [1, 2, 3]);
   });
 
-  test('refresh resets accumulated pages and forces personal source refresh', () async {
-    final calls = <(int, bool)>[];
-    final controller = HomeLabDiscoverySeeAllController(
-      section: section,
-      maxEmptyPageReadAhead: 1,
-      loadPage: (_, {page = 1, forceRefresh = false}) async {
-        calls.add((page, forceRefresh));
-        return pageResult(page, [forceRefresh ? 9 : page]);
-      },
-    );
+  test(
+    'refresh resets accumulated pages and forces personal source refresh',
+    () async {
+      final calls = <(int, bool)>[];
+      final controller = HomeLabDiscoverySeeAllController(
+        section: section,
+        maxEmptyPageReadAhead: 1,
+        loadPage: (_, {page = 1, forceRefresh = false}) async {
+          calls.add((page, forceRefresh));
+          return pageResult(page, [forceRefresh ? 9 : page]);
+        },
+      );
 
-    await controller.loadInitial();
-    await controller.loadMore();
-    final refreshed = await controller.refresh();
+      await controller.loadInitial();
+      await controller.loadMore();
+      final refreshed = await controller.refresh();
 
-    expect(calls, [(1, false), (2, false), (1, true)]);
-    expect(refreshed.items.map((value) => value.id), [9]);
-    expect(refreshed.throughPage, 1);
-  });
+      expect(calls, [(1, false), (2, false), (1, true)]);
+      expect(refreshed.items.map((value) => value.id), [9]);
+      expect(refreshed.throughPage, 1);
+    },
+  );
 }
 
 HomeLabDiscoveryPageLoadResult pageResult(

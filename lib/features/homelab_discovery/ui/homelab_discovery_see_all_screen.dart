@@ -9,10 +9,7 @@ import 'discovery_media_card.dart';
 class HomeLabDiscoverySeeAllScreen extends StatefulWidget {
   final HomeLabDiscoverySeeAllController controller;
 
-  const HomeLabDiscoverySeeAllScreen({
-    super.key,
-    required this.controller,
-  });
+  const HomeLabDiscoverySeeAllScreen({super.key, required this.controller});
 
   @override
   State<HomeLabDiscoverySeeAllScreen> createState() =>
@@ -120,7 +117,9 @@ class _HomeLabDiscoverySeeAllScreenState
                       SizedBox(
                         height: MediaQuery.sizeOf(context).height * 0.7,
                         child: Center(
-                          child: Text('No results are available for ${state.title}.'),
+                          child: Text(
+                            'No results are available for ${state.title}.',
+                          ),
                         ),
                       ),
                     ],
@@ -167,10 +166,11 @@ class _HomeLabDiscoverySeeAllScreenState
               builder: (context, constraints) {
                 const spacing = 12.0;
                 final targetWidth = PlatformDetection.isTV ? 168.0 : 142.0;
-                final columns = ((constraints.crossAxisExtent + spacing) /
-                        (targetWidth + spacing))
-                    .floor()
-                    .clamp(2, 12);
+                final columns =
+                    ((constraints.crossAxisExtent + spacing) /
+                            (targetWidth + spacing))
+                        .floor()
+                        .clamp(2, 12);
                 final cardWidth =
                     (constraints.crossAxisExtent - (columns - 1) * spacing) /
                     columns;
@@ -188,7 +188,9 @@ class _HomeLabDiscoverySeeAllScreenState
                     return HomeLabDiscoveryMediaCard(
                       item: item,
                       width: cardWidth,
-                      onFocus: index >= state.items.length - 8 ? _loadMore : null,
+                      onFocus: index >= state.items.length - 8
+                          ? _loadMore
+                          : null,
                     );
                   }, childCount: state.items.length),
                 );

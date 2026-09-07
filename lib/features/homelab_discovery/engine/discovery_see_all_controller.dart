@@ -5,8 +5,8 @@ import '../data/discovery_lane_loader.dart';
 typedef HomeLabDiscoveryDeepPageLoader =
     Future<HomeLabDiscoveryPageLoadResult> Function(
       HomeLabDiscoverySection section, {
-      int page,
-      bool forceRefresh,
+      required int page,
+      required bool forceRefresh,
     });
 
 class HomeLabDiscoverySeeAllState {
@@ -112,8 +112,7 @@ class HomeLabDiscoverySeeAllController {
           if (_seen.add(_identity(item))) _items.add(item);
         }
         scanned++;
-      } while (
-          _items.length == before &&
+      } while (_items.length == before &&
           state.hasMore &&
           scanned < maxEmptyPageReadAhead);
     } catch (error) {
