@@ -2,7 +2,6 @@ import 'package:get_it/get_it.dart';
 import 'package:server_core/server_core.dart';
 
 import '../../../data/repositories/seerr_repository.dart';
-import '../../../data/services/media_server_client_factory.dart';
 import '../../../data/services/row_data_source.dart';
 import '../bridge/moonfin_discovery_bridge.dart';
 import '../catalogue/discovery_catalogue.dart';
@@ -43,7 +42,6 @@ class HomeLabDiscoveryRuntime {
     HomeLabDiscoveryCatalogue catalogue,
   ) async {
     final getIt = GetIt.instance;
-    final clientFactory = getIt<MediaServerClientFactory>();
     final activeClient = getIt<MediaServerClient>();
     final repository = await getIt.getAsync<SeerrRepository>();
     final bridge = MoonfinHomeLabDiscoveryBridge(
