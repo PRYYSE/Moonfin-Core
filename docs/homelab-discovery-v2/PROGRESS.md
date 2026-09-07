@@ -81,54 +81,81 @@ Representative commits:
 Verified product source: `cc4f03b1e9e4d80314f83a764944670460dd6c58`  
 Workflow: `34086546081` — GREEN
 
-Focused validation passed and the full candidate job successfully produced:
-
-- Web release tarball
-- Android `mobile-beta` APK
-- Android `androidTv-beta` APK
-- source/build metadata
-- SHA-256 manifest
+Focused validation and the first full candidate build produced Web, Android `mobile-beta` and Android `androidTv-beta` artifacts with build metadata and checksums. This milestone established the reproducible build pipeline.
 
 Artifact ID: `10005927276`  
 Artifact digest: `sha256:2baccfb03a43bfb61ec5d82b7a5f9e75a63bea6630613b6652b167b045632713`
 
-Independent post-CI archive verification:
-
-- Android TV APK: `a81e091f5fa458711a233983f495657dd9a01157bfa7de0b806cf58cdbda1df8`
-- Android mobile APK: `f732133d4bdbb4a90bc429091760448e772c5a20e5bfc63cd6878da455bb194c`
-- Web tarball: `469bc0acdf9179726683c58e29a7061767585873e8d934a8c8a4e481fbe6d78f`
-
-All three manifest checksums matched the downloaded files. The Web archive opens and contains expected application assets; both APKs are structurally recognised as Android packages.
-
 CI Android signing is deliberately debug fallback. These APKs prove builds only and must not replace the existing deployment identity. Production/beta installation must preserve cert SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`.
 
-Checkpoint-only follow-up `045a138526403ad2f4a5d06e52b8c70f059ac3ef` passed workflow `34088720989` fully green; the full build job correctly skipped because no product code changed.
+## TV interaction hardening and current rebuilt Flutter candidates — 2026-09-07
 
-## LG/webOS Discovery v2 branch — 2026-09-07
+Current verified product source: `86acba1246ea5e9424fcc96c9729c1e474359c53`  
+Workflow: `34104075134` / run #62 — GREEN
+
+The focus work remained inside the Home Lab feature and reused current Moonfin primitives. Completed and tested:
+
+- TV-only landing rows with upstream focus handling while Web/mobile keep the normal pointer/touch row path
+- initial focus scheduling only for the active visible tab
+- row focus memory and restoration after details/`See All`
+- deterministic TV deep-browse grid with one focus owner
+- D-pad horizontal/vertical traversal
+- partial final-row clamping
+- one-shot select and Back handling
+- near-end load-more trigger once per item set
+- focus-memory restoration after grid rebuild
+- pointer tap regression coverage
+- normal `MediaCard` focus visuals through externally-driven focus state
+
+Run #62 passed route integration, catalogue generation, formatting, focused analysis/tests, narrow-scope validation, Web release build, `mobile-beta` build, `androidTv-beta` build, packaging and artifact upload.
+
+Current candidate artifact:
+
+- ID: `10012562778`
+- name: `homelab-discovery-v2-candidates-86acba1246ea5e9424fcc96c9729c1e474359c53`
+- digest: `sha256:1853f6960394fe902e8ac9b72d0d4709bd2ddfe87265bf64b2ea3695de4083e4`
+- Android TV beta APK: `a56ccc1a12e9e7e34fa54ade4725d96e4979ec544f68f0cc5f5e2d2997092a71`
+- Android mobile beta APK: `ab18aebdb5bbbf8a3ba3192960937c77850bbf9fbefe4ff0bb615083d9c579c0`
+- Web tarball: `ec8ec792b32c6e4c1bdd69af0efbf2a26983bf544cb4c8aaddd3ad9dff1730a2`
+
+App version remains `2.5.1+30000149`; Android TV version/build remains `2.5.1` / `2000016`. CI APKs remain debug-fallback signed and are not deployment candidates.
+
+## LG/webOS Discovery v2 — current engine/package milestone — 2026-09-07
 
 The preserved Smart-TV candidate remains untouched at `PRYYSE/Smart-TV:homelab/webos-v1-staging` / `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`.
 
-A new branch `homelab/webos-discovery-v2` was created from that exact candidate for the new work. The first foundation slice adds:
+The isolated v2 branch `homelab/webos-discovery-v2` was created from that preserved candidate. Current verified source:
 
-- a fail-closed catalogue query planner matching Moonfin-Core's filter/sort/date-token policy
-- a network-first server-scoped catalogue/LKG loader
-- a narrow authenticated Moonbase Seerr proxy client with path/query allow-lists
-- 15 focused service tests
-- an isolated CI/package workflow that never publishes over the known-good webOS candidate
+`439e64f7d396aca9c9774f8fcbea8af413ebfaaf`
 
-First workflow `34088375809` proved all 15 service tests passed. Its package stage then correctly exposed one lint-only defect in the test (`Buffer` no-undef); product code had not failed. Commit `367e5a776efec8fd3a775dfbbb31c89b46d883ae` replaced that Node-only test helper with browser-native `window.btoa`. Follow-up workflow `34088757515` is the current verification run at the time of this ledger update.
+Workflow `34106116784` / run #7 — GREEN.
 
-App identity remains `org.moonfin.webos`; baseline version remains 2.7.0. No release/tag was overwritten.
+Verified v2 service/controller foundation:
+
+- fail-closed catalogue query planner matching Moonfin-Core filter/sort/date-token policy
+- network-first server-scoped catalogue/LKG loader
+- narrow authenticated Moonbase Seerr proxy client with path/query allow-lists
+- membership filtering and feature-local lane loading
+- catalogue composition
+- deterministic tab loading with focused tests
+- isolated package build and identity verification
+
+Current isolated webOS artifact:
+
+- ID: `10012493825`
+- name: `Moonfin-HomeLab-webOS-DiscoveryV2-439e64f7d396aca9c9774f8fcbea8af413ebfaaf`
+- digest: `sha256:d60f07fe926baa240152c58057c9a0650351759a0055ad2f22dc9e50ce20d7a9`
+
+App identity remains `org.moonfin.webos`; baseline version remains 2.7.0. No preserved v1 branch, candidate or release/tag was overwritten.
 
 ## Still open
 
-- finish the current webOS foundation/package gate and checkpoint it green
-- harden Flutter landing TV/D-pad focus without changing Web/mobile pointer/touch behaviour
-- add TV focus/selection/edge regression coverage
-- build six-tab catalogue-driven webOS Discovery behind preserved stock fallback
-- implement or explicitly fail closed for webOS personalisation only after verifying a real supported Jellyfin strategy
+- build the six-tab catalogue-driven webOS Discovery UI behind the preserved `SeerrDiscover` fallback
+- reuse existing Enact Spotlight/card/navigation patterns for remote focus, left-edge navbar return, vertical row movement and Back
+- add deep webOS `See All`/browse while preserving existing detail/request routing
+- determine a real supported Jellyfin strategy for webOS personalisation; unsupported `personalised` semantics must fail closed until proven
+- package and verify the completed webOS UI candidate without changing app identity or publishing over v1
 - semantic regression accounting against the accepted legacy 481/486 result
-- rerun reproducible candidate builds after interaction/focus work
 - prepare atomic server cutover/rollback and `SERVER_RUNBOOK.md`
 - controlled live/server/device acceptance
 
