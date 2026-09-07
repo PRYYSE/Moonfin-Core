@@ -168,9 +168,10 @@ void main() {
     expect(persistCalls, 1);
   });
 
-  test('refresh rotates nonce while reset starts a fresh session', () async {
+  test('refresh rotates nonce while reset persists a fresh session', () async {
     final only = section('only');
     final history = HomeLabDiscoveryRotationHistory();
+    var persistCalls = 0;
     final controller = HomeLabDiscoveryTabController(
       tab: HomeLabDiscoveryTab(
         id: 'movies',
@@ -181,17 +182,25 @@ void main() {
       ),
       sessionSeed: 'server:user',
       rotationHistory: history,
+      persistRotationHistory: () async {
+        persistCalls++;
+      },
       loadLane: (section) async => loaded(section, [1, 2]),
     );
 
     await controller.load();
     expect(controller.refreshNonce, 0);
     expect(history.sessionsSinceSeen, isNotEmpty);
+    expect(persistCalls, 1);
+
     await controller.refresh();
     expect(controller.refreshNonce, 1);
-    controller.resetSession();
+    expect(persistCalls, 2);
+
+    await controller.resetSession();
     expect(controller.refreshNonce, 0);
     expect(history.sessionNumber, 0);
     expect(history.sessionsSinceSeen, isEmpty);
+    expect(persistCalls, 3);
   });
 }

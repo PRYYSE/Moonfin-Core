@@ -116,10 +116,11 @@ class HomeLabDiscoveryTabController {
 
   Future<HomeLabDiscoveryTabLoadResult> refresh() => load(rotate: true);
 
-  void resetSession() {
+  Future<void> resetSession() async {
     _refreshNonce = 0;
     rotationHistory.clear();
     session.reset();
+    await _persistRotationHistory();
   }
 
   Future<void> _persistRotationHistory() async {
