@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue.dart';
 import 'package:moonfin/features/homelab_discovery/data/discovery_lane_loader.dart';
+import 'package:moonfin/features/homelab_discovery/engine/discovery_session.dart';
 import 'package:moonfin/features/homelab_discovery/engine/discovery_tab_presentation.dart';
 
 HomeLabDiscoverySection personalSection(
@@ -94,6 +95,37 @@ void main() {
       a.map((value) => value.items.map((item) => item.id).toList()).toList(),
     );
     expect(a[1].items.take(2).map((value) => value.id), [5, 6]);
+  });
+
+  test('shared session novelty is applied in catalogue order', () {
+    final first = regularSection('first');
+    final second = regularSection('second');
+    final tab = HomeLabDiscoveryTab(
+      id: 'movies',
+      title: 'Movies',
+      sections: [first, second],
+    );
+    final results = <String, HomeLabDiscoveryLaneLoadResult>{
+      second.id: result(second, 'Second', [
+        item(2, 'Repeat'),
+        item(3, 'Fresh second'),
+      ]),
+      first.id: result(first, 'First', [
+        item(1, 'First'),
+        item(2, 'Shared'),
+      ]),
+    };
+
+    final composed = HomeLabDiscoveryTabPresentation.compose(
+      tab,
+      results,
+      session: HomeLabDiscoverySession(),
+      sharedDedupGroup: 'tab:movies',
+    );
+
+    expect(composed.map((value) => value.section.id), ['first', 'second']);
+    expect(composed[0].items.map((value) => value.id), [1, 2]);
+    expect(composed[1].items.map((value) => value.id), [3]);
   });
 
   test('non-personal, sparse and errored results preserve lane semantics', () {
