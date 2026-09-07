@@ -11,12 +11,16 @@ class HomeLabDiscoveryMediaCard extends StatelessWidget {
   final SeerrDiscoverItem item;
   final double width;
   final VoidCallback? onFocus;
+  final VoidCallback? onTap;
+  final bool? externalIsFocused;
 
   const HomeLabDiscoveryMediaCard({
     super.key,
     required this.item,
     required this.width,
     this.onFocus,
+    this.onTap,
+    this.externalIsFocused,
   });
 
   @override
@@ -30,7 +34,8 @@ class HomeLabDiscoveryMediaCard extends StatelessWidget {
       seerrMediaType: item.mediaType,
       seerrStatus: item.mediaInfo?.status,
       onFocus: onFocus,
-      onTap: () => _openItem(context),
+      externalIsFocused: externalIsFocused,
+      onTap: onTap ?? () => openHomeLabDiscoveryItem(context, item),
     );
   }
 
@@ -59,11 +64,14 @@ class HomeLabDiscoveryMediaCard extends StatelessWidget {
     }
     return parts.isEmpty ? null : parts.join('  ');
   }
+}
 
-  void _openItem(BuildContext context) {
-    final mediaType = item.mediaType == 'tv' ? 'tv' : 'movie';
-    context.push(
-      Destinations.seerrMedia(item.id.toString(), mediaType: mediaType),
-    );
-  }
+void openHomeLabDiscoveryItem(
+  BuildContext context,
+  SeerrDiscoverItem item,
+) {
+  final mediaType = item.mediaType == 'tv' ? 'tv' : 'movie';
+  context.push(
+    Destinations.seerrMedia(item.id.toString(), mediaType: mediaType),
+  );
 }
