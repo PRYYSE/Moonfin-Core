@@ -5,6 +5,7 @@ import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue.dart';
 import 'package:moonfin/features/homelab_discovery/data/discovery_lane_loader.dart';
 import 'package:moonfin/features/homelab_discovery/ui/discovery_tv_lane.dart';
+import 'package:moonfin/l10n/app_localizations.dart';
 
 void main() {
   const items = [
@@ -37,6 +38,8 @@ void main() {
   }) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: HomeLabDiscoveryTvLane(
             tabId: 'movies-test-${onSeeAll != null}',
