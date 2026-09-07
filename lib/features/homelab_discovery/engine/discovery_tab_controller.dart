@@ -1,3 +1,4 @@
+import '../../../data/utils/bounded_concurrency.dart';
 import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_lane_loader.dart';
 import 'discovery_composer.dart';
@@ -30,9 +31,10 @@ class HomeLabDiscoveryTabLoadResult {
 
 /// Coordinates one Discovery tab without coupling data loading to Flutter UI.
 ///
-/// Selection is deterministic. Lane I/O is concurrent, but every result is
-/// keyed by section ID and all cross-row/session presentation is applied only
-/// after the concurrent work completes, in selected catalogue order.
+/// Selection is deterministic. Lane I/O is bounded and concurrent, but every
+/// result is keyed by section ID and all cross-row/session presentation is
+/// applied only after the concurrent work completes, in selected catalogue
+/// order.
 class HomeLabDiscoveryTabController {
   final HomeLabDiscoveryTab tab;
   final HomeLabDiscoveryLaneLoad loadLane;
@@ -40,6 +42,7 @@ class HomeLabDiscoveryTabController {
   final HomeLabDiscoveryComposer composer;
   final HomeLabDiscoverySession session;
   final String sharedDedupGroup;
+  final int maxConcurrentLoads;
 
   final Map<String, int> _sessionsSinceSeen = <String, int>{};
   int _refreshNonce = 0;
@@ -51,9 +54,11 @@ class HomeLabDiscoveryTabController {
     HomeLabDiscoveryComposer? composer,
     HomeLabDiscoverySession? session,
     String? sharedDedupGroup,
+    int maxConcurrentLoads = 6,
   }) : composer = composer ?? const HomeLabDiscoveryComposer(),
        session = session ?? HomeLabDiscoverySession(),
-       sharedDedupGroup = sharedDedupGroup ?? 'tab:${tab.id}';
+       sharedDedupGroup = sharedDedupGroup ?? 'tab:${tab.id}',
+       maxConcurrentLoads = maxConcurrentLoads < 1 ? 1 : maxConcurrentLoads;
 
   int get refreshNonce => _refreshNonce;
 
@@ -68,8 +73,10 @@ class HomeLabDiscoveryTabController {
     );
     final resultsBySectionId = <String, HomeLabDiscoveryLaneLoadResult>{};
 
-    await Future.wait(
-      selected.map((section) async {
+    await mapBounded<HomeLabDiscoverySection, bool>(
+      selected,
+      maxConcurrentLoads,
+      (section) async {
         try {
           resultsBySectionId[section.id] = await loadLane(section);
         } catch (error) {
@@ -78,7 +85,8 @@ class HomeLabDiscoveryTabController {
             error: error,
           );
         }
-      }),
+        return true;
+      },
     );
 
     final lanes = HomeLabDiscoveryTabPresentation.composeSections(

@@ -95,6 +95,39 @@ void main() {
     },
   );
 
+  test('lane I/O is bounded without changing catalogue order', () async {
+    final sections = List.generate(6, (index) => section('section-$index'));
+    final tab = HomeLabDiscoveryTab(
+      id: 'movies',
+      title: 'Movies',
+      sections: sections,
+      initialLaneBudget: sections.length,
+      minimumLaneCount: sections.length,
+    );
+    var inFlight = 0;
+    var peakInFlight = 0;
+    final controller = HomeLabDiscoveryTabController(
+      tab: tab,
+      sessionSeed: 'server:user',
+      maxConcurrentLoads: 2,
+      loadLane: (section) async {
+        inFlight++;
+        if (inFlight > peakInFlight) peakInFlight = inFlight;
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        inFlight--;
+        return loaded(section, [section.id.hashCode]);
+      },
+    );
+
+    final result = await controller.load();
+
+    expect(peakInFlight, 2);
+    expect(
+      result.lanes.map((value) => value.section.id).toList(),
+      sections.map((value) => value.id).toList(),
+    );
+  });
+
   test('refresh rotates nonce while reset starts a fresh session', () async {
     final only = section('only');
     final controller = HomeLabDiscoveryTabController(
