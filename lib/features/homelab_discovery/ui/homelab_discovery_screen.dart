@@ -8,6 +8,7 @@ import '../data/discovery_lane_loader.dart';
 import '../engine/discovery_runtime.dart';
 import '../engine/discovery_tab_controller.dart';
 import 'discovery_media_card.dart';
+import 'discovery_tv_lane.dart';
 import 'homelab_discovery_see_all_screen.dart';
 
 class HomeLabDiscoveryScreen extends StatefulWidget {
@@ -157,6 +158,7 @@ class _HomeLabDiscoveryTabView extends StatefulWidget {
 
 class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
   late Future<HomeLabDiscoveryTabLoadResult> _loadFuture;
+  final Map<String, GlobalKey<HomeLabDiscoveryTvLaneState>> _tvLaneKeys = {};
 
   @override
   void initState() {
@@ -168,6 +170,7 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
   void didUpdateWidget(covariant _HomeLabDiscoveryTabView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
+      _tvLaneKeys.clear();
       _loadFuture = widget.controller.load();
     }
   }
@@ -189,6 +192,32 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
         builder: (_) => HomeLabDiscoverySeeAllScreen(controller: controller),
       ),
     );
+  }
+
+  GlobalKey<HomeLabDiscoveryTvLaneState> _tvLaneKey(String sectionId) {
+    return _tvLaneKeys.putIfAbsent(
+      sectionId,
+      () => GlobalKey<HomeLabDiscoveryTvLaneState>(),
+    );
+  }
+
+  bool _moveTvFocus(
+    List<HomeLabDiscoveryLaneLoadResult> lanes,
+    int currentIndex,
+    bool isUp,
+  ) {
+    final targetIndex = currentIndex + (isUp ? -1 : 1);
+    if (targetIndex < 0 || targetIndex >= lanes.length) return false;
+
+    final targetKey = _tvLaneKey(lanes[targetIndex].section.id);
+    final targetState = targetKey.currentState;
+    if (targetState == null) {
+      // Do not consume the key if ListView has not built the adjacent row. The
+      // host focus traversal can then recover instead of leaving a TV focus trap.
+      return false;
+    }
+    targetState.requestFocusFromMemory();
+    return true;
   }
 
   @override
@@ -246,12 +275,23 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
                 );
               }
               final lane = lanes[index];
-              return _DiscoveryLane(
-                lane: lane,
-                onSeeAll: lane.section.expandable
-                    ? () => _openSeeAll(lane)
-                    : null,
-              );
+              final onSeeAll = lane.section.expandable
+                  ? () => _openSeeAll(lane)
+                  : null;
+
+              if (PlatformDetection.isTV) {
+                return HomeLabDiscoveryTvLane(
+                  key: _tvLaneKey(lane.section.id),
+                  tabId: widget.controller.tab.id,
+                  lane: lane,
+                  onOpenItem: (item) => openHomeLabDiscoveryItem(context, item),
+                  onSeeAll: onSeeAll,
+                  onVerticalNavigation: (isUp) =>
+                      _moveTvFocus(lanes, index, isUp),
+                );
+              }
+
+              return _DiscoveryLane(lane: lane, onSeeAll: onSeeAll);
             },
           ),
         );
@@ -269,11 +309,7 @@ class _DiscoveryLane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final cardWidth = PlatformDetection.isTV
-        ? 168.0
-        : width < 600
-        ? 124.0
-        : 148.0;
+    final cardWidth = width < 600 ? 124.0 : 148.0;
     final cardHeight = cardWidth / (2 / 3) + 58;
     final subtitle = lane.section.subtitle?.trim();
 
