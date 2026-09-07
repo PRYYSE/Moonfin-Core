@@ -50,6 +50,16 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    // Widget tests can have a competing root focus scope. Exercise the same
+    // public focus-restoration path used by Discovery when moving vertically
+    // between TV lanes so the D-pad assertions are deterministic rather than
+    // depending on autofocus timing.
+    final laneState = tester.state<HomeLabDiscoveryTvLaneState>(
+      find.byType(HomeLabDiscoveryTvLane),
+    );
+    laneState.requestFocusFromMemory();
+    await tester.pumpAndSettle();
   }
 
   testWidgets('D-pad select activates the currently focused item once', (
