@@ -58,36 +58,42 @@ void main() {
     completers[first.id]!.complete(loaded(first, [1, 2]));
 
     final result = await pending;
-    expect(result.selectedSections.map((value) => value.id), ['first', 'second']);
+    expect(result.selectedSections.map((value) => value.id), [
+      'first',
+      'second',
+    ]);
     expect(result.lanes.map((value) => value.section.id), ['first', 'second']);
     expect(result.lanes[0].items.map((value) => value.id), [1, 2]);
     expect(result.lanes[1].items.map((value) => value.id), [3]);
     expect(result.usableLanes.length, 2);
   });
 
-  test('unexpected lane exception is isolated without aborting the tab', () async {
-    final first = section('first');
-    final second = section('second');
-    final tab = HomeLabDiscoveryTab(
-      id: 'movies',
-      title: 'Movies',
-      sections: [first, second],
-      initialLaneBudget: 2,
-      minimumLaneCount: 2,
-    );
-    final controller = HomeLabDiscoveryTabController(
-      tab: tab,
-      sessionSeed: 'server:user',
-      loadLane: (section) async {
-        if (section.id == second.id) throw StateError('boom');
-        return loaded(section, [1, 2]);
-      },
-    );
+  test(
+    'unexpected lane exception is isolated without aborting the tab',
+    () async {
+      final first = section('first');
+      final second = section('second');
+      final tab = HomeLabDiscoveryTab(
+        id: 'movies',
+        title: 'Movies',
+        sections: [first, second],
+        initialLaneBudget: 2,
+        minimumLaneCount: 2,
+      );
+      final controller = HomeLabDiscoveryTabController(
+        tab: tab,
+        sessionSeed: 'server:user',
+        loadLane: (section) async {
+          if (section.id == second.id) throw StateError('boom');
+          return loaded(section, [1, 2]);
+        },
+      );
 
-    final result = await controller.load();
-    expect(result.usableLanes.map((value) => value.section.id), ['first']);
-    expect(result.failedLanes.map((value) => value.section.id), ['second']);
-  });
+      final result = await controller.load();
+      expect(result.usableLanes.map((value) => value.section.id), ['first']);
+      expect(result.failedLanes.map((value) => value.section.id), ['second']);
+    },
+  );
 
   test('refresh rotates nonce while reset starts a fresh session', () async {
     final only = section('only');
