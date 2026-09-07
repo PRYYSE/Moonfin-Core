@@ -234,14 +234,14 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
         _didRequestInitialTvFocus ||
         lanes.isEmpty ||
         tabController.index != widget.tabIndex ||
-        !TickerMode.of(context)) {
+        !TickerMode.valuesOf(context).enabled) {
       return;
     }
 
     _didRequestInitialTvFocus = true;
     final laneKey = _tvLaneKey(lanes.first.section.id);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !TickerMode.of(context)) {
+      if (!mounted || !TickerMode.valuesOf(context).enabled) {
         _didRequestInitialTvFocus = false;
         return;
       }
