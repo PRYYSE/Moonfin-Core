@@ -64,27 +64,28 @@ void main() {
     expect(state.columns, 3);
   });
 
-  testWidgets('D-pad traverses rows and select opens exactly one focused item', (
-    tester,
-  ) async {
-    final opened = <int>[];
-    final state = await pumpGrid(
-      tester,
-      itemCount: 6,
-      onOpen: (item) => opened.add(item.id),
-    );
+  testWidgets(
+    'D-pad traverses rows and select opens exactly one focused item',
+    (tester) async {
+      final opened = <int>[];
+      final state = await pumpGrid(
+        tester,
+        itemCount: 6,
+        onOpen: (item) => opened.add(item.id),
+      );
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    await tester.pump();
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-    await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
 
-    expect(state.focusedIndex, 4);
+      expect(state.focusedIndex, 4);
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.select);
-    await tester.pump();
-    expect(opened, [5]);
-  });
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pump();
+      expect(opened, [5]);
+    },
+  );
 
   testWidgets('down into a partial final row clamps to its last real card', (
     tester,
@@ -159,11 +160,7 @@ void main() {
     tester,
   ) async {
     final opened = <int>[];
-    await pumpGrid(
-      tester,
-      itemCount: 6,
-      onOpen: (item) => opened.add(item.id),
-    );
+    await pumpGrid(tester, itemCount: 6, onOpen: (item) => opened.add(item.id));
 
     await tester.tap(find.text('Item 2'));
     await tester.pump();

@@ -42,9 +42,7 @@ class HomeLabDiscoveryTvGridState extends State<HomeLabDiscoveryTvGrid> {
   static const _crossAxisSpacing = 16.0;
   static const _mainAxisSpacing = 18.0;
 
-  final FocusNode _focusNode = FocusNode(
-    debugLabel: 'HomeLabDiscoveryTvGrid',
-  );
+  final FocusNode _focusNode = FocusNode(debugLabel: 'HomeLabDiscoveryTvGrid');
   final ScrollController _scrollController = ScrollController();
   final List<GlobalKey> _itemKeys = <GlobalKey>[];
 
@@ -223,7 +221,8 @@ class HomeLabDiscoveryTvGridState extends State<HomeLabDiscoveryTvGrid> {
       final movesForward = key.isRightKey != isRtl;
       final column = _focusedIndex % _columns;
       if (movesForward) {
-        if (column >= _columns - 1 || _focusedIndex >= widget.items.length - 1) {
+        if (column >= _columns - 1 ||
+            _focusedIndex >= widget.items.length - 1) {
           return KeyEventResult.ignored;
         }
         _setFocusedIndex(_focusedIndex + 1);
