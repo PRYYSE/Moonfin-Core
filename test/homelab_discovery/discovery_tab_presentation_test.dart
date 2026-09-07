@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue.dart';
@@ -70,12 +68,14 @@ void main() {
       item(6, 'Vinland Saga'),
     ]);
 
-    final forward = LinkedHashMap<String, HomeLabDiscoveryLaneLoadResult>()
-      ..[first.id] = firstResult
-      ..[second.id] = secondResult;
-    final reverse = LinkedHashMap<String, HomeLabDiscoveryLaneLoadResult>()
-      ..[second.id] = secondResult
-      ..[first.id] = firstResult;
+    final forward = <String, HomeLabDiscoveryLaneLoadResult>{
+      first.id: firstResult,
+      second.id: secondResult,
+    };
+    final reverse = <String, HomeLabDiscoveryLaneLoadResult>{
+      second.id: secondResult,
+      first.id: firstResult,
+    };
 
     final a = HomeLabDiscoveryTabPresentation.compose(tab, forward);
     final b = HomeLabDiscoveryTabPresentation.compose(tab, reverse);
