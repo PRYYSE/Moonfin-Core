@@ -110,10 +110,7 @@ void main() {
         item(2, 'Repeat'),
         item(3, 'Fresh second'),
       ]),
-      first.id: result(first, 'First', [
-        item(1, 'First'),
-        item(2, 'Shared'),
-      ]),
+      first.id: result(first, 'First', [item(1, 'First'), item(2, 'Shared')]),
     };
 
     final composed = HomeLabDiscoveryTabPresentation.compose(
