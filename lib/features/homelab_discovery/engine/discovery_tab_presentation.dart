@@ -66,8 +66,8 @@ abstract final class HomeLabDiscoveryTabPresentation {
         );
       }
 
-      final changed = title != result.displayTitle ||
-          !identical(items, result.items);
+      final changed =
+          title != result.displayTitle || !identical(items, result.items);
       if (!changed) {
         presented.add(result);
         continue;
