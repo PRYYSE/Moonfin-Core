@@ -115,7 +115,8 @@ void main() {
         if (inFlight > peakInFlight) peakInFlight = inFlight;
         await Future<void>.delayed(const Duration(milliseconds: 5));
         inFlight--;
-        return loaded(section, [section.id.hashCode]);
+        final index = int.parse(section.id.split('-').last);
+        return loaded(section, [index + 1]);
       },
     );
 

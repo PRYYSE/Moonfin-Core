@@ -36,9 +36,10 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
   }
 
   Future<HomeLabDiscoveryRuntime> _createRuntime() async {
-    final runtime = await (widget.runtimeLoad ?? HomeLabDiscoveryRuntime.create)(
-      widget.catalogue,
-    );
+    final runtime =
+        await (widget.runtimeLoad ?? HomeLabDiscoveryRuntime.create)(
+          widget.catalogue,
+        );
     if (!mounted) {
       runtime.dispose();
       return runtime;
