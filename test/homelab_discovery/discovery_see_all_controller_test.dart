@@ -61,8 +61,8 @@ void main() {
         section: section,
         maxEmptyPageReadAhead: 1,
         loadPage: (_, {page = 1, forceRefresh = false}) async => switch (page) {
-          1 => pageResult(1, [1, 2]),
-          2 => pageResult(2, [2, 3]),
+          1 => pageResult(1, [1, 2], totalPages: 2),
+          2 => pageResult(2, [2, 3], totalPages: 2),
           _ => pageResult(page, const [], totalPages: 2),
         },
       );
