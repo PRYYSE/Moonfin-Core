@@ -22,7 +22,7 @@ AggregatedItem sourceItem(
     if (anime) 'GenreIds': [16],
     if (anime) 'OriginalLanguage': 'ja',
     if (serverId == 'seerr') 'SeerrStatus': 5,
-    if (jellyfinMediaId != null) 'JellyfinMediaId': jellyfinMediaId,
+    'JellyfinMediaId': ?jellyfinMediaId,
   },
 );
 
