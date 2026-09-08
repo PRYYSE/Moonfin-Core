@@ -26,19 +26,17 @@ AggregatedItem sourceItem(
   },
 );
 
-HomeLabDiscoverySection personal(
-  String strategy, {
-  String mediaType = 'all',
-}) => HomeLabDiscoverySection(
-  id: 'source-$strategy-$mediaType',
-  title: 'Source $strategy',
-  minItems: 1,
-  query: HomeLabDiscoveryQuery(
-    source: HomeLabDiscoverySource.personalised,
-    mediaType: mediaType,
-    seedStrategy: strategy,
-  ),
-);
+HomeLabDiscoverySection personal(String strategy, {String mediaType = 'all'}) =>
+    HomeLabDiscoverySection(
+      id: 'source-$strategy-$mediaType',
+      title: 'Source $strategy',
+      minItems: 1,
+      query: HomeLabDiscoveryQuery(
+        source: HomeLabDiscoverySource.personalised,
+        mediaType: mediaType,
+        seedStrategy: strategy,
+      ),
+    );
 
 void main() {
   test('maps only proven source families', () {
@@ -58,9 +56,7 @@ void main() {
     };
 
     for (final entry in expected.entries) {
-      final policy = homeLabDiscoveryPersonalSourcePolicy(
-        personal(entry.key),
-      );
+      final policy = homeLabDiscoveryPersonalSourcePolicy(personal(entry.key));
       expect(policy?.kind, entry.value, reason: entry.key);
     }
 
@@ -186,11 +182,7 @@ void main() {
       serverId: 'server-1',
       loadPool: (_) async => [sourceItem(1)],
       loadRecommendations: (_) async => [
-        sourceItem(
-          601,
-          serverId: 'seerr',
-          jellyfinMediaId: 'real-jellyfin-id',
-        ),
+        sourceItem(601, serverId: 'seerr', jellyfinMediaId: 'real-jellyfin-id'),
       ],
     );
     final service = HomeLabDiscoveryPersonalisation.forTesting(
