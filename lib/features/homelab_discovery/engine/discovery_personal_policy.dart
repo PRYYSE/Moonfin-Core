@@ -74,10 +74,7 @@ HomeLabDiscoveryPersonalPolicy? homeLabDiscoveryPersonalPolicy(
     'movie-affinity' => policy(rowIndex: 9, mediaType: 'movie'),
     'series-affinity' => policy(rowIndex: 10, mediaType: 'tv'),
     'anime-affinity' => policy(rowIndex: 11, animeOnly: true),
-    'short-runtime-affinity' => policy(
-      rowIndex: 12,
-      maxRuntimeMinutes: 60,
-    ),
+    'short-runtime-affinity' => policy(rowIndex: 12, maxRuntimeMinutes: 60),
     'older-affinity' => policy(rowIndex: 13, olderThanYears: 10),
     'recent-affinity' => policy(rowIndex: 14, newerThanYears: 5),
     'highly-rated-unseen' => policy(
