@@ -58,8 +58,13 @@ class _HomeLabDiscoveryEntryScreenState
   @override
   void didUpdateWidget(covariant HomeLabDiscoveryEntryScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.load != widget.load && _routePayload == null) {
-      _loadFuture = (widget.load ?? _loadDefault)();
+    if (oldWidget.load != widget.load) {
+      // GoRouter rebuilds this route with a new builder closure when the
+      // section query changes. Resolve the current route first so entering a
+      // payload-backed deep route does not launch an unnecessary catalogue
+      // request that is immediately discarded.
+      _routeStateResolved = false;
+      _syncRouteState();
     }
   }
 
