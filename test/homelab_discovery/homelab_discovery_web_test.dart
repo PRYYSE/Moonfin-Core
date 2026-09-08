@@ -17,10 +17,10 @@ const webTabs = [
 ];
 
 Widget tabHarness() {
-  return const MaterialApp(
+  return MaterialApp(
     home: DefaultTabController(
       length: webTabs.length,
-      child: Scaffold(
+      child: const Scaffold(
         body: Column(
           children: [
             HomeLabDiscoveryTabStrip(tabs: webTabs),
