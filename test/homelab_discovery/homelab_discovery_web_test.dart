@@ -137,29 +137,34 @@ void main() {
     'Web media card accepts touch, mouse and keyboard and falls back without art',
     (tester) async {
       var activations = 0;
+
       await tester.pumpWidget(cardHarness(() => activations++));
       await tester.pumpAndSettle();
-
       expect(find.text('Untitled'), findsOneWidget);
       expect(find.text('UNTITLED'), findsOneWidget);
-
-      final cardFinder = find.byType(HomeLabDiscoveryMediaCard);
-      await tester.tap(cardFinder);
+      await tester.tap(find.byType(HomeLabDiscoveryMediaCard));
       await tester.pump();
       expect(activations, 1);
 
+      activations = 0;
+      await tester.pumpWidget(cardHarness(() => activations++));
+      await tester.pumpAndSettle();
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      final cardFinder = find.byType(HomeLabDiscoveryMediaCard);
       final center = tester.getCenter(cardFinder);
       await mouse.addPointer(location: center);
       await mouse.down(center);
       await mouse.up();
       await tester.pump();
-      expect(activations, 2);
+      expect(activations, 1);
       await mouse.removePointer();
 
+      activations = 0;
+      await tester.pumpWidget(cardHarness(() => activations++));
+      await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pump();
-      expect(activations, 3);
+      expect(activations, 1);
     },
     skip: !kIsWeb,
   );
