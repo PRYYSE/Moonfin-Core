@@ -120,53 +120,121 @@ Current candidate artifact:
 
 App version remains `2.5.1+30000149`; Android TV version/build remains `2.5.1` / `2000016`. CI APKs remain debug-fallback signed and are not deployment candidates.
 
-## LG/webOS Discovery v2 — current engine/package milestone — 2026-09-07
+This is a strong implementation/build milestone, not final cross-platform product acceptance.
+
+## LG/webOS Discovery v2 — service foundation — 2026-09-07
 
 The preserved Smart-TV candidate remains untouched at `PRYYSE/Smart-TV:homelab/webos-v1-staging` / `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`.
 
-The isolated v2 branch `homelab/webos-discovery-v2` was created from that preserved candidate. Current verified source:
+The isolated v2 branch `homelab/webos-discovery-v2` was created from that preserved candidate. Early verified source:
 
 `439e64f7d396aca9c9774f8fcbea8af413ebfaaf`
 
 Workflow `34106116784` / run #7 — GREEN.
 
-Verified v2 service/controller foundation:
+That milestone proved the fail-closed query planner, network-first catalogue/LKG loader, authenticated Moonbase Seerr proxy, membership filtering, deterministic tab loading, focused service tests, isolated package build and identity verification.
 
-- fail-closed catalogue query planner matching Moonfin-Core filter/sort/date-token policy
-- network-first server-scoped catalogue/LKG loader
-- narrow authenticated Moonbase Seerr proxy client with path/query allow-lists
-- membership filtering and feature-local lane loading
-- catalogue composition
-- deterministic tab loading with focused tests
-- isolated package build and identity verification
+It has now been superseded by the implemented UI/personalisation milestone below.
 
-Current isolated webOS artifact:
+## LG/webOS Discovery v2 — guarded UI, deep browse and focus — 2026-09-07 to 2026-09-08
 
-- ID: `10012493825`
-- name: `Moonfin-HomeLab-webOS-DiscoveryV2-439e64f7d396aca9c9774f8fcbea8af413ebfaaf`
-- digest: `sha256:d60f07fe926baa240152c58057c9a0650351759a0055ad2f22dc9e50ce20d7a9`
+Repository history confirms that the desynchronised mobile run produced durable code beyond the old checkpoint:
 
-App identity remains `org.moonfin.webos`; baseline version remains 2.7.0. No preserved v1 branch, candidate or release/tag was overwritten.
+- `008dc12a6b17ba861f1b18d6f54938c575f11f58` — guarded catalogue UI and deep browse
+- `6bd1c73ab352dddebfa9facfda1f6465c2f9c669` — stable Discovery hook dependencies
+- `38c3994dec38fa9861429a8633af4c535370f268` — safe virtual deep-browse focus restoration
 
-## Still open
+Workflow `34170654218` / run #12 on `38c3994...` was GREEN and produced artifact ID `10035630833`.
 
-- build the six-tab catalogue-driven webOS Discovery UI behind the preserved `SeerrDiscover` fallback
-- reuse existing Enact Spotlight/card/navigation patterns for remote focus, left-edge navbar return, vertical row movement and Back
-- add deep webOS `See All`/browse while preserving existing detail/request routing
-- determine a real supported Jellyfin strategy for webOS personalisation; unsupported `personalised` semantics must fail closed until proven
-- package and verify the completed webOS UI candidate without changing app identity or publishing over v1
-- semantic regression accounting against the accepted legacy 481/486 result
-- prepare atomic server cutover/rollback and `SERVER_RUNBOOK.md`
-- controlled live/server/device acceptance
+Verified surviving implementation includes:
+
+- feature-local six-tab catalogue Discovery with fallback to existing `SeerrDiscover`
+- loading/retry/empty/partial-failure/refresh states
+- Enact Spotlight row/card/tab navigation foundation
+- active-tab and row focus memory
+- navbar return and vertical row movement
+- feature-local `See All` deep route/controller
+- `VirtualGridList` deep browse with focus restoration and bounded paging/dedup
+- existing detail/request routing preserved
+
+These are completed implementation foundations and must not be treated as future work merely because the older Moonfin checkpoint predates them.
+
+## LG/webOS Discovery v2 — Jellyfin personalisation + persistent rotation recovered — 2026-09-08
+
+Desynchronised source `dd1b52eb5503ee37e74fbaba56f65360ad24f8a7` added substantial real functionality:
+
+- real Jellyfin-backed personalisation reusing the existing Smart-TV Home recommendation engine
+- sixteen deterministic personal strategy slots
+- Jellyfin candidate hydration before provider-ID mapping when required
+- movie/series filtering and explicit anime discrimination
+- dynamic `Because You Watched ...` lane titles
+- personal results through normal membership/dedup handling
+- persistent server/user/tab-scoped surfaced-lane rotation
+- refresh rotation plus personalised first-page refresh
+- persistent rotation reset
+
+Workflow `34176178067` / #13 failed before packaging because three new suites reached the Enact/Jellyfin runtime during Jest module initialisation. Eight suites passed and all 38 tests that actually initialised passed; the failure was the test/runtime import boundary, not failing assertions.
+
+Batch 1 recovery repaired that boundary without removing production behaviour:
+
+- `635574bac20bb0a8a75ddf6dab117d8bc2d5add1` — lazy production runtime adapters keep injected personalisation policy tests independent from Enact module evaluation;
+- the service suite then reached **11/11 suites and 53/53 tests passing**;
+- full production build subsequently exposed one strict `no-shadow` warning in the personalised lane path;
+- `08df13b15bf0b5bd66fdf7dceb6359b18d67042b` — corrected the warning with no behaviour change;
+- workflow `34178662792` / run **#15** — **GREEN** end-to-end.
+
+Run #15 verified:
+
+- dependency install
+- all focused Discovery service tests
+- strict lint
+- legacy CSS/WebKit compatibility checks/patches
+- production Enact compilation
+- webOS IPK packaging
+- preserved app identity/version/main
+- isolated artifact upload
+
+Current verified artifact:
+
+- ID: `10038154398`
+- name: `Moonfin-HomeLab-webOS-DiscoveryV2-08df13b15bf0b5bd66fdf7dceb6359b18d67042b`
+- GitHub artifact digest: `sha256:8babd2765d40c5480acf765a186a673c648ec2c790f7d088d71b76ee3b611d3e`
+- IPK manifest SHA-256: `ebceaf7da758c792eaf939102d76ceac9b2d3d1ae330d9bf69eea7960ca14018`
+- app ID: `org.moonfin.webos`
+- version: `2.7.0`
+- main: `index.html`
+
+No v1 branch/candidate was overwritten. No physical LG acceptance is claimed.
+
+## Current implementation direction
+
+webOS remains the current slice. Do not jump to deployment merely because run #15 is green.
+
+Next webOS work should deliberately assess and improve:
+
+- semantic regression against accepted legacy 481/486 and genuinely unsupported-lane accounting
+- recommendation/lane quality and personal strategy diversity
+- cross-row and title-family duplication
+- remote focus/navigation/Back across tabs, rows, detail-return, See All, partial grids and load-more edges
+- visual consistency/responsiveness and legacy-TV rendering constraints
+- performance/caching/retained-state/stale-request behaviour
+- loading/error/empty/partial-failure combinations
+- request/detail/local-media/playback integration
+- catalogue change, missing image/provider identity, sparse-lane and exhausted-paging edge cases
+- real LG OLED65C6PSA launch/resume/remote/rendering/auth/update acceptance when code gates are ready
+
+After webOS reaches a strong equivalent state, return to the whole Moonfin Discovery product and reassess Web, Android mobile/tablet and Android TV/Google TV alongside webOS. Remaining shared work explicitly includes correctness/architecture, navigation/focus/back, recommendation/lane quality, deep browse, visual consistency/responsiveness, performance/caching, error/loading states, request/detail/playback integration, edge cases/duplication, semantic consistency, real-device acceptance and final polish.
+
+Packaging/cutover preparation remains required later but is not the next priority solely because artifacts now build.
 
 ## Physical acceptance not yet claimed
 
 Still requires real execution later:
 
-- Web mouse/touch/keyboard
+- Web mouse/touch/keyboard and responsive behaviour
 - Android mobile touch/back/resume
 - Android TV D-pad/focus/back
 - LG OLED65C6PSA remote/focus/back/resume/rendering/update
-- request/detail/local-media flow
+- request/detail/local-media/playback flows
 - production Android signing continuity
 - final stock Moonbase/external-Web-root cutover and rollback
