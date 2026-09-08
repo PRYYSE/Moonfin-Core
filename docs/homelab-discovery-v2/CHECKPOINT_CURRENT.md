@@ -70,9 +70,9 @@ Current isolated branch: `homelab/webos-discovery-v2`.
 
 ### Verified webOS product source
 
-`3cf33a70b45854f7db9b703a011511f941f21802`
+`a3a3317894a90bbab8b12cc7764187a8c5591369`
 
-Workflow `34184135140` / run **#49** — **GREEN**.
+Workflow `34184420915` / run **#50** — **GREEN**.
 
 Verification:
 
@@ -86,11 +86,11 @@ Verification:
 
 Artifact:
 
-- ID `10039954551`
-- name `Moonfin-HomeLab-webOS-DiscoveryV2-3cf33a70b45854f7db9b703a011511f941f21802`
-- size 4,312,559 bytes
-- digest `sha256:870e681ff9b3023c007b8ee1392e23362b78b1b1ea277a61683836e457fb0e6c`
-- IPK manifest SHA-256 `5f7012852c7c0dbad17876cb079ba9eb98e28cfa335b7b1414ec6ce13e29a030`
+- ID `10040048352`
+- name `Moonfin-HomeLab-webOS-DiscoveryV2-a3a3317894a90bbab8b12cc7764187a8c5591369`
+- size 4,312,422 bytes
+- digest `sha256:6e765d2ad65fcd0cfb487bfc13075da209332e3f5004ea3e14a434b8d2661eef`
+- IPK manifest SHA-256 `24e7a3af27c6ddf77d747b9990780073edb692ad6cef6453957d3afc45ee8e06`
 - identity remains `org.moonfin.webos` / `2.7.0` / `index.html`
 
 Smart-TV documentation commits may be newer than this code commit. The verified product source above is still the package acceptance point.
@@ -125,13 +125,14 @@ Do not re-enable them without a real source/filter/detail strategy that proves t
 
 ### Latest old-TV / edge / recommendation-quality gate
 
-Verified in run #49:
+Verified in run #50:
 
-- Discovery visual cost now follows the existing performance tier
+- Discovery visual cost follows the existing performance tier
 - low-tier webOS uses lower-resolution `w780` backdrops, zero blur, no backdrop scale/fade animation, longer focus debounce and non-animated row scrolling
 - mid tier caps blur at 4 px; high tier retains configured visual quality
 - disabled Home backdrops do not trigger hidden backdrop requests
 - <=800 px viewports use a smaller/tighter deep virtual grid; normal 1080p grid dimensions remain unchanged
+- compact card sizing merges with Enact VirtualGrid's supplied positioning style, preserving virtual-list transforms/positioning rather than overwriting them
 - poster URL/image failures render a deliberate text fallback instead of a broken image
 - missing/non-numeric/non-positive TMDB identities are filtered before presentation so dead cards cannot be selected
 - populated exhausted deep lists explicitly show `End of list`; sparse personalised lists retain bounded explicit Load More
@@ -143,7 +144,7 @@ No physical LG acceptance is claimed.
 
 ## Exact next work
 
-1. Prepare and execute controlled **LG OLED65C6PSA acceptance** from verified source `3cf33a70...`, preserving rollback/update identity.
+1. Prepare and execute controlled **LG OLED65C6PSA acceptance** from verified source `a3a3317894a90bbab8b12cc7764187a8c5591369`, preserving rollback/update identity.
 2. Validate launch/resume/auth, 720p/1080p rendering/performance, remote focus/Back, landing/detail/deep transitions, missing imagery/long text, sparse/exhausted paging, request/detail behaviour and owned playback.
 3. Capture the aggregate quality snapshot against real Jellyfin/Seerr data and use it to assess actual repetition/diversity/sparse signals before recommendation tuning.
 4. If physical LG acceptance is credible, return to the whole Moonfin Discovery product and fix/revalidate Flutter/Web/Android/Android-TV personalisation semantics plus shared recommendation quality, duplication, UX, performance, details/request/playback and edge cases.
