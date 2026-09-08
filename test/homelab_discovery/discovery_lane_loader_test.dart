@@ -88,39 +88,43 @@ void main() {
     },
   );
 
-  test('unsupported personal semantics hide without running a fake row', () async {
-    var loadRowCalls = 0;
-    final personalisation = HomeLabDiscoveryPersonalisation.forTesting(
-      serverId: 'server-1',
-      loadRow: (_, slot) async {
-        loadRowCalls++;
-        return HomeRow(
-          id: 'sinceYouWatched$slot',
-          title: 'Should not load',
-          rowType: HomeRowType.latestMedia,
-          items: [personalItem(1, 101, 'Wrong source')],
-          totalCount: 1,
-        );
-      },
-      loadMore: ({required row, required serverId, offset}) async =>
-          (row.items, row.totalCount),
-    );
-    final loader = HomeLabDiscoveryLaneLoader(
-      personalisation: personalisation,
-      fetchPage: (_, _) async => throw StateError('raw bridge should not run'),
-    );
+  test(
+    'unsupported personal semantics hide without running a fake row',
+    () async {
+      var loadRowCalls = 0;
+      final personalisation = HomeLabDiscoveryPersonalisation.forTesting(
+        serverId: 'server-1',
+        loadRow: (_, slot) async {
+          loadRowCalls++;
+          return HomeRow(
+            id: 'sinceYouWatched$slot',
+            title: 'Should not load',
+            rowType: HomeRowType.latestMedia,
+            items: [personalItem(1, 101, 'Wrong source')],
+            totalCount: 1,
+          );
+        },
+        loadMore: ({required row, required serverId, offset}) async =>
+            (row.items, row.totalCount),
+      );
+      final loader = HomeLabDiscoveryLaneLoader(
+        personalisation: personalisation,
+        fetchPage: (_, _) async =>
+            throw StateError('raw bridge should not run'),
+      );
 
-    final result = await loader.load(personalSection('watchlist'));
+      final result = await loader.load(personalSection('watchlist'));
 
-    expect(result.hasError, isFalse);
-    expect(result.shouldHide, isTrue);
-    expect(result.items, isEmpty);
-    expect(loadRowCalls, 0);
-    await expectLater(
-      loader.loadPage(personalSection('watchlist')),
-      throwsA(isA<UnsupportedError>()),
-    );
-  });
+      expect(result.hasError, isFalse);
+      expect(result.shouldHide, isTrue);
+      expect(result.items, isEmpty);
+      expect(loadRowCalls, 0);
+      await expectLater(
+        loader.loadPage(personalSection('watchlist')),
+        throwsA(isA<UnsupportedError>()),
+      );
+    },
+  );
 
   test(
     'supported personalised lane keeps authored semantics and raw order',
