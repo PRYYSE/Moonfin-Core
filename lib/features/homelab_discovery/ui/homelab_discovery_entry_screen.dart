@@ -60,9 +60,8 @@ class _HomeLabDiscoveryEntryScreenState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.load != widget.load) {
       // GoRouter rebuilds this route with a new builder closure when the
-      // section query changes. Resolve the current route first so entering a
-      // payload-backed deep route does not launch an unnecessary catalogue
-      // request that is immediately discarded.
+      // section query changes. Resolve route state without throwing away the
+      // already-loaded landing catalogue.
       _routeStateResolved = false;
       _syncRouteState();
     }
@@ -98,7 +97,13 @@ class _HomeLabDiscoveryEntryScreenState
     _routeUri = uri;
     _sectionId = sectionId;
     _routePayload = payload;
-    _loadFuture = payload == null ? (widget.load ?? _loadDefault)() : null;
+
+    // Keep the first validated catalogue future alive while navigating into
+    // and back from a payload-backed deep route. A direct/reloaded deep URL
+    // starts this future once because there is no in-memory payload to reuse.
+    if (payload == null && _loadFuture == null) {
+      _loadFuture = (widget.load ?? _loadDefault)();
+    }
   }
 
   Future<HomeLabDiscoveryLoadResult> _loadDefault() async {
