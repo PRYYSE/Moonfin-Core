@@ -159,8 +159,9 @@ class HomeLabDiscoveryPersonalisation {
     final maxRuntimeMinutes = policy.maxRuntimeMinutes;
     if (maxRuntimeMinutes != null) {
       final runtime = item.runtime;
-      if (runtime != null && runtime.inMinutes > maxRuntimeMinutes)
+      if (runtime != null && runtime.inMinutes > maxRuntimeMinutes) {
         return false;
+      }
     }
 
     final year = item.productionYear;
