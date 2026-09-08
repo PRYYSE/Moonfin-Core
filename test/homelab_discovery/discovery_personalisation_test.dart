@@ -3,6 +3,7 @@ import 'package:moonfin/data/models/aggregated_item.dart';
 import 'package:moonfin/data/models/home_row.dart';
 import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue.dart';
 import 'package:moonfin/features/homelab_discovery/engine/discovery_personal_policy.dart';
+import 'package:moonfin/features/homelab_discovery/engine/discovery_personal_sources.dart';
 import 'package:moonfin/features/homelab_discovery/engine/discovery_personalisation.dart';
 
 AggregatedItem media(
@@ -19,6 +20,7 @@ AggregatedItem media(
   int? runtimeMinutes,
   int? productionYear,
   int? seerrStatus,
+  String? jellyfinMediaId,
 }) {
   final raw = <String, dynamic>{
     'Name': name ?? 'Item $localId',
@@ -35,6 +37,7 @@ AggregatedItem media(
   }
   if (productionYear != null) raw['ProductionYear'] = productionYear;
   if (seerrStatus != null) raw['SeerrStatus'] = seerrStatus;
+  if (jellyfinMediaId != null) raw['JellyfinMediaId'] = jellyfinMediaId;
   return AggregatedItem(
     id: serverId == 'seerr' ? 'seerr-$tmdb' : '$localId',
     serverId: serverId,
@@ -60,15 +63,17 @@ HomeLabDiscoverySection section(
 
 HomeLabDiscoveryPersonalisation serviceWith({
   required Future<HomeRow> Function(String serverId, int rowIndex) loadRow,
+  HomeLabDiscoveryPersonalSources? personalSources,
 }) => HomeLabDiscoveryPersonalisation.forTesting(
   serverId: 'server-1',
   loadRow: loadRow,
   loadMore: ({required row, required serverId, offset}) async =>
       (row.items, row.totalCount),
+  personalSources: personalSources,
 );
 
 void main() {
-  test('source-specific and structural labels fail closed', () async {
+  test('source-specific and structural labels fail closed without an adapter', () async {
     var loadCalls = 0;
     final service = serviceWith(
       loadRow: (_, slot) async {
@@ -100,11 +105,6 @@ void main() {
     ]) {
       final candidate = section(strategy);
       expect(service.supports(candidate), isFalse, reason: strategy);
-      expect(
-        homeLabDiscoveryPersonalPolicy(candidate),
-        isNull,
-        reason: strategy,
-      );
       await expectLater(
         service.load(candidate),
         throwsA(isA<UnsupportedError>()),
@@ -112,6 +112,41 @@ void main() {
     }
 
     expect(loadCalls, 0);
+  });
+
+  test('proven source adapter executes without generic row IO', () async {
+    var genericLoads = 0;
+    var sourceLoads = 0;
+    final sources = HomeLabDiscoveryPersonalSources.forTesting(
+      serverId: 'server-1',
+      loadPool: (kind) async {
+        sourceLoads++;
+        expect(kind, HomeLabDiscoveryPersonalSourceKind.favourites);
+        return [media(1, 501)];
+      },
+      loadRecommendations: (seed) async => [
+        media(2, 601, serverId: 'seerr', seerrStatus: 3),
+      ],
+    );
+    final service = serviceWith(
+      personalSources: sources,
+      loadRow: (_, slot) async {
+        genericLoads++;
+        return HomeRow(
+          id: 'sinceYouWatched$slot',
+          title: 'Generic',
+          rowType: HomeRowType.latestMedia,
+        );
+      },
+    );
+
+    final candidate = section('favourites');
+    expect(service.supports(candidate), isTrue);
+    final result = await service.load(candidate);
+    expect(sourceLoads, 1);
+    expect(genericLoads, 0);
+    expect(result.title, candidate.title);
+    expect(result.page.results.map((item) => item.id), [601]);
   });
 
   test(
@@ -254,7 +289,34 @@ void main() {
     },
   );
 
-  test('items without a real TMDB id are omitted', () async {
+  test('explicit external Jellyfin identity is preserved, never invented', () async {
+    final sources = HomeLabDiscoveryPersonalSources.forTesting(
+      serverId: 'server-1',
+      loadPool: (_) async => [media(1, 701)],
+      loadRecommendations: (_) async => [
+        media(
+          2,
+          702,
+          serverId: 'seerr',
+          seerrStatus: 5,
+          jellyfinMediaId: 'real-jellyfin-id',
+        ),
+      ],
+    );
+    final service = serviceWith(
+      personalSources: sources,
+      loadRow: (_, slot) async => HomeRow(
+        id: 'sinceYouWatched$slot',
+        title: 'Unused',
+        rowType: HomeRowType.latestMedia,
+      ),
+    );
+
+    final result = await service.load(section('recent-history'));
+    expect(result.page.results.single.mediaInfo?.jellyfinMediaId, 'real-jellyfin-id');
+  });
+
+  test('items without a real TMDB id are omitted from results and totals', () async {
     final bad = AggregatedItem(
       id: 'local',
       serverId: 'server-1',
@@ -265,12 +327,14 @@ void main() {
         id: 'sinceYouWatched$slot',
         title: 'Recommended For You',
         rowType: HomeRowType.latestMedia,
-        items: [bad],
-        totalCount: 1,
+        items: [bad, media(2, 802)],
+        totalCount: 2,
       ),
     );
 
     final result = await service.load(section('movie-affinity'));
-    expect(result.page.results, isEmpty);
+    expect(result.page.results.map((item) => item.id), [802]);
+    expect(result.page.totalResults, 1);
+    expect(result.page.totalPages, 1);
   });
 }

@@ -4,10 +4,12 @@ import 'package:server_core/server_core.dart';
 import '../../../data/repositories/seerr_repository.dart';
 import '../../../data/services/row_data_source.dart';
 import '../../../preference/seerr_preferences.dart';
+import '../../../preference/user_preferences.dart';
 import '../bridge/moonfin_discovery_bridge.dart';
 import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_lane_loader.dart';
 import '../data/discovery_membership_policy.dart';
+import 'discovery_personal_sources.dart';
 import 'discovery_personalisation.dart';
 import 'discovery_rotation_history.dart';
 import 'discovery_rotation_store.dart';
@@ -54,13 +56,27 @@ class HomeLabDiscoveryRuntime {
     final activeClient = getIt<MediaServerClient>();
     final repository = await getIt.getAsync<SeerrRepository>();
     final preferences = getIt<SeerrPreferences>();
+    final userPreferences = getIt<UserPreferences>();
     final bridge = MoonfinHomeLabDiscoveryBridge(
       repository: repository,
       client: activeClient,
     );
+    final blockedParentalRatings = userPreferences
+        .get(UserPreferences.blockedParentalRatings)
+        .split(',')
+        .map((value) => value.trim().toUpperCase())
+        .where((value) => value.isNotEmpty)
+        .toSet();
+    final personalSources = HomeLabDiscoveryPersonalSources.production(
+      serverId: activeClient.baseUrl,
+      client: activeClient,
+      repository: repository,
+      blockedParentalRatings: blockedParentalRatings,
+    );
     final personalisation = HomeLabDiscoveryPersonalisation(
       serverId: activeClient.baseUrl,
       rowDataSource: getIt<RowDataSource>(),
+      personalSources: personalSources,
     );
     final loader = HomeLabDiscoveryLaneLoader(
       fetchPage: bridge.fetchPage,

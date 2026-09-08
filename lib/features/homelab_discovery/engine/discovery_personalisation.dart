@@ -4,6 +4,7 @@ import '../../../data/services/row_data_source.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../catalogue/discovery_catalogue.dart';
 import 'discovery_personal_policy.dart';
+import 'discovery_personal_sources.dart';
 
 typedef HomeLabDiscoveryPersonalRowLoader =
     Future<HomeRow> Function(String serverId, int rowIndex);
@@ -22,12 +23,11 @@ class HomeLabDiscoveryPersonalPage {
   const HomeLabDiscoveryPersonalPage({required this.title, required this.page});
 }
 
-/// Feature-local adapter over stock Moonfin's `Since You Watched` engine.
+/// Feature-local personalisation adapter for Home Lab Discovery.
 ///
-/// A personalised catalogue label is executable only when
-/// [homeLabDiscoveryPersonalPolicy] can prove that the current upstream row,
-/// plus explicit result filtering, represents that label truthfully. There is
-/// deliberately no hash/slot fallback for unknown or source-specific labels.
+/// Generic affinity rows use [homeLabDiscoveryPersonalPolicy]. Provenance-
+/// specific rows use [HomeLabDiscoveryPersonalSources]. Unknown, structural or
+/// contextual strategies have no fallback and therefore fail closed.
 class HomeLabDiscoveryPersonalisation {
   static const pageSize = 15;
   static const _maxExpansionPasses = 8;
@@ -35,23 +35,29 @@ class HomeLabDiscoveryPersonalisation {
   final String serverId;
   final HomeLabDiscoveryPersonalRowLoader _loadRow;
   final HomeLabDiscoveryPersonalLoadMore _loadMore;
+  final HomeLabDiscoveryPersonalSources? _personalSources;
   final Map<String, HomeRow> _rows = <String, HomeRow>{};
 
   HomeLabDiscoveryPersonalisation({
     required this.serverId,
     required RowDataSource rowDataSource,
+    HomeLabDiscoveryPersonalSources? personalSources,
   }) : _loadRow = rowDataSource.loadSinceYouWatchedRow,
-       _loadMore = rowDataSource.loadMore;
+       _loadMore = rowDataSource.loadMore,
+       _personalSources = personalSources;
 
   HomeLabDiscoveryPersonalisation.forTesting({
     required this.serverId,
     required HomeLabDiscoveryPersonalRowLoader loadRow,
     required HomeLabDiscoveryPersonalLoadMore loadMore,
+    HomeLabDiscoveryPersonalSources? personalSources,
   }) : _loadRow = loadRow,
-       _loadMore = loadMore;
+       _loadMore = loadMore,
+       _personalSources = personalSources;
 
   bool supports(HomeLabDiscoverySection section) =>
-      homeLabDiscoveryPersonalPolicy(section) != null;
+      homeLabDiscoveryPersonalPolicy(section) != null ||
+      (_personalSources?.supports(section) ?? false);
 
   Future<HomeLabDiscoveryPersonalPage> load(
     HomeLabDiscoverySection section, {
@@ -59,13 +65,50 @@ class HomeLabDiscoveryPersonalisation {
     bool forceRefresh = false,
   }) async {
     final policy = homeLabDiscoveryPersonalPolicy(section);
-    if (policy == null) {
+    if (policy != null) {
+      return _loadGenericAffinity(
+        section,
+        policy,
+        page: page,
+        forceRefresh: forceRefresh,
+      );
+    }
+
+    final sources = _personalSources;
+    if (sources == null || !sources.supports(section)) {
       throw UnsupportedError(
         'Discovery personal strategy ${section.query.seedStrategy ?? section.id} '
         'has no truthful source in the current Flutter client',
       );
     }
 
+    final loaded = await sources.load(
+      section,
+      page: page,
+      forceRefresh: forceRefresh,
+    );
+    final converted = loaded.items
+        .map(_toSeerrItem)
+        .whereType<SeerrDiscoverItem>()
+        .toList(growable: false);
+
+    return HomeLabDiscoveryPersonalPage(
+      title: section.title,
+      page: SeerrDiscoverPage(
+        page: loaded.page,
+        totalPages: loaded.totalPages,
+        totalResults: loaded.totalResults,
+        results: converted,
+      ),
+    );
+  }
+
+  Future<HomeLabDiscoveryPersonalPage> _loadGenericAffinity(
+    HomeLabDiscoverySection section,
+    HomeLabDiscoveryPersonalPolicy policy, {
+    required int page,
+    required bool forceRefresh,
+  }) async {
     final safePage = page < 1 ? 1 : page;
     if (forceRefresh) _rows.remove(section.id);
 
@@ -76,20 +119,20 @@ class HomeLabDiscoveryPersonalisation {
       _rows[section.id] = row;
     }
 
-    final filtered = row.items
+    // Convert before counting/paging so malformed or identity-less upstream
+    // candidates cannot inflate the advertised total or create empty pages.
+    final eligible = row.items
         .where((item) => _matches(policy, item))
-        .toList(growable: false);
-    final total = filtered.length;
-    final totalPages = total == 0 ? 0 : (total + pageSize - 1) ~/ pageSize;
-    final start = (safePage - 1) * pageSize;
-    final end = (start + pageSize).clamp(0, total).toInt();
-    final pageItems = start < total
-        ? filtered.sublist(start, end)
-        : const <AggregatedItem>[];
-    final converted = pageItems
         .map(_toSeerrItem)
         .whereType<SeerrDiscoverItem>()
         .toList(growable: false);
+    final total = eligible.length;
+    final totalPages = total == 0 ? 0 : (total + pageSize - 1) ~/ pageSize;
+    final start = (safePage - 1) * pageSize;
+    final end = (start + pageSize).clamp(0, total).toInt();
+    final converted = start < total
+        ? eligible.sublist(start, end)
+        : const <SeerrDiscoverItem>[];
 
     return HomeLabDiscoveryPersonalPage(
       // Keep the authored label. The upstream row title may describe whichever
@@ -122,9 +165,14 @@ class HomeLabDiscoveryPersonalisation {
     return row;
   }
 
-  void clearSection(String sectionId) => _rows.remove(sectionId);
+  void clearSection(String sectionId) {
+    _rows.remove(sectionId);
+  }
 
-  void clear() => _rows.clear();
+  void clear() {
+    _rows.clear();
+    _personalSources?.clear();
+  }
 
   bool _matches(HomeLabDiscoveryPersonalPolicy policy, AggregatedItem item) {
     final wanted = policy.mediaType.toLowerCase();
@@ -200,7 +248,11 @@ class HomeLabDiscoveryPersonalisation {
   }
 
   SeerrDiscoverItem? _toSeerrItem(AggregatedItem item) {
-    final tmdb = int.tryParse(item.tmdbId ?? '');
+    // A local Jellyfin id is never a TMDB id. External Seerr/TMDB adapters are
+    // the only safe place where a numeric AggregatedItem.id itself is TMDB.
+    final tmdb = int.tryParse(
+      item.tmdbId ?? (item.serverId == 'seerr' ? item.id : ''),
+    );
     if (tmdb == null || tmdb <= 0) return null;
 
     final mediaType = switch (item.type) {
@@ -225,6 +277,12 @@ class HomeLabDiscoveryPersonalisation {
         : external
         ? item.seerrStatus
         : 5;
+    final explicitJellyfinId = raw['JellyfinMediaId']?.toString().trim();
+    final jellyfinId = external
+        ? (explicitJellyfinId == null || explicitJellyfinId.isEmpty
+              ? null
+              : explicitJellyfinId)
+        : item.id;
 
     return SeerrDiscoverItem(
       id: tmdb,
@@ -245,7 +303,7 @@ class HomeLabDiscoveryPersonalisation {
           : SeerrMediaInfo(
               tmdbId: tmdb,
               status: status,
-              jellyfinMediaId: external ? null : item.id,
+              jellyfinMediaId: jellyfinId,
             ),
     );
   }
