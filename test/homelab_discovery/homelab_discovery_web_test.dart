@@ -141,7 +141,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Untitled'), findsOneWidget);
-      expect(find.byIcon(Icons.tv), findsWidgets);
+      expect(find.text('UNTITLED'), findsOneWidget);
 
       final cardFinder = find.byType(HomeLabDiscoveryMediaCard);
       await tester.tap(cardFinder);
