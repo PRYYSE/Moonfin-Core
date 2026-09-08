@@ -14,7 +14,7 @@ Current implementation slice is **LG/webOS**. The code-side webOS gate is now st
   - Flutter/Web/Android product source milestone remains `86acba1246ea5e9424fcc96c9729c1e474359c53`
   - documentation/checkpoint commits are newer than product code
 - `PRYYSE/Smart-TV:homelab/webos-discovery-v2`
-  - current verified product source: `3cf33a70b45854f7db9b703a011511f941f21802`
+  - current verified product source: `a3a3317894a90bbab8b12cc7764187a8c5591369`
   - documentation commits may be newer than verified product source
 - preserved Smart-TV baseline: `homelab/webos-v1-staging` / `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`
 
@@ -32,7 +32,7 @@ Current implementation slice is **LG/webOS**. The code-side webOS gate is now st
 
 These clients are **not product-finished**. The webOS semantic audit exposed a shared personalisation-parity issue that must be corrected in the later whole-product pass.
 
-### webOS verified through `3cf33a70b45854f7db9b703a011511f941f21802`
+### webOS verified through `a3a3317894a90bbab8b12cc7764187a8c5591369`
 
 Foundation already complete:
 
@@ -55,6 +55,7 @@ Latest old-TV/edge/quality hardening:
 - mid tier caps backdrop blur at 4 px; high tier preserves configured quality
 - disabled Home backdrops no longer trigger hidden backdrop image requests
 - <=800 px viewport uses a smaller deep virtual-grid footprint and tighter spacing
+- compact deep-card dimensions are merged with Enact VirtualGrid's supplied item style so positioning/transforms are preserved
 - poster load/network failures fall back cleanly instead of leaving broken-image tiles
 - missing/non-numeric/non-positive TMDB identities are removed before presentation
 - exhausted populated deep lists explicitly show `End of list`
@@ -63,12 +64,12 @@ Latest old-TV/edge/quality hardening:
 
 Verification:
 
-- Smart-TV workflow `34184135140` / run #49: **GREEN**
+- Smart-TV workflow `34184420915` / run #50: **GREEN**
 - 16/16 focused Discovery/integration suites, 85/85 tests
 - strict lint + legacy WebKit compatibility + production Enact build + IPK identity/package verification
-- artifact `10039954551`
-- artifact digest `sha256:870e681ff9b3023c007b8ee1392e23362b78b1b1ea277a61683836e457fb0e6c`
-- IPK manifest SHA-256 `5f7012852c7c0dbad17876cb079ba9eb98e28cfa335b7b1414ec6ce13e29a030`
+- artifact `10040048352`
+- artifact digest `sha256:6e765d2ad65fcd0cfb487bfc13075da209332e3f5004ea3e14a434b8d2661eef`
+- IPK manifest SHA-256 `24e7a3af27c6ddf77d747b9990780073edb692ad6cef6453957d3afc45ee8e06`
 - identity remains `org.moonfin.webos` / `2.7.0` / `index.html`
 
 ## Semantic accounting
@@ -113,7 +114,7 @@ Therefore Flutter/Web/Android/Android-TV green CI does **not** prove semantic pa
 
 ## Tests/builds
 
-- Smart-TV workflow `34184135140` / #49: GREEN
+- Smart-TV workflow `34184420915` / #50: GREEN
   - 16/16 suites
   - 85/85 tests
   - lint, legacy compatibility, production build, IPK, identity verification and artifact upload
@@ -121,7 +122,7 @@ Therefore Flutter/Web/Android/Android-TV green CI does **not** prove semantic pa
 
 ## Exact next actions
 
-1. Prepare and execute controlled **LG OLED65C6PSA acceptance** using verified Smart-TV source `3cf33a70...`, with reversible installation/update and minimal diagnostics.
+1. Prepare and execute controlled **LG OLED65C6PSA acceptance** using verified Smart-TV source `a3a3317894a90bbab8b12cc7764187a8c5591369`, with reversible installation/update and minimal diagnostics.
 2. Validate launch/resume/auth, 720p/1080p rendering/performance, remote focus/Back, landing/detail/deep transitions, exhausted/sparse paging, request/detail behaviour and owned playback.
 3. Capture the aggregate quality snapshot against actual Home Lab Jellyfin/Seerr data and use evidence, not guesswork, for any recommendation tuning.
 4. If LG acceptance is credible, return to the whole Moonfin Discovery product and fix/revalidate shared personalisation semantics, recommendation quality, duplication, UX, performance, details/request/playback and edge cases across all clients.
