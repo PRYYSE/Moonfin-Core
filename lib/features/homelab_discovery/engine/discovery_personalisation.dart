@@ -126,10 +126,7 @@ class HomeLabDiscoveryPersonalisation {
 
   void clear() => _rows.clear();
 
-  bool _matches(
-    HomeLabDiscoveryPersonalPolicy policy,
-    AggregatedItem item,
-  ) {
+  bool _matches(HomeLabDiscoveryPersonalPolicy policy, AggregatedItem item) {
     final wanted = policy.mediaType.toLowerCase();
     if (wanted == 'movie' && item.type != 'Movie') return false;
     if (wanted == 'tv' && item.type != 'Series') return false;
@@ -162,7 +159,8 @@ class HomeLabDiscoveryPersonalisation {
     final maxRuntimeMinutes = policy.maxRuntimeMinutes;
     if (maxRuntimeMinutes != null) {
       final runtime = item.runtime;
-      if (runtime != null && runtime.inMinutes > maxRuntimeMinutes) return false;
+      if (runtime != null && runtime.inMinutes > maxRuntimeMinutes)
+        return false;
     }
 
     final year = item.productionYear;
