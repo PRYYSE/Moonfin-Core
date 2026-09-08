@@ -40,17 +40,14 @@ Widget appFor(HomeLabDiscoveryLoad load) {
 HomeLabDiscoverySeeAllController deepController() {
   return HomeLabDiscoverySeeAllController(
     section: section,
-    loadPage: (
-      candidate, {
-      required page,
-      required forceRefresh,
-    }) async => HomeLabDiscoveryPageLoadResult(
-      section: candidate,
-      page: page,
-      totalPages: 1,
-      totalResults: 0,
-      items: const <SeerrDiscoverItem>[],
-    ),
+    loadPage: (candidate, {required page, required forceRefresh}) async =>
+        HomeLabDiscoveryPageLoadResult(
+          section: candidate,
+          page: page,
+          totalPages: 1,
+          totalResults: 0,
+          items: const <SeerrDiscoverItem>[],
+        ),
   );
 }
 
@@ -90,10 +87,7 @@ void main() {
     final uri = Uri.parse(location);
 
     expect(uri.path, Destinations.seerrDiscover);
-    expect(
-      HomeLabDiscoveryRoutes.sectionId(uri),
-      'anime:watch list/2026',
-    );
+    expect(HomeLabDiscoveryRoutes.sectionId(uri), 'anime:watch list/2026');
     expect(HomeLabDiscoveryRoutes.sectionId(Uri.parse('/home')), isNull);
   });
 

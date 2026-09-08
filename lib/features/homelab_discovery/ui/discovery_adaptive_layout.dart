@@ -12,7 +12,7 @@ int homeLabDiscoveryGridColumns(double crossAxisExtent) {
     return minimumColumns;
   }
 
-  final calculated =
-      ((crossAxisExtent + spacing) / (targetCardWidth + spacing)).floor();
+  final calculated = ((crossAxisExtent + spacing) / (targetCardWidth + spacing))
+      .floor();
   return calculated.clamp(minimumColumns, maximumColumns).toInt();
 }

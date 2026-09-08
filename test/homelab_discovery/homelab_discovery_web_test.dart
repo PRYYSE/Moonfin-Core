@@ -48,11 +48,7 @@ Widget cardHarness(VoidCallback onTap) {
           autofocus: true,
           width: 150,
           onTap: onTap,
-          item: const SeerrDiscoverItem(
-            id: 123,
-            mediaType: 'tv',
-            name: '',
-          ),
+          item: const SeerrDiscoverItem(id: 123, mediaType: 'tv', name: ''),
         ),
       ),
     ),
@@ -69,72 +65,73 @@ void main() {
     expect(homeLabDiscoveryGridColumns(double.infinity), 2);
   });
 
-  test('owned Discovery item routes to Jellyfin while external stays Seerr', () {
-    const owned = SeerrDiscoverItem(
-      id: 44,
-      mediaType: 'movie',
-      title: 'Owned',
-      mediaInfo: SeerrMediaInfo(jellyfinMediaId: 'jf-44', status: 5),
-    );
-    const external = SeerrDiscoverItem(
-      id: 45,
-      mediaType: 'tv',
-      name: 'External',
-    );
-    const malformedLocal = SeerrDiscoverItem(
-      id: 46,
-      mediaType: 'movie',
-      title: 'Malformed local pointer',
-      mediaInfo: SeerrMediaInfo(jellyfinMediaId: ' null ', status: 5),
-    );
-
-    expect(homeLabDiscoveryItemLocation(owned), Destinations.item('jf-44'));
-    expect(
-      homeLabDiscoveryItemLocation(external),
-      Destinations.seerrMedia('45', mediaType: 'tv'),
-    );
-    expect(
-      homeLabDiscoveryItemLocation(malformedLocal),
-      Destinations.seerrMedia('46', mediaType: 'movie'),
-    );
-  });
-
-  testWidgets(
-    'Web tab strip accepts touch, mouse and keyboard selection',
-    (tester) async {
-      await tester.pumpWidget(tabHarness());
-      await tester.pumpAndSettle();
-      expect(find.text('MOVIES BODY'), findsOneWidget);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.pump();
-      await tester.sendKeyEvent(LogicalKeyboardKey.end);
-      await tester.pumpAndSettle();
-      expect(find.text('ANIME BODY'), findsOneWidget);
-      await tester.sendKeyEvent(LogicalKeyboardKey.home);
-      await tester.pumpAndSettle();
-      expect(find.text('MOVIES BODY'), findsOneWidget);
-
-      await tester.tap(
-        find.byKey(const ValueKey<String>('homelab-discovery-tab-series')),
+  test(
+    'owned Discovery item routes to Jellyfin while external stays Seerr',
+    () {
+      const owned = SeerrDiscoverItem(
+        id: 44,
+        mediaType: 'movie',
+        title: 'Owned',
+        mediaInfo: SeerrMediaInfo(jellyfinMediaId: 'jf-44', status: 5),
       );
-      await tester.pumpAndSettle();
-      expect(find.text('SERIES BODY'), findsOneWidget);
-
-      final animeFinder = find.byKey(
-        const ValueKey<String>('homelab-discovery-tab-anime'),
+      const external = SeerrDiscoverItem(
+        id: 45,
+        mediaType: 'tv',
+        name: 'External',
       );
-      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      final animeCenter = tester.getCenter(animeFinder);
-      await mouse.addPointer(location: animeCenter);
-      await mouse.down(animeCenter);
-      await mouse.up();
-      await tester.pumpAndSettle();
-      expect(find.text('ANIME BODY'), findsOneWidget);
-      await mouse.removePointer();
+      const malformedLocal = SeerrDiscoverItem(
+        id: 46,
+        mediaType: 'movie',
+        title: 'Malformed local pointer',
+        mediaInfo: SeerrMediaInfo(jellyfinMediaId: ' null ', status: 5),
+      );
+
+      expect(homeLabDiscoveryItemLocation(owned), Destinations.item('jf-44'));
+      expect(
+        homeLabDiscoveryItemLocation(external),
+        Destinations.seerrMedia('45', mediaType: 'tv'),
+      );
+      expect(
+        homeLabDiscoveryItemLocation(malformedLocal),
+        Destinations.seerrMedia('46', mediaType: 'movie'),
+      );
     },
-    skip: !kIsWeb,
   );
+
+  testWidgets('Web tab strip accepts touch, mouse and keyboard selection', (
+    tester,
+  ) async {
+    await tester.pumpWidget(tabHarness());
+    await tester.pumpAndSettle();
+    expect(find.text('MOVIES BODY'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pumpAndSettle();
+    expect(find.text('ANIME BODY'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await tester.pumpAndSettle();
+    expect(find.text('MOVIES BODY'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('homelab-discovery-tab-series')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('SERIES BODY'), findsOneWidget);
+
+    final animeFinder = find.byKey(
+      const ValueKey<String>('homelab-discovery-tab-anime'),
+    );
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    final animeCenter = tester.getCenter(animeFinder);
+    await mouse.addPointer(location: animeCenter);
+    await mouse.down(animeCenter);
+    await mouse.up();
+    await tester.pumpAndSettle();
+    expect(find.text('ANIME BODY'), findsOneWidget);
+    await mouse.removePointer();
+  }, skip: !kIsWeb);
 
   testWidgets(
     'Web media card accepts touch, mouse and keyboard and falls back without art',

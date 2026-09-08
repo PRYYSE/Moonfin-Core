@@ -85,9 +85,10 @@ class _HomeLabDiscoverySeeAllEntryState
       );
     }
 
-    final runtime = await (widget.runtimeLoad ?? HomeLabDiscoveryRuntime.create)(
-      widget.catalogue,
-    );
+    final runtime =
+        await (widget.runtimeLoad ?? HomeLabDiscoveryRuntime.create)(
+          widget.catalogue,
+        );
     if (!mounted || generation != _generation) {
       runtime.dispose();
       throw StateError('Stale Discovery deep-route resolution');
