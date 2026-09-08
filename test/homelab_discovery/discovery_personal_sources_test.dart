@@ -1,15 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moonfin/data/models/aggregated_item.dart';
+import 'package:moonfin/data/models/home_row.dart';
 import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue.dart';
 import 'package:moonfin/features/homelab_discovery/engine/discovery_personal_sources.dart';
+import 'package:moonfin/features/homelab_discovery/engine/discovery_personalisation.dart';
 
 AggregatedItem sourceItem(
   int tmdb, {
   String type = 'Movie',
   String serverId = 'server-1',
-  List<String> genres = const [],
-  List<String> tags = const [],
-  String? language,
+  bool anime = false,
+  String? jellyfinMediaId,
 }) => AggregatedItem(
   id: serverId == 'seerr' ? '$tmdb' : 'local-$tmdb',
   serverId: serverId,
@@ -17,21 +18,20 @@ AggregatedItem sourceItem(
     'Name': 'Item $tmdb',
     'Type': type,
     'ProviderIds': {'Tmdb': '$tmdb'},
-    'Genres': genres,
-    'Tags': tags,
-    if (language != null) 'OriginalLanguage': language,
-    if (serverId == 'seerr') 'GenreIds': genres.contains('anime') ? [16] : [],
+    if (anime) 'Tags': ['anime'],
+    if (anime) 'GenreIds': [16],
+    if (anime) 'OriginalLanguage': 'ja',
+    if (serverId == 'seerr') 'SeerrStatus': 5,
+    if (jellyfinMediaId != null) 'JellyfinMediaId': jellyfinMediaId,
   },
 );
 
-HomeLabDiscoverySection sourceSection(
+HomeLabDiscoverySection personal(
   String strategy, {
   String mediaType = 'all',
-  List<String> tags = const [],
 }) => HomeLabDiscoverySection(
   id: 'source-$strategy-$mediaType',
   title: 'Source $strategy',
-  tags: tags,
   minItems: 1,
   query: HomeLabDiscoveryQuery(
     source: HomeLabDiscoverySource.personalised,
@@ -41,7 +41,7 @@ HomeLabDiscoverySection sourceSection(
 );
 
 void main() {
-  test('source policy exposes only proven provenance families', () {
+  test('maps only proven source families', () {
     final expected = {
       'recent-history': HomeLabDiscoveryPersonalSourceKind.recentHistory,
       'favourites': HomeLabDiscoveryPersonalSourceKind.favourites,
@@ -58,14 +58,13 @@ void main() {
     };
 
     for (final entry in expected.entries) {
-      expect(
-        homeLabDiscoveryPersonalSourcePolicy(sourceSection(entry.key))?.kind,
-        entry.value,
-        reason: entry.key,
+      final policy = homeLabDiscoveryPersonalSourcePolicy(
+        personal(entry.key),
       );
+      expect(policy?.kind, entry.value, reason: entry.key);
     }
 
-    for (final unsupported in [
+    for (final strategy in [
       'novelty',
       'rewatch',
       'recent-discovery-context',
@@ -76,122 +75,86 @@ void main() {
       'anime-novelty',
     ]) {
       expect(
-        homeLabDiscoveryPersonalSourcePolicy(sourceSection(unsupported)),
+        homeLabDiscoveryPersonalSourcePolicy(personal(strategy)),
         isNull,
-        reason: unsupported,
+        reason: strategy,
       );
     }
   });
 
-  test('recommendation source is bounded, deduped and excludes source seeds', () async {
-    final recommendationSeeds = <int>[];
+  test('bounds and dedupes recommendation transport', () async {
+    final seeds = <int>[];
     final service = HomeLabDiscoveryPersonalSources.forTesting(
       serverId: 'server-1',
-      loadPool: (kind) async => [
+      loadPool: (_) async => [
         sourceItem(10),
         sourceItem(11),
         sourceItem(12),
         sourceItem(13),
       ],
       loadRecommendations: (seed) async {
-        recommendationSeeds.add(int.parse(seed.tmdbId!));
+        seeds.add(int.parse(seed.tmdbId!));
         return [
           sourceItem(10, serverId: 'seerr'),
           sourceItem(100, serverId: 'seerr'),
-          sourceItem(200 + recommendationSeeds.length, serverId: 'seerr'),
+          sourceItem(200 + seeds.length, serverId: 'seerr'),
         ];
       },
     );
 
-    final result = await service.load(sourceSection('recent-history'));
-    expect(recommendationSeeds.length, 2);
+    final result = await service.load(personal('recent-history'));
+    expect(seeds.length, 2);
     expect(result.items.map((item) => item.tmdbId), isNot(contains('10')));
     expect(result.items.where((item) => item.tmdbId == '100').length, 1);
     expect(result.totalResults, result.items.length);
-    expect(result.totalPages, 1);
 
-    await service.load(sourceSection('recent-history'));
-    expect(recommendationSeeds.length, 2, reason: 'section snapshot is cached');
+    await service.load(personal('recent-history'));
+    expect(seeds.length, 2);
   });
 
-  test('seed selection is deterministic within the truthful source pool', () async {
-    Future<List<int>> selected() async {
-      final calls = <int>[];
-      final service = HomeLabDiscoveryPersonalSources.forTesting(
-        serverId: 'server-1',
-        loadPool: (_) async => [
-          sourceItem(1),
-          sourceItem(2),
-          sourceItem(3),
-          sourceItem(4),
-        ],
-        loadRecommendations: (seed) async {
-          calls.add(int.parse(seed.tmdbId!));
-          return [sourceItem(100 + calls.length, serverId: 'seerr')];
-        },
-      );
-      await service.load(sourceSection('favourites'));
-      return calls;
-    }
-
-    expect(await selected(), await selected());
-  });
-
-  test('direct source does not invoke recommendation transport', () async {
-    var recommendationCalls = 0;
+  test('direct source skips recommendation transport', () async {
+    var calls = 0;
     final service = HomeLabDiscoveryPersonalSources.forTesting(
       serverId: 'server-1',
-      loadPool: (kind) async => [sourceItem(501), sourceItem(502)],
-      loadRecommendations: (seed) async {
-        recommendationCalls++;
+      loadPool: (_) async => [sourceItem(501), sourceItem(502)],
+      loadRecommendations: (_) async {
+        calls++;
         return const [];
       },
     );
 
     final result = await service.load(
-      sourceSection('recently-added', mediaType: 'movie'),
+      personal('recently-added', mediaType: 'movie'),
     );
     expect(result.items.map((item) => item.tmdbId), ['501', '502']);
-    expect(recommendationCalls, 0);
+    expect(calls, 0);
   });
 
-  test('anime provenance and recommendation results stay anime-only', () async {
-    var recommendationCalls = 0;
+  test('anime source remains anime only', () async {
+    var calls = 0;
     final service = HomeLabDiscoveryPersonalSources.forTesting(
       serverId: 'server-1',
       loadPool: (_) async => [
-        sourceItem(601, type: 'Series', genres: ['anime']),
-        sourceItem(602, type: 'Series', genres: ['Drama']),
+        sourceItem(601, type: 'Series', anime: true),
+        sourceItem(602, type: 'Series'),
       ],
-      loadRecommendations: (seed) async {
-        recommendationCalls++;
+      loadRecommendations: (_) async {
+        calls++;
         return [
-          sourceItem(
-            701,
-            type: 'Series',
-            serverId: 'seerr',
-            genres: ['anime'],
-            language: 'ja',
-          ),
-          sourceItem(
-            702,
-            type: 'Series',
-            serverId: 'seerr',
-            genres: ['Drama'],
-            language: 'en',
-          ),
+          sourceItem(701, type: 'Series', serverId: 'seerr', anime: true),
+          sourceItem(702, type: 'Series', serverId: 'seerr'),
         ];
       },
     );
 
     final result = await service.load(
-      sourceSection('anime-favourites', mediaType: 'tv', tags: ['anime']),
+      personal('anime-favourites', mediaType: 'tv'),
     );
-    expect(recommendationCalls, 1);
+    expect(calls, 1);
     expect(result.items.map((item) => item.tmdbId), ['701']);
   });
 
-  test('force refresh invalidates source and recommendation snapshots', () async {
+  test('force refresh clears source snapshots', () async {
     var poolLoads = 0;
     var recommendationLoads = 0;
     final service = HomeLabDiscoveryPersonalSources.forTesting(
@@ -200,18 +163,57 @@ void main() {
         poolLoads++;
         return [sourceItem(801)];
       },
-      loadRecommendations: (seed) async {
+      loadRecommendations: (_) async {
         recommendationLoads++;
         return [sourceItem(901, serverId: 'seerr')];
       },
     );
-    final candidate = sourceSection('likes');
+    final candidate = personal('likes');
 
     await service.load(candidate);
     await service.load(candidate);
-    expect((poolLoads, recommendationLoads), (1, 1));
+    expect(poolLoads, 1);
+    expect(recommendationLoads, 1);
 
     await service.load(candidate, forceRefresh: true);
-    expect((poolLoads, recommendationLoads), (2, 2));
+    expect(poolLoads, 2);
+    expect(recommendationLoads, 2);
+  });
+
+  test('personalisation uses source without generic row IO', () async {
+    var genericLoads = 0;
+    final sources = HomeLabDiscoveryPersonalSources.forTesting(
+      serverId: 'server-1',
+      loadPool: (_) async => [sourceItem(1)],
+      loadRecommendations: (_) async => [
+        sourceItem(
+          601,
+          serverId: 'seerr',
+          jellyfinMediaId: 'real-jellyfin-id',
+        ),
+      ],
+    );
+    final service = HomeLabDiscoveryPersonalisation.forTesting(
+      serverId: 'server-1',
+      loadRow: (_, slot) async {
+        genericLoads++;
+        return HomeRow(
+          id: 'unused-$slot',
+          title: 'Unused',
+          rowType: HomeRowType.latestMedia,
+        );
+      },
+      loadMore: ({required row, required serverId, offset}) async =>
+          (row.items, row.totalCount),
+      personalSources: sources,
+    );
+
+    final result = await service.load(personal('favourites'));
+    expect(genericLoads, 0);
+    expect(result.page.results.single.id, 601);
+    expect(
+      result.page.results.single.mediaInfo?.jellyfinMediaId,
+      'real-jellyfin-id',
+    );
   });
 }

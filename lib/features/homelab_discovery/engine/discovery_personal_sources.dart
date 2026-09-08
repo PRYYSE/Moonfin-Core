@@ -264,9 +264,8 @@ class HomeLabDiscoveryPersonalSources {
     return List.unmodifiable(merged);
   }
 
-  Future<List<AggregatedItem>> _pool(
-    HomeLabDiscoveryPersonalSourceKind kind,
-  ) => _poolFutures.putIfAbsent(kind, () => _loadPool(kind));
+  Future<List<AggregatedItem>> _pool(HomeLabDiscoveryPersonalSourceKind kind) =>
+      _poolFutures.putIfAbsent(kind, () => _loadPool(kind));
 
   Future<List<AggregatedItem>> _loadPool(
     HomeLabDiscoveryPersonalSourceKind kind,
@@ -322,14 +321,13 @@ class HomeLabDiscoveryPersonalSources {
     }
   }
 
-  Future<List<AggregatedItem>> _ratedPool() =>
-      _ratedPoolFuture ??= _queryLocal(
-        includeItemTypes: const ['Movie', 'Series'],
-        filters: const ['IsPlayed'],
-        sortBy: 'DatePlayed',
-        sortOrder: 'Descending',
-        limit: _maxRatedCandidates,
-      );
+  Future<List<AggregatedItem>> _ratedPool() => _ratedPoolFuture ??= _queryLocal(
+    includeItemTypes: const ['Movie', 'Series'],
+    filters: const ['IsPlayed'],
+    sortBy: 'DatePlayed',
+    sortOrder: 'Descending',
+    limit: _maxRatedCandidates,
+  );
 
   Future<List<AggregatedItem>> _loadRecentHistory() async {
     final raw = await _queryLocal(
@@ -430,25 +428,27 @@ class HomeLabDiscoveryPersonalSources {
 
   List<AggregatedItem> _parseLocal(Map<String, dynamic> response) {
     final rawItems = response['Items'] as List? ?? const [];
-    return rawItems.whereType<Map>().map((raw) {
-      final data = raw.cast<String, dynamic>();
-      return AggregatedItem(
-        id: data['Id']?.toString() ?? '',
-        serverId: serverId,
-        rawData: data,
-      );
-    }).where((item) {
-      if (item.id.isEmpty) return false;
-      final rating = item.officialRating?.trim().toUpperCase();
-      return rating == null ||
-          rating.isEmpty ||
-          !_blockedParentalRatings.contains(rating);
-    }).toList(growable: false);
+    return rawItems
+        .whereType<Map>()
+        .map((raw) {
+          final data = raw.cast<String, dynamic>();
+          return AggregatedItem(
+            id: data['Id']?.toString() ?? '',
+            serverId: serverId,
+            rawData: data,
+          );
+        })
+        .where((item) {
+          if (item.id.isEmpty) return false;
+          final rating = item.officialRating?.trim().toUpperCase();
+          return rating == null ||
+              rating.isEmpty ||
+              !_blockedParentalRatings.contains(rating);
+        })
+        .toList(growable: false);
   }
 
-  Future<List<AggregatedItem>> _recommendationsFor(
-    AggregatedItem seed,
-  ) {
+  Future<List<AggregatedItem>> _recommendationsFor(AggregatedItem seed) {
     final key = _identityKey(seed);
     return _recommendationFutures.putIfAbsent(key, () async {
       final override = _recommendationLoaderOverride;
@@ -557,8 +557,9 @@ class HomeLabDiscoveryPersonalSources {
   }
 
   static bool _looksLikeAnime(AggregatedItem item) {
-    final tags = (item.rawData['Tags'] as List? ?? const [])
-        .map((value) => value.toString().toLowerCase());
+    final tags = (item.rawData['Tags'] as List? ?? const []).map(
+      (value) => value.toString().toLowerCase(),
+    );
     final genres = item.genres.map((value) => value.toLowerCase());
     if (tags.any((value) => value.contains('anime')) ||
         genres.any((value) => value.contains('anime'))) {
