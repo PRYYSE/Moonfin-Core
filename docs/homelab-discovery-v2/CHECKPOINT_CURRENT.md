@@ -7,12 +7,7 @@ This is the primary resume point. Read this file, then `docs/AI_PROJECT_STATE.md
 
 ## Objective / quality lock
 
-Replace the legacy broad Home Lab Moonfin fork with current stable official Moonfin + a narrow isolated Discovery overlay + server-driven catalogue, while preserving and improving the Discovery product across:
-
-1. Web
-2. Android mobile/tablet
-3. Google TV / Android TV
-4. LG TV / webOS
+Replace the legacy broad Home Lab Moonfin fork with current stable official Moonfin + a narrow isolated Discovery overlay + server-driven catalogue, while preserving and improving Discovery across Web, Android mobile/tablet, Google TV/Android TV and LG webOS.
 
 Quality, maintainability, truthful semantics and polish take priority over speed or nominal lane counts. Green CI/packages are milestones only.
 
@@ -29,7 +24,7 @@ Live remains deliberately untouched as rollback:
 - accepted legacy Discovery 481/486
 - Seerr enabled
 
-Important recovery refs remain intact:
+Recovery refs remain intact:
 
 - `archive/pre-v2-main-2026-09-06` -> `cfe9c5c1a4c32d1c0828eff5ed41ea3a2947d126`
 - `archive/seerr-discovery-v1-2026-09-06` -> `aa604b6cdc0083cebe8762f85ede896024f88725`
@@ -53,16 +48,7 @@ The old LG remains a lightweight Smart-TV/Enact client. Do not replace it with F
 **Verified product source:** `86acba1246ea5e9424fcc96c9729c1e474359c53`  
 **Workflow:** `34104075134` / run #62 — **GREEN**
 
-Implemented/verified foundation includes:
-
-- strict schema/catalogue/LKG/fallback architecture
-- deterministic concurrent loading with catalogue-order post-fetch presentation
-- membership/NSFW filtering
-- safe compiled authoring catalogue and fail-closed unresolved semantics
-- persistent surfaced-lane rotation
-- landing + deep `See All`
-- TV focus/D-pad/partial-grid/load-more hardening
-- reproducible Web/mobile/Android-TV candidate builds
+Verified foundation includes schema/catalogue/LKG/fallback architecture, deterministic concurrent loading/post-fetch presentation, membership/NSFW filtering, safe compiled catalogue semantics, persistent lane rotation, landing + deep See All, TV focus/D-pad hardening and reproducible Web/mobile/Android-TV builds.
 
 Artifact: `10012562778` / `homelab-discovery-v2-candidates-86acba1246ea5e9424fcc96c9729c1e474359c53`.
 
@@ -84,14 +70,14 @@ Current isolated branch: `homelab/webos-discovery-v2`.
 
 ### Verified webOS product source
 
-`21a21acf6f5b9fcb835c8c863c19ee3ce84929e0`
+`1f15b031207551d86eea52326fa8bd9eda394517`
 
-Workflow `34181464956` / run **#38** — **GREEN**.
+Workflow `34182625716` / run **#39** — **GREEN**.
 
 Verification:
 
-- 12/12 focused Discovery suites
-- 64/64 tests
+- 13/13 focused Discovery/integration suites
+- 78/78 tests
 - strict Enact lint
 - legacy CSS/WebKit compatibility
 - production Enact build
@@ -100,10 +86,10 @@ Verification:
 
 Artifact:
 
-- ID `10039078886`
-- name `Moonfin-HomeLab-webOS-DiscoveryV2-21a21acf6f5b9fcb835c8c863c19ee3ce84929e0`
-- digest `sha256:af90f1782149cae8703ec8afa7237d26426800feb0e648d54b5ce9fe567cd15a`
-- IPK manifest SHA-256 `7b55b12a693700ecfa587098b269cb43bb945bf0762b5605d6eb183b0e007869`
+- ID `10039454952`
+- name `Moonfin-HomeLab-webOS-DiscoveryV2-1f15b031207551d86eea52326fa8bd9eda394517`
+- digest `sha256:059f75d539a7937d1f4593930a0a21b7797e79cc20ccfbad9e7542b18f86d4b3`
+- IPK manifest SHA-256 `f98d3b8556b4822c61e20e1c07b68475c18dce09f71387c7803318296d9cd099`
 - identity remains `org.moonfin.webos` / `2.7.0` / `index.html`
 
 ### webOS product foundation completed
@@ -116,22 +102,12 @@ Do not redo:
 - bounded lane loading, membership and deterministic post-fetch presentation
 - persistent surfaced-lane rotation
 - Enact Spotlight landing navigation and exact card/See All restoration
-- deep virtual-grid route/controller with paging, dedup and retry
-- existing details/request routing
+- deep virtual-grid route/controller with incremental paging, dedup and retry
+- truthful Jellyfin/Seerr personalisation sources
+- bounded retained deep-state LRU with refresh invalidation and stale-load generation guards
 - legacy-WebKit build path
 
 ### Truthful personalisation semantics
-
-webOS no longer maps arbitrary named strategies onto pseudo-distinct recommendation slots. Current supported sources/signals include:
-
-- Jellyfin played history, favourites and likes
-- real Seerr watchlist
-- real Seerr movie/TV recommendations seeded by actual TMDB identities
-- provider-ID resolution back to owned Jellyfin items
-- explicit anime/media/runtime/era affinity rules
-- real recently-added/trending/popular-not-owned paths
-
-Unsupported structural/context semantics fail closed.
 
 Accepted shared reference remains **486 authored / 481 active**. Current truthful webOS static capability ceiling remains **468 executable active sections** before runtime sparse/error hiding.
 
@@ -143,20 +119,29 @@ The 13 deliberately ineligible active lanes remain:
 
 Do not re-enable them without a real source/filter/detail strategy that proves the label at acceptable old-TV cost.
 
-### Current deep-browse / retained-state milestone
+### Deep browse / retained-state work already verified
 
-The old bounded personal `See All` limitation is now resolved:
+- personal See All advances later Seerr recommendation pages rather than slicing only the first capture
+- personal landing previews stay one logical page to bound initial old-TV request cost
+- mixed personal rows accept movies + series
+- deep pages survive detail-return in a bounded server/user/section-revision LRU
+- refresh/reset invalidates affected retained deep state
+- obsolete in-flight loads cannot overwrite newer refresh/reset state
+- sparse personal deep rows expose explicit continuation without multiplied read-ahead
 
-- later deep pages increment later Seerr recommendation pages rather than slicing only the first capture
-- row expansion is cached, globally deduplicated and serialised
-- per-logical-page upstream request budget is bounded
-- landing personal rows intentionally load one logical page only
-- sparse personal deep rows avoid multiplied automatic read-ahead and provide explicit Load More continuation
-- `mediaType: all` correctly accepts movie + series results
-- deep loaded pages persist across detail-return in a bounded server/user/section-revision cache
-- refresh/reset invalidates retained deep snapshots for the affected server/user scope
-- landing/deep refresh propagates personal source invalidation
-- stale in-flight deep loads cannot overwrite newer refresh/reset state
+### Current failure / remote / detail-integration milestone
+
+The latest webOS batch fixed several concrete product defects:
+
+- owned Discovery results with a reconciled `jellyfinMediaId` no longer lose that local identity when selected; they open the real Jellyfin item so normal local details/playback remain available
+- requestable/not-owned results continue to use the existing Seerr-only detail route
+- a complete refresh failure preserves the last usable rows and surfaces an explicit warning instead of replacing them with an error/empty screen
+- all-lane transport failures are classified as failure rather than `Nothing is available`
+- zero-row landing states expose a stable D-pad retry target; toolbar DOWN no longer consumes navigation with nowhere to go
+- initial deep transport failure is distinguished from genuine empty content
+- catalogue retry, initial deep retry, sparse Load More and partial-page retry have stable Spotlight IDs/focus behaviour
+- app panel-history ownership was reviewed and deliberately preserved for landing -> detail -> Back, landing -> See All -> Back, and See All -> detail -> Back
+- `seerrTarget.test.js` is now part of the strict Discovery workflow gate so local-vs-Seerr detail routing is regression-tested
 
 No physical LG acceptance is claimed.
 
@@ -164,12 +149,10 @@ No physical LG acceptance is claimed.
 
 Continue webOS product hardening, not deployment:
 
-1. failure-state combinations: catalogue, Seerr and Jellyfin partial failures; empty signals; sparse/exhausted paging; missing images/provider IDs; retries;
-2. remote/back integration: landing/detail/deep transitions, tabs, navbar edge, partial grids and exhausted paging;
-3. visual/old-TV performance: card/backdrop spacing, long text, 720p/1080p rendering, memory and responsiveness;
-4. request/detail/owned/playback/return integration;
-5. real recommendation/duplication quality review against Home Lab data;
-6. if those code gates are strong, prepare the following batch for controlled LG OLED65C6PSA acceptance.
+1. visual/old-TV performance: card/backdrop spacing, long text, missing imagery, 720p/1080p rendering, memory and responsiveness;
+2. remaining failure edges: empty personal signals, missing provider identity and exhausted paging presentation;
+3. prepare real-data recommendation/duplication review against the Home Lab Jellyfin/Seerr data path without increasing landing request cost;
+4. if those code gates are strong, begin controlled LG OLED65C6PSA acceptance in the following batch, covering remote Back/focus, request/detail/local playback, launch/resume/auth and update compatibility.
 
 After webOS reaches strong equivalent state, return to the whole Moonfin Discovery product and correct/revalidate Flutter/Web/Android/Android-TV personalisation semantics plus shared recommendation quality, duplication, UX, performance, details/request/playback and edge cases. Then perform real-device acceptance before cutover.
 
