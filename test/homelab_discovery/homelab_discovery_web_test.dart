@@ -40,12 +40,12 @@ Widget tabHarness() {
   );
 }
 
-Widget cardHarness(VoidCallback onTap) {
+Widget cardHarness(VoidCallback onTap, {bool autofocus = false}) {
   return MaterialApp(
     home: Scaffold(
       body: Center(
         child: HomeLabDiscoveryMediaCard(
-          autofocus: true,
+          autofocus: autofocus,
           width: 150,
           onTap: onTap,
           item: const SeerrDiscoverItem(id: 123, mediaType: 'tv', name: ''),
@@ -133,39 +133,54 @@ void main() {
     await mouse.removePointer();
   }, skip: !kIsWeb);
 
-  testWidgets(
-    'Web media card accepts touch, mouse and keyboard and falls back without art',
-    (tester) async {
-      var activations = 0;
+  testWidgets('Web media card renders the shared missing-art fallback', (
+    tester,
+  ) async {
+    await tester.pumpWidget(cardHarness(() {}));
+    await tester.pumpAndSettle();
 
-      await tester.pumpWidget(cardHarness(() => activations++));
-      await tester.pumpAndSettle();
-      expect(find.text('Untitled'), findsOneWidget);
-      expect(find.text('UNTITLED'), findsOneWidget);
-      await tester.tap(find.byType(HomeLabDiscoveryMediaCard));
-      await tester.pump();
-      expect(activations, 1);
+    expect(find.text('Untitled'), findsOneWidget);
+    expect(find.text('UNTITLED'), findsOneWidget);
+  }, skip: !kIsWeb);
 
-      activations = 0;
-      await tester.pumpWidget(cardHarness(() => activations++));
-      await tester.pumpAndSettle();
-      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      final cardFinder = find.byType(HomeLabDiscoveryMediaCard);
-      final center = tester.getCenter(cardFinder);
-      await mouse.addPointer(location: center);
-      await mouse.down(center);
-      await mouse.up();
-      await tester.pump();
-      expect(activations, 1);
-      await mouse.removePointer();
+  testWidgets('Web media card activates once from touch', (tester) async {
+    var activations = 0;
+    await tester.pumpWidget(cardHarness(() => activations++));
+    await tester.pumpAndSettle();
 
-      activations = 0;
-      await tester.pumpWidget(cardHarness(() => activations++));
-      await tester.pumpAndSettle();
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pump();
-      expect(activations, 1);
-    },
-    skip: !kIsWeb,
-  );
+    await tester.tap(find.byType(HomeLabDiscoveryMediaCard));
+    await tester.pump();
+
+    expect(activations, 1);
+  }, skip: !kIsWeb);
+
+  testWidgets('Web media card activates once from mouse', (tester) async {
+    var activations = 0;
+    await tester.pumpWidget(cardHarness(() => activations++));
+    await tester.pumpAndSettle();
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    final cardFinder = find.byType(HomeLabDiscoveryMediaCard);
+    final center = tester.getCenter(cardFinder);
+    await mouse.addPointer(location: center);
+    await mouse.down(center);
+    await mouse.up();
+    await tester.pump();
+
+    expect(activations, 1);
+    await mouse.removePointer();
+  }, skip: !kIsWeb);
+
+  testWidgets('Web media card activates once from keyboard', (tester) async {
+    var activations = 0;
+    await tester.pumpWidget(
+      cardHarness(() => activations++, autofocus: true),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+
+    expect(activations, 1);
+  }, skip: !kIsWeb);
 }
