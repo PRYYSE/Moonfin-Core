@@ -173,9 +173,7 @@ void main() {
 
   testWidgets('Web media card activates once from keyboard', (tester) async {
     var activations = 0;
-    await tester.pumpWidget(
-      cardHarness(() => activations++, autofocus: true),
-    );
+    await tester.pumpWidget(cardHarness(() => activations++, autofocus: true));
     await tester.pumpAndSettle();
 
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
