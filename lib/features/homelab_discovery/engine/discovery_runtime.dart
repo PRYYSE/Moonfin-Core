@@ -82,6 +82,9 @@ class HomeLabDiscoveryRuntime {
           tab: tab,
           loadLane: loader.load,
           sessionSeed: sessionSeed,
+          isSectionEligible: (section) =>
+              section.query.source != HomeLabDiscoverySource.personalised ||
+              personalisation.supports(section),
           rotationHistory: rotationHistories.putIfAbsent(
             tab.id,
             () => HomeLabDiscoveryRotationHistory(),
