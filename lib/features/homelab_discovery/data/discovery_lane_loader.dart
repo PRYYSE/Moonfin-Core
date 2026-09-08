@@ -72,6 +72,13 @@ class HomeLabDiscoveryLaneLoader {
   ) async {
     try {
       if (section.query.source == HomeLabDiscoverySource.personalised) {
+        final service = personalisation;
+        // Unsupported semantic labels are catalogue capability gaps, not
+        // transport failures. Hide them cleanly instead of surfacing an error
+        // or substituting unrelated recommendation data.
+        if (service != null && !service.supports(section)) {
+          return HomeLabDiscoveryLaneLoadResult(section: section);
+        }
         return _loadPersonalised(section);
       }
 
@@ -111,6 +118,12 @@ class HomeLabDiscoveryLaneLoader {
       final service = personalisation;
       if (service == null) {
         throw StateError('Personalised Discovery service is unavailable');
+      }
+      if (!service.supports(section)) {
+        throw UnsupportedError(
+          'Discovery personal strategy ${section.query.seedStrategy ?? section.id} '
+          'is not executable by this client',
+        );
       }
       final loaded = await service.load(
         section,
