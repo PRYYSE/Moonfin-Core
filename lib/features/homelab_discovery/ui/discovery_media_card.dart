@@ -13,6 +13,7 @@ class HomeLabDiscoveryMediaCard extends StatelessWidget {
   final VoidCallback? onFocus;
   final VoidCallback? onTap;
   final bool? externalIsFocused;
+  final bool autofocus;
 
   const HomeLabDiscoveryMediaCard({
     super.key,
@@ -21,20 +22,24 @@ class HomeLabDiscoveryMediaCard extends StatelessWidget {
     this.onFocus,
     this.onTap,
     this.externalIsFocused,
+    this.autofocus = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final title = item.displayTitle.trim();
     return MediaCard(
-      title: item.displayTitle,
+      title: title.isEmpty ? 'Untitled' : title,
       subtitle: _subtitleFor(item),
       imageUrl: _posterUrl(item.posterPath),
       width: width,
       aspectRatio: 2 / 3,
+      itemType: item.mediaType == 'tv' ? 'Series' : 'Movie',
       seerrMediaType: item.mediaType,
       seerrStatus: item.mediaInfo?.status,
       onFocus: onFocus,
       externalIsFocused: externalIsFocused,
+      autofocus: autofocus,
       onTap: onTap ?? () => openHomeLabDiscoveryItem(context, item),
     );
   }
@@ -66,12 +71,22 @@ class HomeLabDiscoveryMediaCard extends StatelessWidget {
   }
 }
 
+String homeLabDiscoveryItemLocation(SeerrDiscoverItem item) {
+  final jellyfinId = item.mediaInfo?.jellyfinMediaId?.trim();
+  if (jellyfinId != null &&
+      jellyfinId.isNotEmpty &&
+      jellyfinId != '0' &&
+      jellyfinId.toLowerCase() != 'null') {
+    return Destinations.item(jellyfinId);
+  }
+
+  final mediaType = item.mediaType == 'tv' ? 'tv' : 'movie';
+  return Destinations.seerrMedia(item.id.toString(), mediaType: mediaType);
+}
+
 Future<void> openHomeLabDiscoveryItem(
   BuildContext context,
   SeerrDiscoverItem item,
 ) async {
-  final mediaType = item.mediaType == 'tv' ? 'tv' : 'movie';
-  await context.push<void>(
-    Destinations.seerrMedia(item.id.toString(), mediaType: mediaType),
-  );
+  await context.push<void>(homeLabDiscoveryItemLocation(item));
 }

@@ -5,6 +5,7 @@ import '../../../ui/navigation/destinations.dart';
 import '../../../ui/widgets/navigation_layout.dart';
 import '../../../util/platform_detection.dart';
 import '../engine/discovery_see_all_controller.dart';
+import 'discovery_adaptive_layout.dart';
 import 'discovery_media_card.dart';
 import 'discovery_tv_grid.dart';
 
@@ -72,24 +73,26 @@ class _HomeLabDiscoverySeeAllScreenState
     final current = _state;
     if (_loadingMore || current == null || !current.hasMore) return;
     setState(() => _loadingMore = true);
-    final state = await widget.controller.loadMore();
-    if (!mounted) return;
-    setState(() {
-      _state = state;
-      _loadingMore = false;
-    });
+    try {
+      final state = await widget.controller.loadMore();
+      if (!mounted) return;
+      setState(() => _state = state);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   Future<void> _retryMore() async {
     if (_loadingMore) return;
     setState(() => _loadingMore = true);
-    final state = await widget.controller.retry();
-    if (!mounted) return;
-    setState(() {
-      _state = state;
-      _loadingMore = false;
-    });
-    _restoreTvGridFocus();
+    try {
+      final state = await widget.controller.retry();
+      if (!mounted) return;
+      setState(() => _state = state);
+      _restoreTvGridFocus();
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   Future<void> _openTvItem(SeerrDiscoverItem item) async {
@@ -135,8 +138,28 @@ class _HomeLabDiscoverySeeAllScreenState
                       SizedBox(
                         height: MediaQuery.sizeOf(context).height * 0.7,
                         child: Center(
-                          child: Text(
-                            'No results are available for ${state.title}.',
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'No results are available for ${state.title}.',
+                                  textAlign: TextAlign.center,
+                                ),
+                                if (PlatformDetection.isWeb) ...[
+                                  const SizedBox(height: 12),
+                                  FilledButton.icon(
+                                    key: const ValueKey<String>(
+                                      'homelab-discovery-deep-refresh-empty',
+                                    ),
+                                    onPressed: _refresh,
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Refresh'),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -164,18 +187,34 @@ class _HomeLabDiscoverySeeAllScreenState
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
-              child: Column(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    state.title,
-                    style: Theme.of(context).textTheme.headlineMedium,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          state.title,
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${state.items.length} loaded',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${state.items.length} loaded',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  if (PlatformDetection.isWeb)
+                    TextButton.icon(
+                      key: const ValueKey<String>(
+                        'homelab-discovery-deep-refresh',
+                      ),
+                      onPressed: _refresh,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Refresh'),
+                    ),
                 ],
               ),
             ),
@@ -185,12 +224,9 @@ class _HomeLabDiscoverySeeAllScreenState
             sliver: SliverLayoutBuilder(
               builder: (context, constraints) {
                 const spacing = 12.0;
-                const targetWidth = 142.0;
-                final columns =
-                    ((constraints.crossAxisExtent + spacing) /
-                            (targetWidth + spacing))
-                        .floor()
-                        .clamp(2, 12);
+                final columns = homeLabDiscoveryGridColumns(
+                  constraints.crossAxisExtent,
+                );
                 final cardWidth =
                     (constraints.crossAxisExtent - (columns - 1) * spacing) /
                     columns;
@@ -235,6 +271,13 @@ class _HomeLabDiscoverySeeAllScreenState
                     label: const Text('Retry loading more'),
                   ),
                 ),
+              ),
+            )
+          else if (!state.hasMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(24, 0, 24, 32),
+                child: Center(child: Text('End of list')),
               ),
             ),
         ],
@@ -292,6 +335,11 @@ class _HomeLabDiscoverySeeAllScreenState
                 label: const Text('Retry loading more'),
               ),
             ),
+          )
+        else if (!state.hasMore)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 18),
+            child: Center(child: Text('End of list')),
           ),
       ],
     );

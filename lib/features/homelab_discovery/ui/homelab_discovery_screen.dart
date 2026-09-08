@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../../../ui/navigation/destinations.dart';
@@ -8,7 +9,10 @@ import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_lane_loader.dart';
 import '../engine/discovery_runtime.dart';
 import '../engine/discovery_tab_controller.dart';
+import 'discovery_adaptive_layout.dart';
 import 'discovery_media_card.dart';
+import 'discovery_routes.dart';
+import 'discovery_tab_strip.dart';
 import 'discovery_tv_lane.dart';
 import 'homelab_discovery_see_all_screen.dart';
 
@@ -73,7 +77,7 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
           return _shell(
             _DiscoveryFailure(
               message: 'Discovery could not connect to its data services.',
-              onRetry: _retryRuntime,
+              onAction: _retryRuntime,
             ),
           );
         }
@@ -103,10 +107,7 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                     ),
-                    TabBar(
-                      isScrollable: true,
-                      tabs: [for (final tab in tabs) Tab(text: tab.title)],
-                    ),
+                    HomeLabDiscoveryTabStrip(tabs: tabs),
                     Expanded(
                       child: TabBarView(
                         children: [
@@ -213,11 +214,23 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
   Future<void> _openSeeAll(HomeLabDiscoveryLaneLoadResult lane) async {
     final controller = widget.runtime.seeAllControllerFor(lane.section);
     final laneKey = _tvLaneKey(lane.section.id);
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => HomeLabDiscoverySeeAllScreen(controller: controller),
-      ),
-    );
+
+    if (PlatformDetection.isWeb) {
+      await context.push<void>(
+        HomeLabDiscoveryRoutes.section(lane.section.id),
+        extra: HomeLabDiscoverySeeAllRoutePayload(
+          sectionId: lane.section.id,
+          catalogue: widget.runtime.catalogue,
+          controller: controller,
+        ),
+      );
+    } else {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => HomeLabDiscoverySeeAllScreen(controller: controller),
+        ),
+      );
+    }
     await _restoreLaneFocus(laneKey);
   }
 
@@ -265,8 +278,6 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
     final targetKey = _tvLaneKey(lanes[targetIndex].section.id);
     final targetState = targetKey.currentState;
     if (targetState == null) {
-      // Do not consume the key if ListView has not built the adjacent row. The
-      // host focus traversal can then recover instead of leaving a TV focus trap.
       return false;
     }
     targetState.requestFocusFromMemory();
@@ -284,7 +295,7 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
         if (snapshot.hasError || snapshot.data == null) {
           return _DiscoveryFailure(
             message: 'This Discovery tab could not be loaded.',
-            onRetry: _retry,
+            onAction: _retry,
           );
         }
 
@@ -296,13 +307,14 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
             message: failedCount > 0
                 ? 'Discovery is temporarily unavailable for this tab.'
                 : 'Nothing is available in this Discovery tab right now.',
-            onRetry: _retry,
+            onAction: failedCount > 0 ? _retry : _refresh,
+            actionLabel: failedCount > 0 ? 'Retry' : 'Refresh',
           );
         }
 
         _scheduleInitialTvFocus(lanes);
 
-        return RefreshIndicator(
+        final list = RefreshIndicator(
           onRefresh: _refresh,
           child: ListView.builder(
             key: PageStorageKey<String>(
@@ -351,6 +363,28 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
             },
           ),
         );
+
+        if (!PlatformDetection.isWeb) return list;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  key: ValueKey<String>(
+                    'homelab-discovery-refresh-${widget.controller.tab.id}',
+                  ),
+                  onPressed: _refresh,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                ),
+              ),
+            ),
+            Expanded(child: list),
+          ],
+        );
       },
     );
   }
@@ -365,7 +399,7 @@ class _DiscoveryLane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final cardWidth = width < 600 ? 124.0 : 148.0;
+    final cardWidth = homeLabDiscoveryLaneCardWidth(width);
     final cardHeight = cardWidth / (2 / 3) + 58;
     final subtitle = lane.section.subtitle?.trim();
 
@@ -403,6 +437,9 @@ class _DiscoveryLane extends StatelessWidget {
                 ),
                 if (onSeeAll != null)
                   TextButton.icon(
+                    key: ValueKey<String>(
+                      'homelab-discovery-see-all-${lane.section.id}',
+                    ),
                     onPressed: onSeeAll,
                     iconAlignment: IconAlignment.end,
                     icon: const Icon(Icons.chevron_right),
@@ -436,9 +473,14 @@ class _DiscoveryLane extends StatelessWidget {
 
 class _DiscoveryFailure extends StatelessWidget {
   final String message;
-  final VoidCallback onRetry;
+  final VoidCallback onAction;
+  final String actionLabel;
 
-  const _DiscoveryFailure({required this.message, required this.onRetry});
+  const _DiscoveryFailure({
+    required this.message,
+    required this.onAction,
+    this.actionLabel = 'Retry',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -451,9 +493,9 @@ class _DiscoveryFailure extends StatelessWidget {
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: onRetry,
+              onPressed: onAction,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(actionLabel),
             ),
           ],
         ),

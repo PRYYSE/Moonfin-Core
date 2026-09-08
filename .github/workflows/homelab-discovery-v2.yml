@@ -64,6 +64,12 @@ jobs:
       - name: Focused tests
         run: flutter test test/homelab_discovery
 
+      - name: Web interaction tests
+        run: |
+          flutter test --platform chrome \
+            test/homelab_discovery/homelab_discovery_web_test.dart \
+            test/homelab_discovery/homelab_discovery_entry_screen_test.dart
+
       - name: Verify custom scope stays narrow
         shell: bash
         run: |
