@@ -3,6 +3,7 @@ import '../../../data/models/home_row.dart';
 import '../../../data/services/row_data_source.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../catalogue/discovery_catalogue.dart';
+import 'discovery_personal_policy.dart';
 
 typedef HomeLabDiscoveryPersonalRowLoader =
     Future<HomeRow> Function(String serverId, int rowIndex);
@@ -21,12 +22,12 @@ class HomeLabDiscoveryPersonalPage {
   const HomeLabDiscoveryPersonalPage({required this.title, required this.page});
 }
 
-/// Adapts stock Moonfin's accepted `Since You Watched` recommendation engine
-/// to Home Lab Discovery without changing Home or RowDataSource.
+/// Feature-local adapter over stock Moonfin's `Since You Watched` engine.
 ///
-/// Stock RowDataSource already builds/scored-caches up to 100 recommendations.
-/// Discovery expands that cache, then applies section-specific media/anime
-/// filtering locally. This keeps the recommendation engine upstream-owned.
+/// A personalised catalogue label is executable only when
+/// [homeLabDiscoveryPersonalPolicy] can prove that the current upstream row,
+/// plus explicit result filtering, represents that label truthfully. There is
+/// deliberately no hash/slot fallback for unknown or source-specific labels.
 class HomeLabDiscoveryPersonalisation {
   static const pageSize = 15;
   static const _maxExpansionPasses = 8;
@@ -49,24 +50,35 @@ class HomeLabDiscoveryPersonalisation {
   }) : _loadRow = loadRow,
        _loadMore = loadMore;
 
+  bool supports(HomeLabDiscoverySection section) =>
+      homeLabDiscoveryPersonalPolicy(section) != null;
+
   Future<HomeLabDiscoveryPersonalPage> load(
     HomeLabDiscoverySection section, {
     int page = 1,
     bool forceRefresh = false,
   }) async {
+    final policy = homeLabDiscoveryPersonalPolicy(section);
+    if (policy == null) {
+      throw UnsupportedError(
+        'Discovery personal strategy ${section.query.seedStrategy ?? section.id} '
+        'has no truthful source in the current Flutter client',
+      );
+    }
+
     final safePage = page < 1 ? 1 : page;
     if (forceRefresh) _rows.remove(section.id);
 
     var row = _rows[section.id];
     if (row == null) {
-      row = await _loadRow(serverId, _slotFor(section));
+      row = await _loadRow(serverId, policy.rowIndex);
       row = await _expandScoredRow(row);
       _rows[section.id] = row;
     }
 
     final filtered = row.items
-        .where((item) => _matches(section, item))
-        .toList();
+        .where((item) => _matches(policy, item))
+        .toList(growable: false);
     final total = filtered.length;
     final totalPages = total == 0 ? 0 : (total + pageSize - 1) ~/ pageSize;
     final start = (safePage - 1) * pageSize;
@@ -80,7 +92,10 @@ class HomeLabDiscoveryPersonalisation {
         .toList(growable: false);
 
     return HomeLabDiscoveryPersonalPage(
-      title: _effectiveTitle(section, row),
+      // Keep the authored label. The upstream row title may describe whichever
+      // seed source the user configured and must not silently redefine the
+      // semantics of this Discovery lane.
+      title: section.title,
       page: SeerrDiscoverPage(
         page: safePage,
         totalPages: totalPages,
@@ -111,50 +126,61 @@ class HomeLabDiscoveryPersonalisation {
 
   void clear() => _rows.clear();
 
-  int _slotFor(HomeLabDiscoverySection section) {
-    const slots = <String, int>{
-      'recent-history': 1,
-      'favourites': 2,
-      'watchlist': 3,
-      'high-ratings': 4,
-      'likes': 5,
-      'mixed-positive': 6,
-      'highly-rated-unseen': 7,
-      'novelty': 8,
-      'movie-affinity': 9,
-      'series-affinity': 10,
-      'anime-affinity': 11,
-      'short-runtime-affinity': 12,
-      'older-affinity': 13,
-      'recent-affinity': 14,
-      'rewatch': 15,
-      'recent-discovery-context': 16,
-    };
-    final strategy = section.query.seedStrategy ?? '';
-    final direct = slots[strategy];
-    if (direct != null) return direct;
-
-    // Anime/specialised strategy names deterministically share one of the same
-    // sixteen upstream recommendation slots, then section filtering diverges.
-    var hash = 0;
-    for (final unit in '${section.id}|$strategy'.codeUnits) {
-      hash = (hash * 31 + unit) & 0x7fffffff;
-    }
-    return (hash % 16) + 1;
-  }
-
-  bool _matches(HomeLabDiscoverySection section, AggregatedItem item) {
-    final wanted = section.query.mediaType;
+  bool _matches(
+    HomeLabDiscoveryPersonalPolicy policy,
+    AggregatedItem item,
+  ) {
+    final wanted = policy.mediaType.toLowerCase();
     if (wanted == 'movie' && item.type != 'Movie') return false;
     if (wanted == 'tv' && item.type != 'Series') return false;
-    if (_animeOnly(section) && !_looksLikeAnime(item)) return false;
-    return item.type == 'Movie' || item.type == 'Series';
-  }
+    if (wanted != 'movie' &&
+        wanted != 'tv' &&
+        wanted != 'all' &&
+        wanted != 'any') {
+      return false;
+    }
+    if (item.type != 'Movie' && item.type != 'Series') return false;
 
-  bool _animeOnly(HomeLabDiscoverySection section) {
-    if (section.tags.any((tag) => tag.toLowerCase() == 'anime')) return true;
-    final strategy = section.query.seedStrategy?.toLowerCase() ?? '';
-    return strategy.startsWith('anime-') || section.id.startsWith('anime-');
+    if (policy.animeOnly && !_looksLikeAnime(item)) return false;
+
+    if (policy.requiredGenreFragments.isNotEmpty) {
+      final genres = item.genres.map((value) => value.toLowerCase()).toList();
+      final matchesGenre = policy.requiredGenreFragments.any(
+        (fragment) => genres.any((genre) => genre.contains(fragment)),
+      );
+      if (!matchesGenre) return false;
+    }
+
+    final minimumRating = policy.minRating;
+    if (minimumRating != null) {
+      final rating = item.communityRating;
+      if (rating == null || rating < minimumRating) return false;
+    }
+
+    if (policy.unseenOnly && item.isPlayed) return false;
+
+    final maxRuntimeMinutes = policy.maxRuntimeMinutes;
+    if (maxRuntimeMinutes != null) {
+      final runtime = item.runtime;
+      if (runtime != null && runtime.inMinutes > maxRuntimeMinutes) return false;
+    }
+
+    final year = item.productionYear;
+    final currentYear = DateTime.now().year;
+    final olderThanYears = policy.olderThanYears;
+    if (olderThanYears != null &&
+        year != null &&
+        year > currentYear - olderThanYears) {
+      return false;
+    }
+    final newerThanYears = policy.newerThanYears;
+    if (newerThanYears != null &&
+        year != null &&
+        year < currentYear - newerThanYears) {
+      return false;
+    }
+
+    return true;
   }
 
   bool _looksLikeAnime(AggregatedItem item) {
@@ -172,14 +198,6 @@ class HomeLabDiscoveryPersonalisation {
     final japanese =
         language == 'ja' || language == 'jpn' || language == 'japanese';
     return isAnimated && (japanese || fromJapan);
-  }
-
-  String _effectiveTitle(HomeLabDiscoverySection section, HomeRow row) {
-    final generated = row.title.trim();
-    if (generated.isNotEmpty && generated != 'Recommended For You') {
-      return generated;
-    }
-    return section.title;
   }
 
   SeerrDiscoverItem? _toSeerrItem(AggregatedItem item) {
@@ -202,7 +220,12 @@ class HomeLabDiscoveryPersonalisation {
         .map((value) => value is int ? value : int.tryParse(value.toString()))
         .whereType<int>()
         .toList(growable: false);
-    final status = raw['IsBlacklisted'] == true ? 6 : 5;
+    final external = item.serverId == 'seerr';
+    final status = raw['IsBlacklisted'] == true
+        ? 6
+        : external
+        ? item.seerrStatus
+        : 5;
 
     return SeerrDiscoverItem(
       id: tmdb,
@@ -218,11 +241,13 @@ class HomeLabDiscoveryPersonalisation {
       genreIds: genreIds,
       voteAverage: item.communityRating,
       adult: raw['Adult'] == true,
-      mediaInfo: SeerrMediaInfo(
-        tmdbId: tmdb,
-        status: status,
-        jellyfinMediaId: item.id,
-      ),
+      mediaInfo: status == null
+          ? null
+          : SeerrMediaInfo(
+              tmdbId: tmdb,
+              status: status,
+              jellyfinMediaId: external ? null : item.id,
+            ),
     );
   }
 }
