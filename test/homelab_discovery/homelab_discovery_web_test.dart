@@ -8,6 +8,7 @@ import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue
 import 'package:moonfin/features/homelab_discovery/ui/discovery_adaptive_layout.dart';
 import 'package:moonfin/features/homelab_discovery/ui/discovery_media_card.dart';
 import 'package:moonfin/features/homelab_discovery/ui/discovery_tab_strip.dart';
+import 'package:moonfin/l10n/app_localizations.dart';
 import 'package:moonfin/ui/navigation/destinations.dart';
 
 const webTabs = [
@@ -42,6 +43,9 @@ Widget tabHarness() {
 
 Widget cardHarness(VoidCallback onTap, {bool autofocus = false}) {
   return MaterialApp(
+    locale: const Locale('en'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: Center(
         child: HomeLabDiscoveryMediaCard(
