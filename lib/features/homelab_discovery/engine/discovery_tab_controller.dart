@@ -10,8 +10,9 @@ typedef HomeLabDiscoveryLaneLoad =
     Future<HomeLabDiscoveryLaneLoadResult> Function(
       HomeLabDiscoverySection section,
     );
-
 typedef HomeLabDiscoveryRotationPersist = Future<void> Function();
+typedef HomeLabDiscoverySectionEligibility =
+    bool Function(HomeLabDiscoverySection section);
 
 class HomeLabDiscoveryTabLoadResult {
   final List<HomeLabDiscoverySection> selectedSections;
@@ -47,6 +48,7 @@ class HomeLabDiscoveryTabController {
   final HomeLabDiscoverySession session;
   final HomeLabDiscoveryRotationHistory rotationHistory;
   final HomeLabDiscoveryRotationPersist? persistRotationHistory;
+  final HomeLabDiscoverySectionEligibility? isSectionEligible;
   final String sharedDedupGroup;
   final int maxConcurrentLoads;
 
@@ -60,6 +62,7 @@ class HomeLabDiscoveryTabController {
     HomeLabDiscoverySession? session,
     HomeLabDiscoveryRotationHistory? rotationHistory,
     this.persistRotationHistory,
+    this.isSectionEligible,
     String? sharedDedupGroup,
     int maxConcurrentLoads = 6,
   }) : composer = composer ?? const HomeLabDiscoveryComposer(),
@@ -78,6 +81,7 @@ class HomeLabDiscoveryTabController {
       sessionSeed: sessionSeed,
       refreshNonce: _refreshNonce,
       sessionsSinceSeen: rotationHistory.sessionsSinceSeen,
+      isEligible: isSectionEligible,
     );
     final resultsBySectionId = <String, HomeLabDiscoveryLaneLoadResult>{};
 
