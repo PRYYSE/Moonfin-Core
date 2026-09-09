@@ -1,6 +1,6 @@
 # Home Lab Discovery v2 — Current Checkpoint
 
-**Last updated:** 2026-09-09 Australia/Adelaide  
+**Last updated:** 2026-09-10 Australia/Adelaide  
 **Primary branch:** `homelab/discovery-v2`
 
 Read this file with `docs/AI_PROJECT_STATE.md`. Do not restart completed work or touch live services during GitHub-only completion.
@@ -10,7 +10,7 @@ Read this file with `docs/AI_PROJECT_STATE.md`. Do not restart completed work or
 - Shared semantics/personalisation: COMPLETE
 - Web: COMPLETE
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
-- Android TV / Google TV: **ACTIVE — Slice 1 replacement focused workflow #122 pending**
+- Android TV / Google TV: **ACTIVE — Slice 1 replacement workflow #123 pending**
 - Smart-TV/webOS: do not reconcile until Android TV is complete
 
 ## Android mobile/tablet closure
@@ -31,7 +31,7 @@ Production signing invariant remains SHA-256 `3163e01792e429ce972097a8e3ff9a4626
 
 ## Android TV / Google TV — Slice 1
 
-Existing TV lane/grid focus foundations remain intact. Product source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21` fixes the remote-recovery defect family:
+Product source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21` fixes the remote-recovery defect family:
 
 - deep genuine-empty explicitly shows Refresh for TV and autofocuses it
 - deep load Retry autofocuses on TV
@@ -40,44 +40,42 @@ Existing TV lane/grid focus foundations remain intact. Product source `9788338cb
 
 No controller/catalogue/routing, Gradle/package/signing, Smart-TV or live changes.
 
-### #121 result
+### #121
 
-Workflow #121 / `34331824783` failed only the two new screen-level deep-recovery tests because the isolated test harness did not bootstrap `UserPreferences` required by `NavigationLayout`.
+Workflow #121 / `34331824783` failed only the two new screen tests because isolated `NavigationLayout` lacked app-service registrations. Route, 486-lane catalogue/compiler, 8 Python tests, format and analyse passed. Focused suite: **101 passed, 2 failed, 5 skipped**. TV tab-strip regression passed.
 
-Before that failure:
+Harness bootstrap recovery source: `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`. Production code unchanged.
 
-- route PASS
-- 486-lane catalogue/compiler PASS
-- 8 catalogue Python tests PASS
-- format: 54 files, 0 changed
-- analyse: no issues
-- TV tab-strip recovery regression PASS
-- focused suite final count: **101 passed, 2 failed, 5 skipped**
+### #122
 
-This was a test-harness failure, not a product/runtime failure.
+Workflow #122 / `34335668107` again passed route, 486-lane catalogue/compiler + 8 Python tests, format (54 files, 0 changed) and analyse.
 
-### Harness recovery / #122
+Focused suite: **101 passed, 2 failed, 5 skipped**. Both deep-recovery screen tests now mounted; their only failure was `pumpAndSettle timed out`, caused by waiting for the real TV navigation chrome to become globally quiescent.
 
-Harness-only source:
+No product exception or failed product assertion was reported before the timeout.
 
-`ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`
+### Bounded-pump recovery / #123
 
-`test(discovery-v2): bootstrap TV recovery screen harness`
+Test-only source:
 
-The test now bootstraps in-memory preferences, real `PlaybackManager`, and minimal mocked app services needed by the real navigation shell. Production code is unchanged.
+`373a1a44d68d375dff1b17a35da76f578820d4d5`
+
+`test(discovery-v2): bound TV recovery screen pumps`
+
+Exact diff from the prior checkpoint is one test file only (+10/-4). Broad screen-level `pumpAndSettle()` calls were replaced with bounded pumps around the state transitions under test. Product/runtime code remains unchanged.
 
 Replacement focused workflow:
 
-- **#122 / `34335668107`**
-- exact source `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`
+- **#123 / `34407316688`**
+- exact source `373a1a44d68d375dff1b17a35da76f578820d4d5`
 - status at checkpoint: **in progress**
 - no full candidate requested
 
-Do not poll #122. Inspect it once on continuation.
+Do not poll #123. Inspect it once on continuation.
 
 ## Remaining TV completion gate
 
-After #122 is green, verify/fix:
+After #123 is green, verify/fix:
 
 1. deterministic navbar/tab/lane traversal and tab-strip ↔ active-lane re-entry;
 2. prevent inactive tab pages competing for TV autofocus;
@@ -96,4 +94,4 @@ Shared semantic/personalisation work, catalogue/compiler, request-cost/paging/ca
 
 ## Exact next action
 
-Inspect #122 (`34335668107`) exactly once. If green, close Slice 1 and implement the remaining deterministic TV focus/remote-navigation slice. If red, fix only the failing gate, preserve the remote-recovery behaviour, launch replacement focused CI, record exact source/run, and stop under the long-CI rule.
+Inspect #123 (`34407316688`) exactly once. If green, close Slice 1 recovery and implement the remaining deterministic TV focus/remote-navigation slice. If red, fix only the failing gate, preserve the remote-recovery behaviour, launch replacement focused CI, record exact source/run and stop under the long-CI rule.
