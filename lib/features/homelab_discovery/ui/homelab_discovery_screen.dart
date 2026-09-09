@@ -493,6 +493,7 @@ class _DiscoveryFailure extends StatelessWidget {
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             FilledButton.icon(
+              autofocus: PlatformDetection.isTV,
               onPressed: onAction,
               icon: const Icon(Icons.refresh),
               label: Text(actionLabel),

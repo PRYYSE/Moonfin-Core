@@ -147,12 +147,14 @@ class _HomeLabDiscoverySeeAllScreenState
                                   'No results are available for ${state.title}.',
                                   textAlign: TextAlign.center,
                                 ),
-                                if (PlatformDetection.isWeb) ...[
+                                if (PlatformDetection.isWeb ||
+                                    PlatformDetection.isTV) ...[
                                   const SizedBox(height: 12),
                                   FilledButton.icon(
                                     key: const ValueKey<String>(
                                       'homelab-discovery-deep-refresh-empty',
                                     ),
+                                    autofocus: PlatformDetection.isTV,
                                     onPressed: _refresh,
                                     icon: const Icon(Icons.refresh),
                                     label: const Text('Refresh'),
@@ -365,6 +367,8 @@ class _DeepFailure extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             FilledButton.icon(
+              key: const ValueKey<String>('homelab-discovery-deep-retry'),
+              autofocus: PlatformDetection.isTV,
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
