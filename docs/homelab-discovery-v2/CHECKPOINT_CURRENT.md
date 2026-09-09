@@ -10,82 +10,86 @@ Read this file with `docs/AI_PROJECT_STATE.md`. Do not restart completed work or
 - Shared semantics/personalisation: COMPLETE
 - Web: COMPLETE
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
-- Android TV / Google TV: **ACTIVE — Slice 1 replacement workflow #124 pending**
+- Android TV / Google TV: **ACTIVE — deterministic focus/navigation Slice 2 workflow #125 pending**
 - Smart-TV/webOS: do not reconcile until Android TV is complete
 
 ## Android mobile/tablet closure
 
-Final source `4af01af054d9b7cbe8e230b7ded482cb8fea330c`; final workflow #120 / `34326151119` GREEN.
+Final source `4af01af054d9b7cbe8e230b7ded482cb8fea330c`; workflow #120 / `34326151119` GREEN.
 
 #120 passed route, 486-lane catalogue/compiler + 8 Python tests, format, analyse, 100 Discovery tests with 5 skipped, 12 Chrome interaction tests, custom-scope validation, and full Web + `mobile-beta` + `androidTv-beta` candidate packaging.
 
-Artifact:
-
-- ID `10094778627`
-- digest `sha256:27e01f5d5db575ee8d853e9808bbee7a2595dfa453be9ccd086ea0b3313cb421`
-- mobile SHA256 `4d968b1ee2a27dddfdba8c2aa117f7301323dee3d3ce861f075b015992aced8e`
-- TV baseline SHA256 `2c7ece2f5042f93d247b89d490d57de844d8d5b80f1ee05634128d7930e63621`
-- Web SHA256 `8f17099b4668300f763d246a6db96ddc7938962b4cad1712171c30dff48b4b73`
+Artifact `10094778627`; digest `sha256:27e01f5d5db575ee8d853e9808bbee7a2595dfa453be9ccd086ea0b3313cb421`.
 
 Production signing invariant remains SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`; never regenerate it. CI candidates are debug fallback and not deployment artefacts.
 
-## Android TV / Google TV — Slice 1
+## Android TV / Google TV
 
-Product source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21` fixes the remote-recovery defect family:
+### Slice 1 — VERIFIED COMPLETE
 
-- deep genuine-empty explicitly shows Refresh for TV and autofocuses it
-- deep load Retry autofocuses on TV
-- landing/runtime/tab failure or genuine-empty action autofocuses on TV
-- TV regressions cover tab selection, deep-empty Refresh via Select and deep-failure Retry via Select
+Product source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21` fixes the remote-recovery defect family: TV failure/empty actions autofocus, deep genuine-empty exposes explicit Refresh, and deep initial failure exposes focused Retry.
 
-No controller/catalogue/routing, Gradle/package/signing, Smart-TV or live changes.
+Final recovery validation:
 
-### Recovery sequence
-
-#121 / `34331824783`: route/catalogue/format/analyse passed; focused suite **101 passed, 2 failed, 5 skipped** because the isolated screen harness lacked `NavigationLayout` app services. Harness bootstrap source: `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`. Production unchanged.
-
-#122 / `34335668107`: structural gates passed again; focused suite **101 passed, 2 failed, 5 skipped**. Screen tests now mounted but `pumpAndSettle()` timed out against non-quiescing TV navigation chrome. Bounded-pump test recovery source: `373a1a44d68d375dff1b17a35da76f578820d4d5`. Production unchanged.
-
-#123 / `34407316688`: structural gates passed again; focused suite **101 passed, 2 failed, 5 skipped**. Both deep recovery paths now completed successfully: remote Select triggered Refresh/Retry, controller state recovered and the TV grid rendered. The only failures were `find.text('Recovered Item'), findsOneWidget` because the TV card intentionally renders two title `Text` nodes.
-
-### Assertion recovery / #124
-
-Test-only source:
-
-`955b5496d8e0d82d90ddb8de69b838737333243a`
-
-`test(discovery-v2): assert TV recovery controller state`
-
-Exact diff from the prior checkpoint is one test file only (+2/-2). Each deep-recovery regression now proves the recovered item through `controller.state.items == [_item]`, retains the exact single-grid assertion, operation counts, autofocus and remote Select checks, and no longer assumes title presentation uses exactly one `Text` node. Product/runtime code remains unchanged.
-
-Replacement focused workflow:
-
-- **#124 / `34416882794`**
+- workflow **#124 / `34416882794`** — GREEN
 - exact source `955b5496d8e0d82d90ddb8de69b838737333243a`
+- focused job `102683613449`
+- route PASS
+- 486-lane catalogue/compiler + 8 Python tests PASS
+- format: 54 files, 0 changed
+- analyse: no issues
+- Discovery: **103 passed, 5 skipped**
+- Chrome Web/entry-route: **12 passed**
+- custom-scope gate PASS
+- full-build skipped as intended for this focused gate
+
+Earlier #121–#123 failures were isolated test-harness/wait/assertion-cardinality issues only; production recovery behaviour remained intact.
+
+### Slice 2 — deterministic TV focus/navigation implemented
+
+Source:
+
+`2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
+
+`feat(discovery-v2): complete deterministic TV focus paths`
+
+The source commit touches only six intended files: four Discovery TV UI/focus files and two focused test files.
+
+Implemented:
+
+1. TV tab strip has one focus owner; left/right changes tabs without losing strip focus, Down/Select enters active content, and first-lane Up returns explicitly to the tab strip.
+2. Landing remembers the last focused lane and re-enters that lane; first lanes no longer independently autofocus, so inactive `TabBarView` pages cannot compete for focus.
+3. TV deep grid has explicit Up/Down edge callbacks while preserving normal D-pad movement, partial-row clamping, Select, Back and paging semantics.
+4. Populated deep browse exposes remote Refresh; first-row Up reaches it and Refresh restores grid focus.
+5. Paging-error Retry More is reachable from final-row Down; Retry More Up returns to the grid and successful retry restores grid focus.
+6. Regressions cover tab-strip focus/content entry, grid edge delegation, populated Refresh and paging-error Retry More recovery.
+
+No catalogue/controller, Android package/signing, Smart-TV or live changes.
+
+### Current focused gate
+
+- **#125 / `34417981160`**
+- exact source `2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
 - status at checkpoint: **in progress**
 - no full candidate requested
 
-Do not poll #124. Inspect it once on continuation.
+Do not poll #125. Inspect it once on continuation.
 
-## Remaining TV completion gate
+## Remaining TV completion gate after #125 green
 
-After #124 is green, verify/fix:
-
-1. deterministic navbar/tab/lane traversal and tab-strip ↔ active-lane re-entry;
-2. prevent inactive tab pages competing for TV autofocus;
-3. focus memory/restoration after detail return, paging/retry and re-entry;
-4. populated deep-grid Refresh and paging-error Retry reachability;
-5. Back/Select behaviour, partial rows and off-screen focus/scroll at 1080p/4K;
-6. lifecycle/resume/retained-state behaviour inherited from shared controllers;
-7. TV package/version/signing/update identity unchanged;
-8. targeted TV tests and final full candidate green.
+1. confirm Back/detail return and re-entry coverage with the new focus bridge;
+2. validate off-screen focus/scroll at representative 1080p and 4K widths;
+3. confirm lifecycle/resume/retained-state behaviour inherited from shared controllers;
+4. re-check TV package/version/signing/update identity unchanged;
+5. run final targeted TV coverage and required `[full-build]` candidate green;
+6. only then mark Android TV / Google TV GitHub/code complete.
 
 Physical TV acceptance remains deferred.
 
 ## Do not redo
 
-Shared semantic/personalisation work, catalogue/compiler, request-cost/paging/cache/dedup/identity safeguards, local-vs-Seerr routing, verified Web, verified Android mobile/tablet, existing TV grid/lane primitives, docs-only CI hygiene, or separately advanced Smart-TV work.
+Shared semantic/personalisation work, catalogue/compiler, request-cost/paging/cache/dedup/identity safeguards, local-vs-Seerr routing, verified Web, verified Android mobile/tablet, existing TV grid/lane primitives, Slice 1 recovery, docs-only CI hygiene, or separately advanced Smart-TV work.
 
 ## Exact next action
 
-Inspect #124 (`34416882794`) exactly once. If green, close Slice 1 recovery and implement the remaining deterministic TV focus/remote-navigation slice. If red, fix only the failing gate, preserve the remote-recovery behaviour, launch replacement focused CI, record exact source/run and stop under the long-CI rule.
+Inspect #125 (`34417981160`) exactly once. If green, record its evidence and continue the remaining TV review beginning with Back/detail return and 1080p/4K off-screen focus/scroll. If red, inspect only the failing gate, fix the root cause, launch a replacement focused run, record exact source/run and stop under the long-CI rule.
