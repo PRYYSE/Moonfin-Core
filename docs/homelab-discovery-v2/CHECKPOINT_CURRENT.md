@@ -9,110 +9,109 @@ Do not restart completed work or modify the live server during GitHub-only compl
 
 ## Current boundary
 
-The shared source-aware personalisation batch and the **Web completion pass are verified complete**.
+Shared personalisation and the Web completion pass are verified complete. Android mobile/tablet is now active and intentionally split into three slices to reduce timeout risk.
 
-Verified Web/product source:
+Current source:
 
-- `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
-- `test(discovery-v2): restore Web media-card harness [full-build]`
+- `086a41b0092f388d82c98ca2803e37b89dc6e46d`
+- `feat(discovery-v2): harden Android adaptive touch baseline`
+
+Current focused workflow:
+
+- **#116** / ID `34320947110`
+- exact source `086a41b0092f388d82c98ca2803e37b89dc6e46d`
+- status at checkpoint: **in progress**
+
+Do not poll it. Inspect #116 once on continuation.
+
+## Android Slice 1 — adaptive/touch baseline
+
+Implemented:
+
+- explicit compact/medium/expanded window classes: `<600`, `600–839`, `>=840` px
+- lane-card widths: `124`, `140`, `148` px across those classes
+- wide Web sizing remains unchanged at `148` px for `>=840` px
+- non-Web Discovery tabs explicitly use the Material minimum interactive height (`48` px)
+- added `homelab_discovery_mobile_test.dart` covering:
+  - breakpoint classification and invalid-width fallback
+  - representative phone/tablet grid densities
+  - 48 px tab touch target + tap selection
+  - missing-art fallback + exactly-once touch activation
+
+Source diff is only:
+
+- `lib/features/homelab_discovery/ui/discovery_adaptive_layout.dart`
+- `lib/features/homelab_discovery/ui/discovery_tab_strip.dart`
+- `test/homelab_discovery/homelab_discovery_mobile_test.dart`
+
+Slice 1 is not called verified until #116 passes.
+
+## Android slices remaining
+
+### Slice 2 — mobile UX/state robustness
+
+After #116 is green:
+
+- refine phone/tablet portrait/landscape ergonomics where code evidence shows a gap
+- touch scrolling, pull-to-refresh and deep paging
+- loading/error/genuine-empty actions
+- Android Back semantics across landing/details/See All
+- lifecycle/resume and retained tab/deep state
+- Android-specific malformed identity/artwork regressions still missing after shared coverage
+
+### Slice 3 — final Android validation
+
+- final defect/review pass
+- focused Android tests
+- auth persistence/update-safe state/signing checks that are testable in GitHub/CI
+- one required full candidate workflow
+- exact build/artifact/signing evidence
+- Android mobile/tablet complete checkpoint
+
+Physical-device acceptance remains deferred.
+
+## Last fully green product/build baseline
+
+Until an Android source-changing full build supersedes it:
+
+- source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
 - workflow **#115** / ID `34291216084` — GREEN
-- focused-validation job `102277953232` — GREEN
-- full candidate job `102279011763` — GREEN
-
-Documentation-only commits may be newer than `1ac1499a...`; that SHA remains the verified product/build source until a later source-changing full build passes.
-
-## Web completion verification
-
-#115 focused validation passed:
-
-- route integration
-- 486-lane authoring/catalogue validation
+- normal Discovery suite: **93 passed, 5 Web-only skipped**
+- Chrome suite: **12 passed**
 - catalogue Python tests: **8 passed**
-- format gate: **52 files, 0 changed**
-- Flutter analyse: **no issues**
-- normal Discovery Flutter suite: **93 passed, 5 Web-only skipped**
-- Chrome Web/entry-route suite: **12 passed**
-- narrow custom-scope gate
-
-The 12 Chrome tests include:
-
-- adaptive Web card density
-- owned Jellyfin vs external Seerr routing
-- malformed local pointer safe fallback
-- touch/mouse/keyboard tab selection
-- `Untitled` / `UNTITLED` missing-art fallback
-- exactly-once card activation by touch, mouse and keyboard
-- URL-safe section routing
-- navigation-history landing restoration
-- direct deep-URL catalogue/section resolution
-
-The earlier four media-card failures were caused by the Chrome test harness missing Moonfin localisation delegates required by the shared Seerr media-type badge. `1ac1499a...` corrects the harness without changing runtime media-card behaviour.
-
-## Verified candidate artifact
-
-- ID `10082137559`
-- name `homelab-discovery-v2-candidates-1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
-- size `304771572` bytes
+- Web + `mobile-beta` + `androidTv-beta` candidate builds passed
+- artifact `10082137559`
 - digest `sha256:f2a7fc6b32667d3f4d38cf3a8e4165c2cce46d39facbd6dccb029687365e2abc`
 
-Internal SHA-256 values:
+Production Android signing certificate SHA-256 must remain `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`; never regenerate it.
 
-- Android TV APK: `acc1477625c1a24d2644b8b871b168e4e8c9430cb6b1694c70c1f9273cbbb029`
-- Android mobile APK: `e83c4c099e73548c2110b82b5da66c6bb981700582d35aef43c0fc74f3c2f326`
-- Web tarball: `c50ae5eff6956946d5339ea99f11dd4a383fa6e09a7fb9e79132516bc1437079`
+## Completed work that must not be redone
 
-`BUILD_INFO.txt` confirms source `1ac1499a...`, Flutter `3.44.1`, app `2.5.1+30000149`, Android TV `2.5.1` / build `2000016`, Web release, `mobile-beta`, `androidTv-beta`, and CI signing `debug-fallback-not-for-deployment`.
-
-Android packages produced by this workflow are validation artefacts only. Android platform completion has **not** started.
-
-## Web scope now closed code-side
-
-Do not redo without a concrete regression:
-
-- responsive/adaptive Web density
-- pointer/touch/mouse/keyboard interaction coverage
-- landing/deep browse routing and browser history
-- Jellyfin local vs Seerr external details routing
-- malformed-data/identity fallback covered by the current tests
-- missing-art/title fallback
-- shared personalisation semantics, recommendation safeguards, deduplication and fail-closed behaviour
-- guarded stock fallback
-
-Workflow hygiene is also corrected: push-triggered Discovery CI ignores `docs/**`, so durable checkpoint commits do not cancel active validation runs.
-
-## Completed foundations that must not be redone
-
-- isolated Home Lab Discovery architecture
-- deterministic concurrent lane loading/presentation
+- shared semantic/personalisation contract
 - 486-lane catalogue/compiler validation
-- membership/NSFW filtering
-- persistent rotation/session novelty
-- landing + deep `See All`, paging, retry and refresh behaviour
+- guarded stock fallback
+- request-cost/paging/cache/dedup/identity safeguards
+- landing + deep See All foundations
+- local-vs-Seerr details routing
 - TV focus/D-pad foundations
-- external/local identity correction
-- explicit generic affinity contract
-- truthful source-aware personalisation adapters
-- bounded request cost, paging, caching, dedup, identity and force-refresh safeguards
-- **Web completion verified by #115**
-- existing advanced webOS code-side work at its separate checkpoint
+- verified Web completion at `1ac1499a...` / #115
+- advanced Smart-TV implementation at its separate checkpoint
 
-Unsupported structural/context semantics remain intentionally fail-closed.
+## Exact next action
 
-## Stable / rollback state
+Inspect **#116 (`34320947110`) once**.
 
-Live remains untouched:
+### If green
 
-- custom Moonbase 2.0.3.1
-- Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`
-- accepted legacy Discovery 481/486
-- Seerr enabled
+1. mark Slice 1 verified;
+2. begin **Slice 2 — mobile UX/state robustness**;
+3. do not redo shared/Web work;
+4. keep physical-device testing deferred.
 
-Recovery refs/candidates remain intact. Production Android signing must preserve certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`; never regenerate it.
+### If red
 
-## Exact next large batch
-
-**Android mobile/tablet completion pass.**
-
-Use the current shared Discovery implementation as the base. Finish everything reasonably code-testable for Android phone/tablet, including mobile interaction/layout/navigation/lifecycle/state edges and platform-specific routing/integration needed by Discovery. Preserve the already-verified semantic, identity, paging, deduplication and guarded-fallback contracts.
-
-Finish the Android mobile/tablet batch with focused validation and the required full candidate workflow. Do not start Android TV in that same completion slice, and do not begin physical-device acceptance yet.
+1. inspect only the exact failing gate/test;
+2. fix the root cause without weakening mobile coverage;
+3. trigger the appropriate focused workflow;
+4. record exact source/run here and in `docs/AI_PROJECT_STATE.md`;
+5. stop under the long-CI rule.
