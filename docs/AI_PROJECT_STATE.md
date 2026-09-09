@@ -6,119 +6,117 @@
 
 Complete everything reasonably possible in GitHub/code across the Home Lab Moonfin Discovery product before physical-device, live-service or production acceptance.
 
-Current phase: **Web completion pass final validation**. Shared source-aware personalisation is already complete and must not be redone. Android mobile/tablet work has not started.
+**Current phase:** Android mobile/tablet completion pass is NEXT. Shared personalisation and the Web completion pass are verified complete and must not be restarted without a concrete regression.
 
-Durable plan: `docs/homelab-discovery-v2/GITHUB_COMPLETION_PLAN.md`  
+Durable implementation order: `docs/homelab-discovery-v2/GITHUB_COMPLETION_PLAN.md`  
 Mandatory official-update procedure: `docs/UPSTREAM_UPDATE_PROTOCOL.md`
 
-## Moonfin-Core current state
+## Moonfin-Core current verified state
 
 Repository: `PRYYSE/Moonfin-Core`  
 Branch: `homelab/discovery-v2`
 
-Current validation commit:
+### Verified product/build source
 
-- `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
-- `test(discovery-v2): restore Web media-card harness [full-build]`
-- exact diff is limited to the Web test harness plus Discovery workflow trigger hygiene; runtime product code was not changed by this recovery fix
+- source: `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
+- commit: `test(discovery-v2): restore Web media-card harness [full-build]`
+- workflow: **#115** / ID `34291216084` — GREEN
+- focused-validation job: `102277953232` — GREEN
+- full candidate job: `102279011763` — GREEN
 
-Current full workflow:
+Documentation-only checkpoint commits may be newer than this SHA. `1ac1499a...` remains the verified product/build source until a later source-changing full build passes.
 
-- run **#115** / ID `34291216084`
-- exact source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
-- status at checkpoint: in progress
+### #115 validation evidence
 
-Per the long-CI rule, do not poll this run. On continuation inspect this exact run once.
+Focused validation passed:
 
-## Web validation recovery evidence
-
-### Run #111 — formatter-only failure
-
-Run #111 / `34202952024` failed at the strict Dart format gate before analysis/tests/builds. Its only required change was the formatter output already committed in `6c9c7f8c524ac1ee0fe5bd8cdfe45a1cf6beea16`.
-
-### Runs #112/#113 — superseded by checkpoint pushes
-
-Run #112 / `34290442346` was cancelled during checkout when the first docs checkpoint commit advanced the same branch. Run #113 was then cancelled by the following docs checkpoint push. Neither cancellation is evidence of a code/test failure.
-
-Root cause was workflow concurrency combined with every docs-only push triggering the Discovery workflow. `1ac1499a...` adds `paths-ignore: ['docs/**']` to branch push triggering so future durable checkpoint commits do not cancel an in-progress validation run.
-
-### Run #114 — useful diagnostic failure
-
-Run #114 / `34290494915` completed enough validation to prove:
-
-- route overlay gate: PASS
-- 486-lane catalogue/compiler gate: PASS
+- route overlay integration gate
+- 486-lane authoring/catalogue compiler gate
 - catalogue Python tests: **8 passed**
-- strict Dart format: PASS
-- Flutter analyse: PASS / no issues
-- normal Discovery Flutter suite: **93 passed, 5 Web-only tests skipped**
-- Chrome entry/history tests: PASS
-- Web tab-strip touch/mouse/keyboard test: PASS
-- Chrome total: **8 passed, 4 failed**
+- Dart format: **52 files, 0 changed**
+- Flutter analyse: **no issues found**
+- normal `test/homelab_discovery` suite: **93 passed, 5 Web-only skipped**
+- Chrome Web/route suite: **12 passed**
+- narrow custom-scope gate
 
-All four Chrome failures were the tests that instantiate `HomeLabDiscoveryMediaCard`: missing-art fallback, touch activation, mouse activation and keyboard activation.
+The Chrome suite proves the Web contracts added in this pass, including:
 
-The common root cause is the test harness, not four separate product behaviours. Shared `MediaCard` renders `SeerrMediaTypeBadge` for movie/TV items; that badge requires `AppLocalizations.of(context)`. The Chrome `cardHarness()` used a bare `MaterialApp` without Moonfin's localisation delegate, so all four tests failed while building the same shared widget path before their individual assertions could prove anything.
+- adaptive Web grid density
+- correct Jellyfin-vs-Seerr item routing and malformed-local-pointer fallback
+- tab selection by touch, mouse and keyboard
+- shared missing-art/title fallback (`Untitled` / `UNTITLED`)
+- media-card activation exactly once from touch, mouse and keyboard
+- browser/deep-route history, direct deep URL resolution and landing restoration
 
-`1ac1499a...` fixes the harness by installing:
+The earlier media-card Chrome failures were a test-environment localisation omission, not a runtime product defect. The harness now installs Moonfin localisation delegates; runtime `HomeLabDiscoveryMediaCard`/`MediaCard` behaviour was not weakened or bypassed.
 
-- `AppLocalizations.localizationsDelegates`
-- `AppLocalizations.supportedLocales`
-- deterministic English locale for the test
+### #115 candidate evidence
 
-Meaningful fallback/touch/mouse/keyboard coverage remains intact and isolated. Product `HomeLabDiscoveryMediaCard` / shared `MediaCard` behaviour was not weakened or bypassed.
+Full candidate build passed:
 
-## Web completion implementation already present
+- Web release
+- Android `mobile-beta` release APK
+- Android `androidTv-beta` release APK
+- packaging/checksum generation
+- artifact upload
 
-The Web pass covers:
+Artifact:
 
-- adaptive wide-Web grid density
-- local Jellyfin vs external Seerr details routing, including malformed local-pointer fallback
-- Web tab selection by touch, mouse and keyboard
-- browser/deep-route history and landing restoration
-- shared missing-art/title fallback contract (`Untitled` / `UNTITLED`)
-- isolated media-card activation regressions for touch, mouse and keyboard
-- retained source-aware Discovery semantics, filtering, deduplication and guarded fallback
+- ID: `10082137559`
+- name: `homelab-discovery-v2-candidates-1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
+- size: `304771572` bytes
+- digest: `sha256:f2a7fc6b32667d3f4d38cf3a8e4165c2cce46d39facbd6dccb029687365e2abc`
 
-Do not collapse the isolated Web input tests back into one compound test without a concrete reason.
+Internal candidate SHA-256 values:
 
-## Last fully verified product/build acceptance point
+- Android TV APK: `acc1477625c1a24d2644b8b871b168e4e8c9430cb6b1694c70c1f9273cbbb029`
+- Android mobile APK: `e83c4c099e73548c2110b82b5da66c6bb981700582d35aef43c0fc74f3c2f326`
+- Web tarball: `c50ae5eff6956946d5339ea99f11dd4a383fa6e09a7fb9e79132516bc1437079`
 
-Until #115 is green, the last fully green candidate remains:
+`BUILD_INFO.txt` confirms source `1ac1499a...`, Flutter `3.44.1`, app `2.5.1+30000149`, Android TV `2.5.1` / build `2000016`, Web release, `mobile-beta`, and `androidTv-beta`.
 
-- source `5d9f3e63d644f303db918b02d31bf55be7e92346`
-- workflow `34189599805` / run #102 GREEN
-- Discovery Flutter tests: 88 passed
-- catalogue Python tests: 8 passed
-- Web release + Android mobile-beta + Android-TV-beta candidate builds passed
-- artifact `10042251886`
+CI Android signing remains `debug-fallback-not-for-deployment`. Production Android signing must preserve the accepted Home Lab certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`; never regenerate it.
 
-A green #115 will supersede this as the Web code/build acceptance point. Android APKs produced by this full candidate workflow are validation artefacts only; they do not mean the Android completion pass has started or completed.
+The Android APKs above are validation artefacts only. They do **not** mean the Android mobile/tablet or Android TV completion passes are complete.
 
-## Shared personalisation contract — complete, do not redo
+## Completed foundations — do not redo
 
-Truthful provenance-specific personalisation and explicit generic affinity strategies are already implemented and verified. Unknown structural/context semantics fail closed. Request cost, paging, caching, deduplication, identity preservation and force-refresh safeguards are already covered by the shared batch.
+- isolated Home Lab Discovery architecture with guarded stock fallback
+- deterministic concurrent loading and post-fetch presentation
+- 486-lane authoring/catalogue validation
+- membership/NSFW filtering
+- persistent rotation and session novelty handling
+- landing + deep `See All`, paging, retry and refresh state
+- local/external identity safeguards and details routing
+- TV focus/D-pad foundations
+- explicit generic affinity personalisation
+- truthful source-specific personalisation adapters
+- bounded request cost, caching, paging, deduplication, identity and force-refresh safeguards
+- **Web completion pass verified at `1ac1499a...` / #115**
+- workflow push hygiene: `docs/**` commits no longer start/cancel Discovery validation
+
+Unsupported structural/context semantics remain fail-closed. Do not re-enable them by approximation.
 
 ## Smart-TV / webOS
 
-Do not redo Smart-TV work during this Web validation slice. Its advanced isolated implementation remains at its separately verified GitHub checkpoint; final reconciliation comes later in the completion order. No physical LG acceptance is claimed.
+Do not redo the separately completed advanced Smart-TV work while starting Android. Final webOS reconciliation comes after Android TV in the completion order. No physical LG acceptance is claimed yet.
 
-## Stable / recovery state
+## Stable / rollback state
 
-Live remains deliberately untouched as rollback:
+Live remains deliberately untouched:
 
 - custom Moonbase 2.0.3.1
 - Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`
 - accepted legacy Discovery 481/486
 - Seerr enabled
 
-Recovery refs remain intact. Accepted Android signing cert SHA-256 remains `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`; never regenerate signing.
+Recovery refs/candidates remain intact. Do not modify live services during GitHub-only completion work.
 
 ## Completion order
 
-1. shared semantic/personalisation contract — COMPLETE
-2. Web completion pass — IMPLEMENTED, #115 FINAL VALIDATION IN PROGRESS
-3. Android mobile/tablet completion pass
+1. shared semantic/personalisation contract — **COMPLETE**
+2. Web completion pass — **COMPLETE at `1ac1499a...` / #115**
+3. Android mobile/tablet completion pass — **NEXT**
 4. Android TV / Google TV completion pass
 5. final webOS reconciliation
 6. cross-platform parity/recommendation-quality pass
@@ -127,9 +125,7 @@ Recovery refs remain intact. Accepted Android signing cert SHA-256 remains `3163
 9. explicit GitHub completion checkpoint
 10. physical/live acceptance and cutover
 
-## Known acceptance-only work
-
-Still deferred:
+## Acceptance-only work still deferred
 
 - subjective Web browser acceptance
 - Android phone/tablet device acceptance
@@ -141,7 +137,4 @@ Still deferred:
 
 ## Exact next action
 
-Inspect workflow **#115 (`34291216084`) once**.
-
-- If green: verify focused-validation, exact Chrome/Flutter test evidence, full candidate build and artifact metadata; update this file and `CHECKPOINT_CURRENT.md` with the exact verified source/run/artifact; commit the docs-only Web-complete checkpoint; stop. **Do not start Android in that same run.**
-- If red: diagnose only the specific remaining gate/test, fix the genuine root cause without weakening Web coverage, trigger the required full workflow, record its exact source/run here, and stop under the long-CI rule.
+Begin the **Android mobile/tablet completion pass** as the next implementation batch. Use the already-verified shared Discovery contracts and Web work; do not rebuild them. Finish everything code-testable for phone/tablet, run focused validation, then use the full candidate workflow as the final GitHub-side gate. Keep physical-device acceptance deferred until the whole GitHub completion sequence reaches its explicit checkpoint.
