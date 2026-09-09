@@ -340,9 +340,7 @@ class _HomeLabDiscoverySeeAllScreenState
                       _restoreTvGridFocus,
                 },
                 child: TextButton.icon(
-                  key: const ValueKey<String>(
-                    'homelab-discovery-deep-refresh',
-                  ),
+                  key: const ValueKey<String>('homelab-discovery-deep-refresh'),
                   focusNode: _tvRefreshFocusNode,
                   onPressed: _refresh,
                   icon: const Icon(Icons.refresh),
