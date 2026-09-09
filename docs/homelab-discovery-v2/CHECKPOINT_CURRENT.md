@@ -10,7 +10,7 @@ Read this file with `docs/AI_PROJECT_STATE.md`. Do not restart completed work or
 - Shared semantics/personalisation: COMPLETE
 - Web: COMPLETE
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
-- Android TV / Google TV: **ACTIVE — Slice 1 focused workflow #121 pending**
+- Android TV / Google TV: **ACTIVE — Slice 1 replacement focused workflow #122 pending**
 - Smart-TV/webOS: do not reconcile until Android TV is complete
 
 ## Android mobile/tablet closure
@@ -31,44 +31,59 @@ Production signing invariant remains SHA-256 `3163e01792e429ce972097a8e3ff9a4626
 
 ## Android TV / Google TV — Slice 1
 
-Existing TV lane/grid focus foundations were retained. Current review found one concrete remote-recovery defect family:
-
-- deep genuine-empty had Web Refresh and touch pull-refresh, but no TV remote Refresh
-- landing/deep failure/empty action buttons were focusable but not deterministically initial-focused for TV recovery
-
-Implemented source:
-
-`9788338cb27a86cb4024ee8dbe57b82bfcf68f21`
-
-`feat(discovery-v2): make TV recovery remote-safe`
-
-Changes:
+Existing TV lane/grid focus foundations remain intact. Product source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21` fixes the remote-recovery defect family:
 
 - deep genuine-empty explicitly shows Refresh for TV and autofocuses it
 - deep load Retry autofocuses on TV
 - landing/runtime/tab failure or genuine-empty action autofocuses on TV
-- new TV integration regressions cover tab D-pad selection, deep-empty Refresh via Select and deep-failure Retry via Select
+- TV regressions cover tab selection, deep-empty Refresh via Select and deep-failure Retry via Select
 
-Exact diff is limited to two Discovery UI files plus one new TV test file. No controller/catalogue/routing, Gradle/package/signing, Smart-TV or live changes.
+No controller/catalogue/routing, Gradle/package/signing, Smart-TV or live changes.
 
-Focused workflow:
+### #121 result
 
-- **#121 / `34331824783`**
-- exact source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21`
+Workflow #121 / `34331824783` failed only the two new screen-level deep-recovery tests because the isolated test harness did not bootstrap `UserPreferences` required by `NavigationLayout`.
+
+Before that failure:
+
+- route PASS
+- 486-lane catalogue/compiler PASS
+- 8 catalogue Python tests PASS
+- format: 54 files, 0 changed
+- analyse: no issues
+- TV tab-strip recovery regression PASS
+- focused suite final count: **101 passed, 2 failed, 5 skipped**
+
+This was a test-harness failure, not a product/runtime failure.
+
+### Harness recovery / #122
+
+Harness-only source:
+
+`ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`
+
+`test(discovery-v2): bootstrap TV recovery screen harness`
+
+The test now bootstraps in-memory preferences, real `PlaybackManager`, and minimal mocked app services needed by the real navigation shell. Production code is unchanged.
+
+Replacement focused workflow:
+
+- **#122 / `34335668107`**
+- exact source `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`
 - status at checkpoint: **in progress**
 - no full candidate requested
 
-Do not poll #121. Inspect it once on continuation.
+Do not poll #122. Inspect it once on continuation.
 
-## TV completion gate
+## Remaining TV completion gate
 
-Before Android TV / Google TV can close, verify/fix:
+After #122 is green, verify/fix:
 
-1. deterministic D-pad traversal through navbar/tabs/lanes/deep grids;
-2. focus memory/restoration after detail return, paging/retry and re-entry;
-3. Select/Enter and Back behaviour;
-4. partial rows and off-screen focus/scroll;
-5. remotely reachable loading/error/empty/paging recovery;
+1. deterministic navbar/tab/lane traversal and tab-strip ↔ active-lane re-entry;
+2. prevent inactive tab pages competing for TV autofocus;
+3. focus memory/restoration after detail return, paging/retry and re-entry;
+4. populated deep-grid Refresh and paging-error Retry reachability;
+5. Back/Select behaviour, partial rows and off-screen focus/scroll at 1080p/4K;
 6. lifecycle/resume/retained-state behaviour inherited from shared controllers;
 7. TV package/version/signing/update identity unchanged;
 8. targeted TV tests and final full candidate green.
@@ -81,4 +96,4 @@ Shared semantic/personalisation work, catalogue/compiler, request-cost/paging/ca
 
 ## Exact next action
 
-Inspect #121 (`34331824783`) exactly once. If green, continue only the remaining Android-TV-specific review and final validation sequence. If red, fix only the failing gate, preserve the remote-recovery behaviour, launch replacement focused CI, record exact source/run, and stop under the long-CI rule.
+Inspect #122 (`34335668107`) exactly once. If green, close Slice 1 and implement the remaining deterministic TV focus/remote-navigation slice. If red, fix only the failing gate, preserve the remote-recovery behaviour, launch replacement focused CI, record exact source/run, and stop under the long-CI rule.
