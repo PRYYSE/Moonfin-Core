@@ -9,7 +9,7 @@ Complete everything reasonably possible in GitHub/code across Home Lab Moonfin D
 Repository: `PRYYSE/Moonfin-Core`  
 Branch: `homelab/discovery-v2`
 
-**Current phase:** Android TV / Google TV completion — TV recovery Slice 1 is verified complete; deterministic focus/navigation Slice 2 is implemented and focused workflow **#125** is pending. Android mobile/tablet remains GitHub/code complete.
+**Current phase:** Android TV / Google TV completion — TV recovery Slice 1 is verified complete; deterministic focus/navigation Slice 2 is implemented and replacement focused workflow **#126** is pending after #125 failed only the Dart format gate. Android mobile/tablet remains GitHub/code complete.
 
 ## Completed platform foundations — do not redo
 
@@ -63,34 +63,52 @@ Final Slice 1 gate:
 
 ### TV Slice 2 — deterministic focus/navigation implemented
 
-Source:
+Functional source:
 
 `2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
 
 `feat(discovery-v2): complete deterministic TV focus paths`
 
-Exact source commit is one parented commit touching only six intended files: four Discovery TV UI/focus files plus two focused test files. No catalogue/controller, Android Gradle/package/signing, Smart-TV or live code changed.
+Exact functional commit is one parented commit touching only six intended files: four Discovery TV UI/focus files plus two focused test files. No catalogue/controller, Android Gradle/package/signing, Smart-TV or live code changed.
 
 Implemented:
 
-- `HomeLabDiscoveryTabStrip` now has one TV focus owner; left/right changes tabs while retaining strip focus, Down/Select hands into active content, Up/horizontal boundary can return to host traversal
+- `HomeLabDiscoveryTabStrip` has one TV focus owner; left/right changes tabs while retaining strip focus, Down/Select hands into active content, Up/horizontal boundary can return to host traversal
 - landing keeps stable per-tab view keys, remembers the last focused lane, makes first-lane Up explicitly return to the tab strip, and restores the remembered lane when re-entering content
 - first TV lanes no longer use framework `autofocus`; active-tab-only scheduled focus remains authoritative, preventing inactive `TabBarView` pages competing for focus
-- `HomeLabDiscoveryTvGrid` now exposes deterministic vertical edge callbacks without changing normal row movement, partial-row clamping, Select, Back or paging behaviour
-- populated TV deep browse now has an explicit Refresh action; grid Up at the first row reaches it and Refresh returns focus to the grid
+- `HomeLabDiscoveryTvGrid` exposes deterministic vertical edge callbacks without changing normal row movement, partial-row clamping, Select, Back or paging behaviour
+- populated TV deep browse has an explicit Refresh action; grid Up at the first row reaches it and Refresh returns focus to the grid
 - paging-error Retry More is explicitly reachable from grid Down at the final row; Up returns to the grid and successful retry restores grid focus
-- added focused regressions for TV tab-strip focus ownership/content entry, grid vertical edges, populated deep Refresh and paging-error Retry More recovery
+- focused regressions cover TV tab-strip focus ownership/content entry, grid vertical edges, populated deep Refresh and paging-error Retry More recovery
 
-### Current Slice 2 gate
+### #125 — formatter-only failure
 
-- workflow **#125 / `34417981160`**
-- exact source `2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
+Workflow **#125 / `34417981160`**, exact functional source `2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`:
+
+- route PASS
+- 486-lane catalogue/compiler + 8 Python tests PASS
+- format gate failed because `dart format` changed exactly one formatting site in `homelab_discovery_see_all_screen.dart`
+- required change only collapsed the `homelab-discovery-deep-refresh` `ValueKey` constructor from three lines to the formatter's single-line form
+- analyse, focused tests, Chrome tests and scope gate were skipped after the format failure
+- no behavioural failure was observed because behavioural validation did not run
+
+Exact formatter recovery:
+
+- source `a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`
+- commit `style(discovery-v2): apply TV focus slice formatter output`
+- verified diff from the prior checkpoint: one file only, +1/-3
+- no behaviour, tests, catalogue, package/signing, Smart-TV or live code changed
+
+### Current Slice 2 replacement gate
+
+- workflow **#126 / `34418234678`**
+- exact source `a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`
 - status at checkpoint: **in progress**
 - focused validation only; no `[full-build]`
 
-Per the long-CI rule, do not poll #125. Inspect this exact run once on continuation.
+Per the long-CI rule, do not poll #126. Inspect this exact run once on continuation.
 
-### Remaining TV review after #125 green
+### Remaining TV review after #126 green
 
 - confirm Back/detail return and re-entry coverage remains intact with the new focus bridge
 - validate off-screen focus/scroll behaviour at representative 1080p and 4K TV widths
@@ -109,7 +127,7 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 1. shared semantics/personalisation — COMPLETE
 2. Web — COMPLETE
 3. Android mobile/tablet — COMPLETE
-4. Android TV / Google TV — **ACTIVE; Slice 2 #125 PENDING**
+4. Android TV / Google TV — **ACTIVE; Slice 2 #126 PENDING**
 5. final webOS reconciliation
 6. cross-platform parity/recommendation quality
 7. whole-product CI/release engineering
@@ -119,4 +137,4 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 
 ## Exact next action
 
-Inspect workflow #125 (`34417981160`) exactly once. If green, record its focused evidence and continue the remaining Android-TV-specific review, starting with Back/detail return plus 1080p/4K off-screen focus/scroll behaviour. If red, inspect only the failing gate, fix the root cause without weakening the new deterministic focus paths, launch a replacement focused run, checkpoint exact source/run and stop under the long-CI rule.
+Inspect workflow #126 (`34418234678`) exactly once. If green, record its focused evidence and continue the remaining Android-TV-specific review, starting with Back/detail return plus representative 1080p/4K off-screen focus/scroll behaviour. If red, inspect only the failing gate, fix the root cause without weakening the deterministic focus paths, launch a replacement focused run, checkpoint exact source/run and stop under the long-CI rule.
