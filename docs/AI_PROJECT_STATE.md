@@ -9,7 +9,7 @@ Complete everything reasonably possible in GitHub/code across Home Lab Moonfin D
 Repository: `PRYYSE/Moonfin-Core`  
 Branch: `homelab/discovery-v2`
 
-**Current phase:** Android TV / Google TV completion — Slice 1 product fix remains intact; replacement focused validation **#123** is in progress after #122 exposed only a non-quiescing TV test wait. Android mobile/tablet is GitHub/code complete.
+**Current phase:** Android TV / Google TV completion — Slice 1 product fix remains intact; replacement focused validation **#124** is in progress after #123 proved the recovery path but exposed only an over-strict duplicate-title test assertion. Android mobile/tablet is GitHub/code complete.
 
 ## Android mobile/tablet — COMPLETE
 
@@ -66,7 +66,19 @@ No shared controller/catalogue/routing, Android Gradle/package/signing, Smart-TV
 
 ### #121 — test bootstrap failure only
 
-Workflow #121 / `34331824783`, source `9788338cb...`:
+Workflow #121 / `34331824783`, source `9788338cb...` passed route, 486-lane catalogue/compiler + 8 Python tests, format and analyse. Focused suite: **101 passed, 2 failed, 5 skipped**. The two new deep-recovery screen tests failed before render because isolated `NavigationLayout` lacked required app services. TV tab-strip regression passed.
+
+Harness bootstrap recovery source `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136` registered in-memory preferences, real `PlaybackManager`, and minimal mocked app services. Production code remained unchanged.
+
+### #122 — bounded-wait issue only
+
+Workflow #122 / `34335668107`, source `ebbabb7cd...` again passed route, 486-lane catalogue/compiler + 8 Python tests, format (54 files, 0 changed) and analyse. Focused suite again ended **101 passed, 2 failed, 5 skipped**. Both screen tests mounted successfully; their only failure was `pumpAndSettle timed out` because the real TV navigation chrome never globally quiesces.
+
+Test-only recovery source `373a1a44d68d375dff1b17a35da76f578820d4d5` (`test(discovery-v2): bound TV recovery screen pumps`) replaced those broad settle waits with bounded pumps. Product/runtime code remained unchanged.
+
+### #123 — recovery behaviour proven; assertion cardinality only
+
+Workflow #123 / `34407316688`, exact source `373a1a44d68d375dff1b17a35da76f578820d4d5`:
 
 - route PASS
 - 486-lane catalogue/compiler PASS
@@ -74,36 +86,30 @@ Workflow #121 / `34331824783`, source `9788338cb...`:
 - format: 54 files, 0 changed
 - analyse: no issues
 - focused suite: **101 passed, 2 failed, 5 skipped**
-- TV tab-strip regression passed
-- two new deep-recovery screen tests failed before render because isolated `NavigationLayout` lacked required app services
+- TV tab-strip regression PASS
+- both deep-recovery tests successfully mounted, received remote Select, completed Refresh/Retry, updated the controller and rendered `HomeLabDiscoveryTvGrid`
+- the only failing assertion expected exactly one `Text('Recovered Item')`; the TV card intentionally produces two title text nodes, so the assertion was testing presentation-node cardinality rather than recovery state
 
-Harness bootstrap recovery source `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136` registered in-memory preferences, real `PlaybackManager`, and minimal mocked app services. Production code remained unchanged.
+No product/runtime defect was exposed by #123.
 
-### #122 — bounded-wait issue only
+Test-only assertion recovery source:
 
-Workflow #122 / `34335668107`, source `ebbabb7cd...` again passed route, 486-lane catalogue/compiler + 8 Python tests, format (54 files, 0 changed) and analyse.
-
-Focused suite again ended **101 passed, 2 failed, 5 skipped**. Both previously crashing screen tests now mounted successfully; their only failure was `pumpAndSettle timed out` because the real TV navigation chrome does not become globally quiescent. No product exception or assertion mismatch was reported before the timeout.
-
-Test-only recovery source:
-
-- `373a1a44d68d375dff1b17a35da76f578820d4d5`
-- `test(discovery-v2): bound TV recovery screen pumps`
-- exact diff from the prior checkpoint: one test file only, +10/-4
-- replaces broad screen-level `pumpAndSettle()` waits with bounded pumps around the actual asynchronous state transition
-- tab-strip test remains unchanged
+- `955b5496d8e0d82d90ddb8de69b838737333243a`
+- `test(discovery-v2): assert TV recovery controller state`
+- exact diff from the prior checkpoint: one test file only, +2/-2
+- both tests now assert `controller.state.items == [_item]` plus exactly one `HomeLabDiscoveryTvGrid`; operation-count and TV autofocus/Select checks remain intact
 - no production/runtime code changed
 
 ### Current replacement gate
 
-- workflow **#123 / `34407316688`**
-- exact source `373a1a44d68d375dff1b17a35da76f578820d4d5`
+- workflow **#124 / `34416882794`**
+- exact source `955b5496d8e0d82d90ddb8de69b838737333243a`
 - status at checkpoint: **in progress**
 - focused validation only; no `[full-build]`
 
-Per the long-CI rule, do not poll #123. Inspect this exact run once on continuation.
+Per the long-CI rule, do not poll #124. Inspect this exact run once on continuation.
 
-### Remaining TV-specific review after #123 green
+### Remaining TV-specific review after #124 green
 
 Known areas to finish before TV closure:
 
@@ -138,7 +144,7 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 1. shared semantics/personalisation — COMPLETE
 2. Web — COMPLETE
 3. Android mobile/tablet — COMPLETE
-4. Android TV / Google TV — **ACTIVE; #123 PENDING**
+4. Android TV / Google TV — **ACTIVE; #124 PENDING**
 5. final webOS reconciliation
 6. cross-platform parity/recommendation quality
 7. whole-product CI/release engineering
@@ -148,4 +154,4 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 
 ## Exact next action
 
-Inspect workflow #123 (`34407316688`) exactly once. If green, record its focused evidence, close TV Slice 1 recovery and implement the remaining deterministic TV focus/remote-navigation slice. If red, inspect only the failing gate, fix the root cause without weakening the TV recovery regressions, launch a replacement focused run, checkpoint exact source/run and stop under the long-CI rule.
+Inspect workflow #124 (`34416882794`) exactly once. If green, record its focused evidence, close TV Slice 1 recovery and implement the remaining deterministic TV focus/remote-navigation slice. If red, inspect only the failing gate, fix the root cause without weakening the TV recovery regressions, launch a replacement focused run, checkpoint exact source/run and stop under the long-CI rule.
