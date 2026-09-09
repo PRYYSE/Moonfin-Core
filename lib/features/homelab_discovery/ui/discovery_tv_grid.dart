@@ -18,6 +18,8 @@ class HomeLabDiscoveryTvGrid extends StatefulWidget {
   final ValueChanged<SeerrDiscoverItem> onOpenItem;
   final VoidCallback? onNearEnd;
   final VoidCallback? onBack;
+  final VoidCallback? onUpEdge;
+  final VoidCallback? onDownEdge;
   final bool autofocus;
   final double targetCardWidth;
 
@@ -28,6 +30,8 @@ class HomeLabDiscoveryTvGrid extends StatefulWidget {
     required this.onOpenItem,
     this.onNearEnd,
     this.onBack,
+    this.onUpEdge,
+    this.onDownEdge,
     this.autofocus = false,
     this.targetCardWidth = 168,
   });
@@ -234,9 +238,16 @@ class HomeLabDiscoveryTvGridState extends State<HomeLabDiscoveryTvGrid> {
 
     if (key.isUpKey || key.isDownKey) {
       final target = _verticalTarget(key.isUpKey);
-      if (target == null) return KeyEventResult.ignored;
-      _setFocusedIndex(target);
-      return KeyEventResult.handled;
+      if (target != null) {
+        _setFocusedIndex(target);
+        return KeyEventResult.handled;
+      }
+      final edge = key.isUpKey ? widget.onUpEdge : widget.onDownEdge;
+      if (edge != null) {
+        edge();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
     }
 
     return KeyEventResult.ignored;

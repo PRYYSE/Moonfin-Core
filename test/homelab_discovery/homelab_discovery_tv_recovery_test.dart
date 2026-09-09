@@ -52,15 +52,24 @@ const _item = SeerrDiscoverItem(
   title: 'Recovered Item',
 );
 
+const _item2 = SeerrDiscoverItem(
+  id: 102,
+  mediaType: 'movie',
+  title: 'Recovered Item Two',
+);
+
 HomeLabDiscoveryPageLoadResult _page({
   List<SeerrDiscoverItem> items = const [],
+  int page = 1,
+  int totalPages = 1,
+  int? totalResults,
 }) => HomeLabDiscoveryPageLoadResult(
   section: _section,
   displayTitle: _section.title,
   items: items,
-  page: 1,
-  totalPages: 1,
-  totalResults: items.length,
+  page: page,
+  totalPages: totalPages,
+  totalResults: totalResults ?? items.length,
 );
 
 Widget _materialHarness(Widget child) {
@@ -72,15 +81,18 @@ Widget _materialHarness(Widget child) {
   );
 }
 
-Widget _tabHarness() {
+Widget _tabHarness(VoidCallback onTvEnterContent) {
   return MaterialApp(
     home: DefaultTabController(
       length: _tabs.length,
-      child: const Scaffold(
+      child: Scaffold(
         body: Column(
           children: [
-            HomeLabDiscoveryTabStrip(tabs: _tabs),
-            Expanded(
+            HomeLabDiscoveryTabStrip(
+              tabs: _tabs,
+              onTvEnterContent: onTvEnterContent,
+            ),
+            const Expanded(
               child: TabBarView(
                 children: [
                   Center(child: Text('MOVIES BODY')),
@@ -146,21 +158,29 @@ void main() {
     await GetIt.instance.reset();
   });
 
-  testWidgets('TV tab strip is reachable and changes tab by D-pad selection', (
+  testWidgets('TV tab strip owns D-pad focus and delegates entry to content', (
     tester,
   ) async {
-    await tester.pumpWidget(_tabHarness());
+    var enterContentCalls = 0;
+    await tester.pumpWidget(_tabHarness(() => enterContentCalls += 1));
     await tester.pumpAndSettle();
     expect(find.text('MOVIES BODY'), findsOneWidget);
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    final stripState = tester.state<HomeLabDiscoveryTabStripState>(
+      find.byType(HomeLabDiscoveryTabStrip),
+    );
+    expect(stripState.requestTvFocus(), isTrue);
     await tester.pump();
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    await tester.pump();
-    await tester.sendKeyEvent(LogicalKeyboardKey.select);
-    await tester.pumpAndSettle();
+    expect(stripState.hasTvFocus, isTrue);
 
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
     expect(find.text('SERIES BODY'), findsOneWidget);
+    expect(stripState.hasTvFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(enterContentCalls, 1);
   });
 
   testWidgets('TV genuine-empty deep browse exposes remote Refresh', (
@@ -229,5 +249,116 @@ void main() {
     expect(attempts, 2);
     expect(controller.state.items, const [_item]);
     expect(find.byType(HomeLabDiscoveryTvGrid), findsOneWidget);
+  });
+
+  testWidgets('TV populated deep browse reaches Refresh and returns to grid', (
+    tester,
+  ) async {
+    var forcedRefreshes = 0;
+    final controller = HomeLabDiscoverySeeAllController(
+      section: _section,
+      maxEmptyPageReadAhead: 1,
+      loadPage: (_, {page = 1, forceRefresh = false}) async {
+        if (forceRefresh) forcedRefreshes++;
+        return _page(items: const [_item]);
+      },
+    );
+
+    await tester.pumpWidget(
+      _materialHarness(HomeLabDiscoverySeeAllScreen(controller: controller)),
+    );
+    await _pumpTvScreenTransition(tester);
+
+    var gridState = tester.state<HomeLabDiscoveryTvGridState>(
+      find.byType(HomeLabDiscoveryTvGrid),
+    );
+    gridState.requestFocusFromMemory();
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    final refresh = find.byKey(
+      const ValueKey<String>('homelab-discovery-deep-refresh'),
+    );
+    expect(refresh, findsOneWidget);
+    expect(tester.widget<TextButton>(refresh).focusNode?.hasFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await _pumpTvScreenTransition(tester);
+
+    expect(forcedRefreshes, 1);
+    gridState = tester.state<HomeLabDiscoveryTvGridState>(
+      find.byType(HomeLabDiscoveryTvGrid),
+    );
+    expect(gridState.hasFocus, isTrue);
+    expect(controller.state.items, const [_item]);
+  });
+
+  testWidgets('TV paging error reaches Retry More and restores grid focus', (
+    tester,
+  ) async {
+    var pageTwoAttempts = 0;
+    final controller = HomeLabDiscoverySeeAllController(
+      section: _section,
+      maxEmptyPageReadAhead: 1,
+      loadPage: (_, {page = 1, forceRefresh = false}) async {
+        if (page == 1) {
+          return _page(
+            items: const [_item],
+            page: 1,
+            totalPages: 2,
+            totalResults: 2,
+          );
+        }
+        pageTwoAttempts++;
+        if (pageTwoAttempts == 1) {
+          throw StateError('temporary paging failure');
+        }
+        return _page(
+          items: const [_item2],
+          page: 2,
+          totalPages: 2,
+          totalResults: 2,
+        );
+      },
+    );
+
+    await tester.pumpWidget(
+      _materialHarness(HomeLabDiscoverySeeAllScreen(controller: controller)),
+    );
+    await _pumpTvScreenTransition(tester);
+    await _pumpTvScreenTransition(tester);
+
+    final retryMore = find.byKey(
+      const ValueKey<String>('homelab-discovery-deep-retry-more'),
+    );
+    expect(retryMore, findsOneWidget);
+    expect(pageTwoAttempts, 1);
+
+    var gridState = tester.state<HomeLabDiscoveryTvGridState>(
+      find.byType(HomeLabDiscoveryTvGrid),
+    );
+    gridState.requestFocusFromMemory();
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(tester.widget<FilledButton>(retryMore).focusNode?.hasFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(gridState.hasFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await _pumpTvScreenTransition(tester);
+
+    expect(pageTwoAttempts, 2);
+    expect(controller.state.items, const [_item, _item2]);
+    gridState = tester.state<HomeLabDiscoveryTvGridState>(
+      find.byType(HomeLabDiscoveryTvGrid),
+    );
+    expect(gridState.hasFocus, isTrue);
   });
 }

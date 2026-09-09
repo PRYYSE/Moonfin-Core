@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../../../ui/navigation/destinations.dart';
@@ -25,6 +26,12 @@ class _HomeLabDiscoverySeeAllScreenState
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<HomeLabDiscoveryTvGridState> _tvGridKey =
       GlobalKey<HomeLabDiscoveryTvGridState>();
+  final FocusNode _tvRefreshFocusNode = FocusNode(
+    debugLabel: 'HomeLabDiscoveryDeepRefresh',
+  );
+  final FocusNode _tvRetryMoreFocusNode = FocusNode(
+    debugLabel: 'HomeLabDiscoveryDeepRetryMore',
+  );
   HomeLabDiscoverySeeAllState? _state;
   bool _loadingMore = false;
 
@@ -40,6 +47,8 @@ class _HomeLabDiscoverySeeAllScreenState
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
+    _tvRefreshFocusNode.dispose();
+    _tvRetryMoreFocusNode.dispose();
     super.dispose();
   }
 
@@ -60,6 +69,7 @@ class _HomeLabDiscoverySeeAllScreenState
     final state = await widget.controller.refresh();
     if (!mounted) return;
     setState(() => _state = state);
+    _restoreTvGridFocus();
   }
 
   void _onScroll() {
@@ -106,6 +116,18 @@ class _HomeLabDiscoverySeeAllScreenState
       if (!mounted) return;
       _tvGridKey.currentState?.requestFocusFromMemory();
     });
+  }
+
+  void _focusTvRefresh() {
+    if (_tvRefreshFocusNode.canRequestFocus) {
+      _tvRefreshFocusNode.requestFocus();
+    }
+  }
+
+  void _focusTvRetryMore() {
+    if (_tvRetryMoreFocusNode.canRequestFocus) {
+      _tvRetryMoreFocusNode.requestFocus();
+    }
   }
 
   @override
@@ -293,17 +315,39 @@ class _HomeLabDiscoverySeeAllScreenState
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 6),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                state.title,
-                style: Theme.of(context).textTheme.headlineMedium,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      state.title,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${state.items.length} loaded',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                '${state.items.length} loaded',
-                style: Theme.of(context).textTheme.bodySmall,
+              CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.arrowDown):
+                      _restoreTvGridFocus,
+                },
+                child: TextButton.icon(
+                  key: const ValueKey<String>(
+                    'homelab-discovery-deep-refresh',
+                  ),
+                  focusNode: _tvRefreshFocusNode,
+                  onPressed: _refresh,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                ),
               ),
             ],
           ),
@@ -319,6 +363,10 @@ class _HomeLabDiscoverySeeAllScreenState
               onOpenItem: _openTvItem,
               onNearEnd: _loadMore,
               onBack: () => Navigator.of(context).maybePop(),
+              onUpEdge: _focusTvRefresh,
+              onDownEdge: !_loadingMore && state.hasError
+                  ? _focusTvRetryMore
+                  : null,
             ),
           ),
         ),
@@ -331,10 +379,20 @@ class _HomeLabDiscoverySeeAllScreenState
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
             child: Center(
-              child: FilledButton.icon(
-                onPressed: _retryMore,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry loading more'),
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.arrowUp):
+                      _restoreTvGridFocus,
+                },
+                child: FilledButton.icon(
+                  key: const ValueKey<String>(
+                    'homelab-discovery-deep-retry-more',
+                  ),
+                  focusNode: _tvRetryMoreFocusNode,
+                  onPressed: _retryMore,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry loading more'),
+                ),
               ),
             ),
           )

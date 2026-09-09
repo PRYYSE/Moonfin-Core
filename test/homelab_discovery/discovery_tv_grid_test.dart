@@ -24,6 +24,8 @@ void main() {
     required ValueChanged<SeerrDiscoverItem> onOpen,
     VoidCallback? onNearEnd,
     VoidCallback? onBack,
+    VoidCallback? onUpEdge,
+    VoidCallback? onDownEdge,
     String hubKey = 'tv-grid-test',
   }) async {
     await tester.pumpWidget(
@@ -42,6 +44,8 @@ void main() {
                 onOpenItem: onOpen,
                 onNearEnd: onNearEnd,
                 onBack: onBack,
+                onUpEdge: onUpEdge,
+                onDownEdge: onDownEdge,
               ),
             ),
           ),
@@ -100,6 +104,35 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
     expect(state.focusedIndex, 4);
+  });
+
+  testWidgets('vertical edges delegate to the owning TV screen', (
+    tester,
+  ) async {
+    var upEdges = 0;
+    var downEdges = 0;
+    final state = await pumpGrid(
+      tester,
+      itemCount: 6,
+      onOpen: (_) {},
+      onUpEdge: () => upEdges += 1,
+      onDownEdge: () => downEdges += 1,
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(upEdges, 1);
+    expect(state.focusedIndex, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(state.focusedIndex, 3);
+    expect(downEdges, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(downEdges, 1);
+    expect(state.focusedIndex, 3);
   });
 
   testWidgets('remote Back is delegated once to the owning deep route', (

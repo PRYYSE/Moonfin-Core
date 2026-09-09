@@ -33,6 +33,10 @@ class HomeLabDiscoveryScreen extends StatefulWidget {
 class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
   late Future<HomeLabDiscoveryRuntime> _runtimeFuture;
   HomeLabDiscoveryRuntime? _runtime;
+  final GlobalKey<HomeLabDiscoveryTabStripState> _tvTabStripKey =
+      GlobalKey<HomeLabDiscoveryTabStripState>();
+  final Map<String, GlobalKey<_HomeLabDiscoveryTabViewState>> _tvTabViewKeys =
+      <String, GlobalKey<_HomeLabDiscoveryTabViewState>>{};
 
   @override
   void initState() {
@@ -57,6 +61,23 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
     _runtime?.dispose();
     _runtime = null;
     setState(() => _runtimeFuture = _createRuntime());
+  }
+
+  GlobalKey<_HomeLabDiscoveryTabViewState> _tvTabViewKey(String tabId) {
+    return _tvTabViewKeys.putIfAbsent(
+      tabId,
+      () => GlobalKey<_HomeLabDiscoveryTabViewState>(),
+    );
+  }
+
+  void _enterActiveTvTab(
+    BuildContext tabContext,
+    List<HomeLabDiscoveryTab> tabs,
+  ) {
+    if (!PlatformDetection.isTV || tabs.isEmpty) return;
+    final index = DefaultTabController.of(tabContext).index;
+    if (index < 0 || index >= tabs.length) return;
+    _tvTabViewKey(tabs[index].id).currentState?.requestTvFocusFromMemory();
   }
 
   @override
@@ -92,38 +113,52 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
 
         return DefaultTabController(
           length: tabs.length,
-          child: Scaffold(
-            body: NavigationLayout(
-              activeRoute: Destinations.seerrDiscover,
-              showBackButton: true,
-              child: SafeArea(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-                      child: Text(
-                        'Discovery',
-                        style: Theme.of(context).textTheme.headlineMedium,
+          child: Builder(
+            builder: (tabContext) => Scaffold(
+              body: NavigationLayout(
+                activeRoute: Destinations.seerrDiscover,
+                showBackButton: true,
+                child: SafeArea(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+                        child: Text(
+                          'Discovery',
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
                       ),
-                    ),
-                    HomeLabDiscoveryTabStrip(tabs: tabs),
-                    Expanded(
-                      child: TabBarView(
-                        children: [
-                          for (var index = 0; index < tabs.length; index++)
-                            _HomeLabDiscoveryTabView(
-                              key: PageStorageKey<String>(
-                                'homelab-discovery-${tabs[index].id}',
+                      HomeLabDiscoveryTabStrip(
+                        key: _tvTabStripKey,
+                        tabs: tabs,
+                        onTvEnterContent: () =>
+                            _enterActiveTvTab(tabContext, tabs),
+                      ),
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            for (var index = 0; index < tabs.length; index++)
+                              _HomeLabDiscoveryTabView(
+                                key: _tvTabViewKey(tabs[index].id),
+                                tabIndex: index,
+                                controller: runtime.controllerFor(
+                                  tabs[index].id,
+                                ),
+                                runtime: runtime,
+                                onRequestTabFocus: () =>
+                                    _tvTabStripKey.currentState
+                                        ?.requestTvFocus() ??
+                                    false,
+                                isTabStripFocused: () =>
+                                    _tvTabStripKey.currentState?.hasTvFocus ??
+                                    false,
                               ),
-                              tabIndex: index,
-                              controller: runtime.controllerFor(tabs[index].id),
-                              runtime: runtime,
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -148,12 +183,16 @@ class _HomeLabDiscoveryTabView extends StatefulWidget {
   final int tabIndex;
   final HomeLabDiscoveryTabController controller;
   final HomeLabDiscoveryRuntime runtime;
+  final bool Function()? onRequestTabFocus;
+  final bool Function()? isTabStripFocused;
 
   const _HomeLabDiscoveryTabView({
     super.key,
     required this.tabIndex,
     required this.controller,
     required this.runtime,
+    this.onRequestTabFocus,
+    this.isTabStripFocused,
   });
 
   @override
@@ -164,6 +203,8 @@ class _HomeLabDiscoveryTabView extends StatefulWidget {
 class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
   late Future<HomeLabDiscoveryTabLoadResult> _loadFuture;
   final Map<String, GlobalKey<HomeLabDiscoveryTvLaneState>> _tvLaneKeys = {};
+  List<HomeLabDiscoveryLaneLoadResult> _tvLanes = const [];
+  String? _lastFocusedLaneId;
   bool _didRequestInitialTvFocus = false;
 
   @override
@@ -177,6 +218,8 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       _tvLaneKeys.clear();
+      _tvLanes = const [];
+      _lastFocusedLaneId = null;
       _didRequestInitialTvFocus = false;
       _loadFuture = widget.controller.load();
     }
@@ -190,6 +233,32 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
     final next = widget.controller.refresh();
     setState(() => _loadFuture = next);
     await next;
+  }
+
+  bool requestTvFocusFromMemory() {
+    if (!mounted ||
+        !PlatformDetection.isTV ||
+        !TickerMode.valuesOf(context).enabled ||
+        _tvLanes.isEmpty) {
+      return false;
+    }
+
+    var target = _tvLanes.first;
+    final rememberedLaneId = _lastFocusedLaneId;
+    if (rememberedLaneId != null) {
+      for (final lane in _tvLanes) {
+        if (lane.section.id == rememberedLaneId) {
+          target = lane;
+          break;
+        }
+      }
+    }
+
+    final laneState = _tvLaneKey(target.section.id).currentState;
+    if (laneState == null) return false;
+    _lastFocusedLaneId = target.section.id;
+    laneState.requestFocusFromMemory();
+    return true;
   }
 
   Future<void> _restoreLaneFocus(
@@ -206,12 +275,14 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
     HomeLabDiscoveryLaneLoadResult lane,
     SeerrDiscoverItem item,
   ) async {
+    _lastFocusedLaneId = lane.section.id;
     final laneKey = _tvLaneKey(lane.section.id);
     await openHomeLabDiscoveryItem(context, item);
     await _restoreLaneFocus(laneKey);
   }
 
   Future<void> _openSeeAll(HomeLabDiscoveryLaneLoadResult lane) async {
+    _lastFocusedLaneId = lane.section.id;
     final controller = widget.runtime.seeAllControllerFor(lane.section);
     final laneKey = _tvLaneKey(lane.section.id);
 
@@ -247,14 +318,17 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
         _didRequestInitialTvFocus ||
         lanes.isEmpty ||
         tabController.index != widget.tabIndex ||
-        !TickerMode.valuesOf(context).enabled) {
+        !TickerMode.valuesOf(context).enabled ||
+        (widget.isTabStripFocused?.call() ?? false)) {
       return;
     }
 
     _didRequestInitialTvFocus = true;
     final laneKey = _tvLaneKey(lanes.first.section.id);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !TickerMode.valuesOf(context).enabled) {
+      if (!mounted ||
+          !TickerMode.valuesOf(context).enabled ||
+          (widget.isTabStripFocused?.call() ?? false)) {
         _didRequestInitialTvFocus = false;
         return;
       }
@@ -263,6 +337,7 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
         _didRequestInitialTvFocus = false;
         return;
       }
+      _lastFocusedLaneId = lanes.first.section.id;
       laneState.requestFocusFromMemory();
     });
   }
@@ -272,14 +347,19 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
     int currentIndex,
     bool isUp,
   ) {
-    final targetIndex = currentIndex + (isUp ? -1 : 1);
-    if (targetIndex < 0 || targetIndex >= lanes.length) return false;
+    if (currentIndex < 0 || currentIndex >= lanes.length) return false;
+    _lastFocusedLaneId = lanes[currentIndex].section.id;
 
-    final targetKey = _tvLaneKey(lanes[targetIndex].section.id);
-    final targetState = targetKey.currentState;
-    if (targetState == null) {
-      return false;
+    final targetIndex = currentIndex + (isUp ? -1 : 1);
+    if (targetIndex < 0) {
+      return isUp ? (widget.onRequestTabFocus?.call() ?? false) : false;
     }
+    if (targetIndex >= lanes.length) return false;
+
+    final targetLane = lanes[targetIndex];
+    final targetState = _tvLaneKey(targetLane.section.id).currentState;
+    if (targetState == null) return false;
+    _lastFocusedLaneId = targetLane.section.id;
     targetState.requestFocusFromMemory();
     return true;
   }
@@ -301,6 +381,7 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
 
         final result = snapshot.data!;
         final lanes = result.usableLanes;
+        _tvLanes = lanes;
         final failedCount = result.failedLanes.length;
         if (lanes.isEmpty) {
           return _DiscoveryFailure(
@@ -355,7 +436,7 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
                   onSeeAll: onSeeAll,
                   onVerticalNavigation: (isUp) =>
                       _moveTvFocus(lanes, index, isUp),
-                  autofocus: index == 0,
+                  autofocus: false,
                 );
               }
 
