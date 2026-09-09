@@ -9,11 +9,11 @@ Do not restart completed work or modify the live server during GitHub-only compl
 
 ## Current boundary
 
-Shared personalisation and Web are verified complete. Android mobile/tablet is split into three slices.
+Shared personalisation and Web are verified complete. Android mobile/tablet is at its final GitHub/CI gate.
 
 - Slice 1 — adaptive/touch baseline: **VERIFIED**
-- Slice 2 — mobile UX/state robustness: **IMPLEMENTED; FORMATTER-ONLY RECOVERY #118 IN PROGRESS**
-- Slice 3 — final Android validation: **NEXT only after #118 green**
+- Slice 2 — mobile UX/state robustness: **VERIFIED**
+- Slice 3 — final Android validation: **FULL CANDIDATE #119 IN PROGRESS**
 
 ## Slice 1 — VERIFIED
 
@@ -37,72 +37,92 @@ Verified mobile baseline:
 - non-Web tabs retain 48 px minimum touch height
 - native regressions cover phone/tablet density, tab tapping and card fallback/touch activation
 
-## Slice 2 — implementation complete
+## Slice 2 — VERIFIED
 
-Functional source:
+Functional source `0aeadfb6ef948502c5e64bface0374fe2ed66ceb` implemented:
 
-`0aeadfb6ef948502c5e64bface0374fe2ed66ceb`
-
-Implemented:
-
-- tab controller retains last successful data across ordinary reconstruction/orientation/resume
-- concurrent normal tab loads share one in-flight request
-- failed results are not cached; Retry reloads without rotating
+- retained successful tab state across ordinary reconstruction/orientation/resume
+- coalesced concurrent normal tab loads
+- failed results remain retryable without forced rotation
 - explicit Refresh clears retained state and rotates
-- session reset waits for active work then clears retained state/history
-- deep See All owns one active advance; duplicate paging joins it
-- pull-to-refresh waits for active paging before resetting/reloading
+- session reset waits for active work then clears state/history
+- deep See All owns one active advance
+- duplicate paging joins the active operation
+- pull-to-refresh waits for active paging before destructive reset/reload
 - synchronous reset during active paging is deferred until completion
 
-Existing Android Back/lifecycle/loading/error/empty paths were reviewed and retained where already correct; no unnecessary product rewrite was made.
+Workflow **#117** / `34322168040` failed only Dart formatting in one regression test.
 
-## #117 result and recovery
-
-Workflow **#117** / `34322168040` on functional source `0aeadfb6...` failed **only** the Dart formatter gate.
-
-- route integration: PASS
-- 486-lane catalogue/compiler: PASS
-- formatter: one test file needed reformatting
-- analyse/tests/build: skipped after formatter failure
-
-CI's formatter diff changed only wrapping/indentation in:
-
-`test/homelab_discovery/discovery_tab_controller_test.dart`
-
-Formatter-only recovery commit:
+Formatter-only recovery:
 
 - `3cab6c5430eb6175320c4f16c4932218b41d42b8`
-- `style(discovery-v2): format Android state regression test`
-- exactly one test file changed
-- no runtime/product logic changed
+- exactly one test file reformatted; no runtime logic changed
 
-Current focused workflow:
+Workflow **#118** / `34322882024` — **GREEN**:
 
-- **#118** / `34322882024`
-- exact source `3cab6c5430eb6175320c4f16c4932218b41d42b8`
-- status at checkpoint: **in progress**
-- full candidate build not requested
+- route integration PASS
+- authoring catalogue PASS
+- format PASS
+- analyse PASS
+- focused Discovery tests PASS
+- Chrome Web/route tests PASS
+- custom-scope PASS
+- candidate build skipped as intended
 
-Do not poll #118. Inspect it once on continuation.
+Slice 2 is therefore verified complete.
 
 ## Slice 3 — final Android mobile/tablet validation
 
-Only after #118 is green:
+Final review found no remaining code-testable Android mobile/tablet defect requiring product changes.
 
-1. mark Slice 2 verified;
-2. do one final mobile/tablet code defect review;
-3. verify auth/local-state/update-safe app identity practical in GitHub/CI;
-4. preserve production signing certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604` — never regenerate it;
-5. trigger the required `[full-build]` candidate workflow from the exact final source;
-6. record exact Android mobile APK/artifact/build/signing evidence;
-7. close Android mobile/tablet in both checkpoints;
-8. stop before Android TV / Google TV.
+Safety review:
 
-Physical phone/tablet acceptance remains deferred.
+- delta from pre-mobile source `9491b145de7b3ea64dc6e31c4863e9c7c60520f6` is confined to Discovery UI/controllers/tests and docs
+- no Android Gradle, manifest, package, auth, secure-storage or signing files changed
+- production mobile application ID remains `org.moonfin.androidtv`
+- beta application ID remains `org.moonfin.androidtv.beta`
+- release build continues to use the existing release keystore when available
+- CI debug signing remains a deliberate candidate-only fallback and is not a deployable production identity
+- production certificate SHA-256 invariant remains `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`; never regenerate it
+
+Final UI/routing review retained existing correct behaviour for:
+
+- loading / failure / genuine-empty states
+- touch pull-to-refresh
+- automatic deep paging + visible loading/error/end states
+- title/artwork fallback
+- local Jellyfin vs external Seerr routing and malformed local pointer handling
+- Android system Back through native `Navigator.push(MaterialPageRoute)` See All paths
+
+One final regression was added because duplicate near-end paging coalescing was implemented but lacked its own exact test:
+
+- final source `f0fbec0a9b29dcc2df0cf0e9b02ce3a8989c7b52`
+- `[full-build] test(discovery-v2): close Android mobile paging gate`
+- exact diff: `test/homelab_discovery/discovery_see_all_controller_test.dart` only
+- test proves two overlapping `loadMore()` calls issue only one page-2 request and both receive the same accumulated result
+
+Required final full candidate workflow:
+
+- **#119** / ID `34323556542`
+- exact source `f0fbec0a9b29dcc2df0cf0e9b02ce3a8989c7b52`
+- status at checkpoint: **in progress**
+- `[full-build]` marker ensures the full Web + `mobile-beta` + `androidTv-beta` candidate job is enabled after focused validation
+
+Do not poll #119. Inspect it once on continuation.
+
+## Production signing invariant
+
+Accepted production Android certificate SHA-256:
+
+`3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
+
+Never regenerate or replace it.
+
+CI does not contain the private release keystore, so its APKs are intentionally `debug-fallback-not-for-deployment`. A green candidate proves build/update compatibility of the code and package configuration, not the private production certificate itself. Production deployment must continue using the existing Home Lab release keystore.
 
 ## Last fully green full-build baseline
 
-Until Slice 3 supersedes it:
+Until #119 is green and artefact evidence is recorded:
 
 - source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
 - workflow **#115** / `34291216084` — GREEN
@@ -124,18 +144,26 @@ Until Slice 3 supersedes it:
 - TV focus/D-pad foundations
 - verified Web completion
 - verified Android Slice 1
+- verified Android Slice 2
 - separately advanced Smart-TV work
 
 Unsupported structural/context semantics remain fail-closed.
 
 ## Exact next action
 
-Inspect **#118 (`34322882024`) once**.
+Inspect **#119 (`34323556542`) once**.
 
 ### If green
 
-Mark Slice 2 verified and begin Slice 3 without revisiting shared/Web/Slice-1 work.
+- capture focused-validation test counts and gate results;
+- capture full candidate result;
+- capture artifact ID/digest, `BUILD_INFO.txt` and SHA256s;
+- record Android mobile candidate evidence and signing mode;
+- mark Android mobile/tablet **GitHub/code COMPLETE**;
+- proceed to **Android TV / Google TV completion**.
 
 ### If red
 
-Inspect only the failing gate, fix its root cause without weakening Slice-2 coverage, launch the appropriate focused workflow, record exact source/run, and stop under the long-CI rule.
+Inspect only the exact failure, fix its root cause without weakening coverage or changing signing/update identity, trigger a replacement full candidate run, record exact source/run, and stop under the long-CI rule.
+
+Physical phone/tablet acceptance remains deferred.
