@@ -9,7 +9,7 @@ Complete everything reasonably possible in GitHub/code across Home Lab Moonfin D
 Repository: `PRYYSE/Moonfin-Core`  
 Branch: `homelab/discovery-v2`
 
-**Current phase:** Android TV / Google TV completion — first remote-recovery/focus slice implemented; focused validation #121 in progress. Android mobile/tablet is GitHub/code complete.
+**Current phase:** Android TV / Google TV completion — Slice 1 product fix implemented; replacement focused validation **#122** is in progress after a test-harness-only #121 failure. Android mobile/tablet is GitHub/code complete.
 
 ## Android mobile/tablet — COMPLETE
 
@@ -34,72 +34,79 @@ Physical mobile/tablet acceptance remains deferred.
 
 ## Android TV / Google TV — ACTIVE
 
-### Existing verified foundations — do not redo
+### Existing foundations — do not redo
 
 - `HomeLabDiscoveryTvLane` uses the locked-focus row primitive
 - `HomeLabDiscoveryTvGrid` has deterministic single focus ownership
-- existing regressions cover Select, horizontal/vertical D-pad movement, partial final rows, Back, near-end paging, pointer activation and focus memory
+- existing regressions cover Select, D-pad movement, partial final rows, Back, near-end paging, pointer activation and focus memory
 - landing restores lane focus after details and See All return
 - deep browse restores grid focus after details and paging retry
 - local Jellyfin vs Seerr routing is shared and already verified
-- #120 proves the current `androidTv-beta` flavor compiles and packages successfully, but is not TV product-completion proof
+- #120 proves current `androidTv-beta` compiles/packages, but is not TV product-completion proof
 
 TV/update identity remains:
 
 - production app ID `org.moonfin.androidtv`; beta `.beta`
 - TV version `2.5.1`, build `2000016`
 - forced-TV build uses `MOONFIN_FORCE_TV=true`
-- TV flavors disable Impeller
 - production signing certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
 - never regenerate production signing material
 - CI APKs remain `debug-fallback-not-for-deployment`
 
-### TV Slice 1 — IMPLEMENTED; #121 PENDING
+### TV Slice 1 — product fix implemented
 
-Defect review found a real remote-only recovery gap: a genuine-empty deep collection exposed explicit Refresh on Web and pull-refresh on touch, but no TV remote action. Failure/empty action buttons also lacked deterministic initial TV focus.
+Product source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21` (`feat(discovery-v2): make TV recovery remote-safe`) fixes a real remote-only recovery gap:
 
-Source:
+- deep genuine-empty exposes an explicit TV Refresh action and autofocuses it
+- deep load Retry autofocuses on TV
+- landing/runtime/tab failure or genuine-empty action autofocuses on TV
+- new TV regressions cover tab selection, deep-empty Refresh via Select and deep-failure Retry via Select
 
-`9788338cb27a86cb4024ee8dbe57b82bfcf68f21`
+No shared controller/catalogue/routing, Android Gradle/package/signing, Smart-TV or live code changed.
 
-Commit:
+### #121 — FAILED TEST HARNESS ONLY
 
-`feat(discovery-v2): make TV recovery remote-safe`
+Workflow #121 / `34331824783`, source `9788338cb...`:
 
-Exact source diff:
+- route PASS
+- 486-lane catalogue/compiler PASS
+- catalogue Python tests: 8 passed
+- format: 54 files, 0 changed
+- analyse: no issues
+- focused suite: **101 passed, 2 failed, 5 skipped**
+- TV tab-strip recovery regression passed
+- both failures were new screen-level deep-recovery tests crashing before render because their isolated harness had not registered `UserPreferences` for `NavigationLayout`
 
-- `homelab_discovery_see_all_screen.dart`: deep genuine-empty now exposes Refresh on TV as well as Web and TV recovery actions autofocus; deep Retry has a stable regression key
-- `homelab_discovery_screen.dart`: landing/runtime/tab failure and genuine-empty action autofocuses on TV
-- new `homelab_discovery_tv_recovery_test.dart`
+This was not a runtime/product failure.
 
-New TV integration regressions cover:
+Harness-only recovery source:
 
-- TV tab strip reachable and selectable through keyboard/D-pad focus semantics
-- genuine-empty deep browse Refresh via remote Select, followed by TV-grid recovery
-- failed deep load Retry via remote Select, followed by TV-grid recovery
+- `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`
+- `test(discovery-v2): bootstrap TV recovery screen harness`
+- production code unchanged
+- test now bootstraps in-memory preferences, real `PlaybackManager`, and minimal mocked app services required by real `NavigationLayout`
 
-No shared controller/catalogue/routing, Android Gradle/package/signing or Smart-TV/live code changed.
+### Current replacement gate
 
-Focused workflow:
-
-- **#121 / `34331824783`**
-- exact source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21`
+- workflow **#122 / `34335668107`**
+- exact source `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`
 - status at checkpoint: **in progress**
-- no `[full-build]`; candidate build is not part of this first TV slice
+- focused validation only; no `[full-build]`
 
-Per the long-CI rule, do not poll #121. Inspect it once on continuation.
+Per the long-CI rule, do not poll #122. Inspect this exact run once on continuation.
 
-### Remaining Android TV completion scope after #121
+### Remaining TV-specific review after #122 green
 
-If #121 is green, continue the narrow TV defect/review pass over:
+Known areas to finish before TV closure:
 
-- navbar/tab/lane transitions and re-entry
-- populated deep-grid paging-error reachability/focus restoration
-- Back/detail return
-- off-screen focus/scroll behaviour at 1080p/4K
-- lifecycle/resume and retained state inherited from shared controllers
+- deterministic tab-strip ↔ active-lane hand-off and first-lane Up behaviour
+- avoid inactive TabBar pages competing for TV autofocus
+- populated deep-grid Refresh reachability
+- paging-error Retry reachability from the grid bottom and focus restoration
+- Back/detail return and off-screen focus/scroll at 1080p/4K
+- lifecycle/resume/retained-state inheritance
 - package/version/signing/update safety
-- final targeted tests and required full candidate build
+- final targeted tests and required `[full-build]` candidate
 
 Physical TV acceptance remains deferred.
 
@@ -123,7 +130,7 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 1. shared semantics/personalisation — COMPLETE
 2. Web — COMPLETE
 3. Android mobile/tablet — COMPLETE
-4. Android TV / Google TV — **ACTIVE; #121 PENDING**
+4. Android TV / Google TV — **ACTIVE; #122 PENDING**
 5. final webOS reconciliation
 6. cross-platform parity/recommendation quality
 7. whole-product CI/release engineering
@@ -133,4 +140,4 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 
 ## Exact next action
 
-Inspect workflow #121 (`34331824783`) exactly once. If green, record its focused evidence and continue Android-TV-specific review only. If red, inspect only the failing gate, fix the root cause without weakening TV regressions, launch a replacement focused run, checkpoint exact source/run, and stop under the long-CI rule.
+Inspect workflow #122 (`34335668107`) exactly once. If green, record its focused evidence, close TV Slice 1 and implement the remaining deterministic TV focus/remote-navigation slice. If red, inspect only the failing gate, fix the root cause without weakening TV regressions, launch a replacement focused run, checkpoint exact source/run and stop under the long-CI rule.
