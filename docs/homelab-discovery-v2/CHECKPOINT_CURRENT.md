@@ -9,95 +9,54 @@ Read this file with `docs/AI_PROJECT_STATE.md`. Do not restart completed work or
 
 - Shared semantics/personalisation: **COMPLETE**
 - Web: **COMPLETE**
-- Android mobile/tablet Slice 1: **VERIFIED**
-- Android mobile/tablet Slice 2: **VERIFIED**
-- Android mobile/tablet Slice 3: **replacement full-build #120 IN PROGRESS**
-- Android TV / Google TV: next only after Android mobile closes
-- Smart-TV/webOS: do not reconcile until after Android TV
+- Android mobile/tablet: **GITHUB/CODE COMPLETE**
+- Android TV / Google TV: **ACTIVE NEXT**
+- Smart-TV/webOS: do not reconcile until Android TV is complete
 
-## Verified Android mobile work
+## Android mobile/tablet closure
 
-### Slice 1
+Final source: `4af01af054d9b7cbe8e230b7ded482cb8fea330c`  
+Final workflow: **#120 / `34326151119` — GREEN**
 
-Source `086a41b0092f388d82c98ca2803e37b89dc6e46d`; workflow #116 / `34320947110` GREEN.
+Focused validation passed route integration, 486-lane catalogue/compiler + 8 Python tests, format, analyse, focused Discovery tests, Chrome interaction tests and custom-scope validation.
 
-Verified adaptive phone/tablet breakpoints, lane/card density, 48 px non-Web tab target, native tapping and missing-art/title fallback. Discovery suite 96 passed with 5 Web-only skipped; Chrome suite 12 passed.
+Full candidate passed:
 
-### Slice 2
+- Web release
+- `mobile-beta` APK, 128.1 MB
+- `androidTv-beta` APK, 127.1 MB — shared build baseline only, not TV completion proof
 
-Functional source `0aeadfb6ef948502c5e64bface0374fe2ed66ceb`:
+Artifact evidence:
 
-- retains successful tab data across normal reconstruction/orientation/resume
-- coalesces concurrent normal loads
-- keeps failed results retryable without rotation
-- preserves explicit refresh/reset semantics
-- serialises deep paging/refresh/reset so stale page responses cannot repopulate refreshed state
-- duplicate active paging joins the same in-flight operation
+- artifact ID `10094778627`
+- artifact size `304608904` bytes
+- artifact digest `sha256:27e01f5d5db575ee8d853e9808bbee7a2595dfa453be9ccd086ea0b3313cb421`
+- mobile APK SHA256 `4d968b1ee2a27dddfdba8c2aa117f7301323dee3d3ce861f075b015992aced8e`
+- Android TV APK SHA256 `2c7ece2f5042f93d247b89d490d57de844d8d5b80f1ee05634128d7930e63621`
+- Web SHA256 `8f17099b4668300f763d246a6db96ddc7938962b4cad1712171c30dff48b4b73`
+- app `2.5.1+30000149`; TV `2.5.1` build `2000016`; Flutter `3.44.1`
+- CI signing `debug-fallback-not-for-deployment`
 
-#117 failed only formatting; formatter-only recovery `3cab6c5430eb6175320c4f16c4932218b41d42b8`; #118 / `34322882024` GREEN across route/catalogue/format/analyse/focused tests/Chrome/scope.
+Production/update invariants remain unchanged:
 
-## Slice 3 — current final gate
+- application ID `org.moonfin.androidtv`; beta `.beta`
+- production signing certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
+- never regenerate production signing; deployment must use the existing release keystore
 
-Final review found no remaining code-testable Android mobile/tablet product defect.
-
-Update/signing invariants remain intact:
-
-- production mobile app ID `org.moonfin.androidtv`
-- beta app ID `org.moonfin.androidtv.beta`
-- no Gradle/manifest/auth/secure-storage/signing config changed during the mobile pass
-- accepted production signing certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
-- never regenerate or replace production signing material
-- CI APKs are `debug-fallback-not-for-deployment`; production deployment must use the existing release keystore
-
-Final regression source `f0fbec0a9b29dcc2df0cf0e9b02ce3a8989c7b52` added one exact overlapping near-end paging test.
-
-### #119
-
-Workflow #119 / `34323556542` failed only Dart format before tests/full build:
-
-- route PASS
-- 486-lane catalogue/compiler PASS
-- 8 catalogue Python tests PASS
-- one new test reformatted by Dart
-- analyse/tests/full candidate skipped
-
-### #120 — CURRENT
-
-Applied CI formatter output exactly; no test logic changed.
-
-- source `4af01af054d9b7cbe8e230b7ded482cb8fea330c`
-- commit `[full-build] style(discovery-v2): format final Android paging regression`
-- one test file formatting-only diff
-- workflow **#120** / `34326151119`
-- status at checkpoint: **in progress**
-- `[full-build]` present, therefore candidate job will build Web + `mobile-beta` + `androidTv-beta` after focused validation
-
-Do not poll #120. Inspect it once next continuation.
-
-## Last green full-build baseline
-
-Until #120 supersedes it:
-
-- source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
-- workflow #115 / `34291216084` GREEN
-- artifact `10082137559`
-- artifact digest `sha256:f2a7fc6b32667d3f4d38cf3a8e4165c2cce46d39facbd6dccb029687365e2abc`
+Physical mobile/tablet acceptance remains deferred.
 
 ## Do not redo
 
-Shared semantic/personalisation work, catalogue/compiler, request-cost/paging/cache/dedup/identity safeguards, local-vs-Seerr routing, verified Web pass, Android Slices 1/2, existing TV focus/D-pad foundations, docs-only workflow hygiene.
+Shared semantic/personalisation work, catalogue/compiler, request-cost/paging/cache/dedup/identity safeguards, local-vs-Seerr routing, verified Web pass, Android mobile/tablet completion, docs-only workflow hygiene. Existing recovery refs remain intact.
 
-Live remains untouched. Existing recovery refs remain intact.
+## Android TV / Google TV — next slice
+
+Use the green #120 Android-TV APK only as a compile/build baseline. Product completion still requires a TV-specific code/test pass over focus memory, D-pad navigation, selection, Back/re-entry, async loading/paging/refresh and TV-specific routing behaviour.
+
+### Acceptance gate
+
+All code-testable Android TV / Google TV focus, D-pad navigation, selection, Back/re-entry and TV-specific grid defects found in the first pass are fixed with focused regressions; verified Web/mobile behaviour remains unchanged; no physical-device, live-service or Smart-TV work starts.
 
 ## Exact next action
 
-Inspect **#120 (`34326151119`) once**.
-
-If green:
-- capture exact focused gate/test counts;
-- capture full candidate job result;
-- capture artifact ID/digest, BUILD_INFO and all SHA256s;
-- mark Android mobile/tablet **GitHub/code COMPLETE**;
-- begin Android TV / Google TV completion only.
-
-If red: inspect only the failing gate, fix the genuine root cause without weakening coverage or changing update/signing identity, launch a replacement full-build and checkpoint it.
+Inspect the TV-specific requirements in `GITHUB_COMPLETION_PLAN.md`, current `discovery_tv_grid.dart`, landing/deep TV integration and existing TV regression tests. Implement only genuine gaps, launch focused CI from the exact source, record its run/source, then stop under the long-CI rule if the run remains in progress.
