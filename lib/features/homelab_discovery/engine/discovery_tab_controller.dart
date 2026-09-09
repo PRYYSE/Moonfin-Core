@@ -53,6 +53,8 @@ class HomeLabDiscoveryTabController {
   final int maxConcurrentLoads;
 
   int _refreshNonce = 0;
+  HomeLabDiscoveryTabLoadResult? _cachedResult;
+  Future<HomeLabDiscoveryTabLoadResult>? _inFlightLoad;
 
   HomeLabDiscoveryTabController({
     required this.tab,
@@ -73,9 +75,44 @@ class HomeLabDiscoveryTabController {
 
   int get refreshNonce => _refreshNonce;
 
-  Future<HomeLabDiscoveryTabLoadResult> load({bool rotate = false}) async {
-    if (rotate) _refreshNonce++;
+  /// Returns retained tab data on ordinary rebuilds/resume instead of turning
+  /// widget recycling into another recommendation load. Concurrent callers
+  /// share the same in-flight work. Explicit refresh still rotates the lane
+  /// selection; failed results are deliberately not cached so Retry can heal.
+  Future<HomeLabDiscoveryTabLoadResult> load({bool rotate = false}) {
+    if (rotate) {
+      final active = _inFlightLoad;
+      if (active != null) {
+        return active.then((_) => load(rotate: true));
+      }
+      _refreshNonce++;
+      _cachedResult = null;
+      return _loadFresh();
+    }
 
+    final cached = _cachedResult;
+    if (cached != null) return Future.value(cached);
+    return _loadFresh();
+  }
+
+  Future<HomeLabDiscoveryTabLoadResult> _loadFresh() {
+    final active = _inFlightLoad;
+    if (active != null) return active;
+
+    late final Future<HomeLabDiscoveryTabLoadResult> future;
+    future = _performLoad()
+        .then((result) {
+          if (result.failedLanes.isEmpty) _cachedResult = result;
+          return result;
+        })
+        .whenComplete(() {
+          if (identical(_inFlightLoad, future)) _inFlightLoad = null;
+        });
+    _inFlightLoad = future;
+    return future;
+  }
+
+  Future<HomeLabDiscoveryTabLoadResult> _performLoad() async {
     final selected = composer.compose(
       tab,
       sessionSeed: sessionSeed,
@@ -121,7 +158,16 @@ class HomeLabDiscoveryTabController {
   Future<HomeLabDiscoveryTabLoadResult> refresh() => load(rotate: true);
 
   Future<void> resetSession() async {
+    final active = _inFlightLoad;
+    if (active != null) {
+      try {
+        await active;
+      } catch (_) {
+        // A failed in-flight load must not prevent an explicit session reset.
+      }
+    }
     _refreshNonce = 0;
+    _cachedResult = null;
     rotationHistory.clear();
     session.reset();
     await _persistRotationHistory();

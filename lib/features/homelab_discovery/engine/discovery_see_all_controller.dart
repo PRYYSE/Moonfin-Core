@@ -51,7 +51,8 @@ class HomeLabDiscoverySeeAllController {
   int _totalPages = 1;
   int _sourceTotalResults = 0;
   Object? _error;
-  bool _loading = false;
+  Future<HomeLabDiscoverySeeAllState>? _activeAdvance;
+  bool _resetAfterActive = false;
 
   HomeLabDiscoverySeeAllController({
     required this.section,
@@ -69,27 +70,63 @@ class HomeLabDiscoverySeeAllController {
     error: _error,
   );
 
-  Future<HomeLabDiscoverySeeAllState> loadInitial() async {
+  Future<HomeLabDiscoverySeeAllState> loadInitial() =>
+      _replaceAfterCurrent(forceRefresh: false);
+
+  Future<HomeLabDiscoverySeeAllState> refresh() =>
+      _replaceAfterCurrent(forceRefresh: true);
+
+  Future<HomeLabDiscoverySeeAllState> loadMore() => _advanceOrJoin();
+
+  Future<HomeLabDiscoverySeeAllState> retry() => _advanceOrJoin();
+
+  /// Synchronous callers may request a reset while paging is still in flight.
+  /// Defer the destructive clear until that operation has settled so its
+  /// response can never repopulate a freshly reset collection with stale data.
+  void reset() {
+    if (_activeAdvance != null) {
+      _resetAfterActive = true;
+      return;
+    }
     _resetData();
-    return _advance(forceRefresh: false);
   }
 
-  Future<HomeLabDiscoverySeeAllState> refresh() async {
+  Future<HomeLabDiscoverySeeAllState> _replaceAfterCurrent({
+    required bool forceRefresh,
+  }) async {
+    while (_activeAdvance != null) {
+      await _activeAdvance;
+    }
     _resetData();
-    return _advance(forceRefresh: true);
+    return _startAdvance(forceRefresh: forceRefresh);
   }
 
-  Future<HomeLabDiscoverySeeAllState> loadMore() => _advance();
+  Future<HomeLabDiscoverySeeAllState> _advanceOrJoin() {
+    final active = _activeAdvance;
+    if (active != null) return active;
+    if (!state.hasMore && _throughPage > 0) return Future.value(state);
+    return _startAdvance();
+  }
 
-  Future<HomeLabDiscoverySeeAllState> retry() => _advance();
-
-  void reset() => _resetData();
+  Future<HomeLabDiscoverySeeAllState> _startAdvance({
+    bool forceRefresh = false,
+  }) {
+    late final Future<HomeLabDiscoverySeeAllState> future;
+    future = _advance(forceRefresh: forceRefresh).whenComplete(() {
+      if (!identical(_activeAdvance, future)) return;
+      _activeAdvance = null;
+      if (_resetAfterActive) {
+        _resetAfterActive = false;
+        _resetData();
+      }
+    });
+    _activeAdvance = future;
+    return future;
+  }
 
   Future<HomeLabDiscoverySeeAllState> _advance({
     bool forceRefresh = false,
   }) async {
-    if (_loading || (!state.hasMore && _throughPage > 0)) return state;
-    _loading = true;
     _error = null;
     final before = _items.length;
     var scanned = 0;
@@ -117,8 +154,6 @@ class HomeLabDiscoverySeeAllController {
           scanned < maxEmptyPageReadAhead);
     } catch (error) {
       _error = error;
-    } finally {
-      _loading = false;
     }
 
     return state;

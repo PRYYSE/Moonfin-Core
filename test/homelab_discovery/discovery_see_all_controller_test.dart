@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue.dart';
@@ -122,6 +124,52 @@ void main() {
       expect(calls, [(1, false), (2, false), (1, true)]);
       expect(refreshed.items.map((value) => value.id), [9]);
       expect(refreshed.throughPage, 1);
+    },
+  );
+
+  test(
+    'refresh waits for in-flight paging before replacing deep state',
+    () async {
+      final calls = <(int, bool)>[];
+      final secondPage = Completer<HomeLabDiscoveryPageLoadResult>();
+      final refreshedFirstPage = Completer<HomeLabDiscoveryPageLoadResult>();
+      var refreshRequested = false;
+      final controller = HomeLabDiscoverySeeAllController(
+        section: section,
+        maxEmptyPageReadAhead: 1,
+        loadPage: (_, {page = 1, forceRefresh = false}) {
+          calls.add((page, forceRefresh));
+          if (page == 2) return secondPage.future;
+          if (forceRefresh) {
+            refreshRequested = true;
+            return refreshedFirstPage.future;
+          }
+          return Future.value(pageResult(1, [1], totalPages: 2));
+        },
+      );
+
+      await controller.loadInitial();
+      final more = controller.loadMore();
+      await Future<void>.delayed(Duration.zero);
+      expect(calls, [(1, false), (2, false)]);
+
+      final refresh = controller.refresh();
+      await Future<void>.delayed(Duration.zero);
+      expect(refreshRequested, isFalse);
+
+      secondPage.complete(pageResult(2, [2], totalPages: 2));
+      await more;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(refreshRequested, isTrue);
+      expect(calls, [(1, false), (2, false), (1, true)]);
+
+      refreshedFirstPage.complete(pageResult(1, [9], totalPages: 2));
+      final refreshed = await refresh;
+
+      expect(refreshed.items.map((value) => value.id), [9]);
+      expect(refreshed.throughPage, 1);
+      expect(refreshed.hasError, isFalse);
     },
   );
 }
