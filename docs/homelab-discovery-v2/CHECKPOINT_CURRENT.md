@@ -10,7 +10,7 @@ Read this file with `docs/AI_PROJECT_STATE.md`. Do not restart completed work or
 - Shared semantics/personalisation: COMPLETE
 - Web: COMPLETE
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
-- Android TV / Google TV: **ACTIVE — deterministic focus/navigation Slice 2 workflow #125 pending**
+- Android TV / Google TV: **ACTIVE — deterministic focus/navigation Slice 2 replacement workflow #126 pending**
 - Smart-TV/webOS: do not reconcile until Android TV is complete
 
 ## Android mobile/tablet closure
@@ -47,13 +47,13 @@ Earlier #121–#123 failures were isolated test-harness/wait/assertion-cardinali
 
 ### Slice 2 — deterministic TV focus/navigation implemented
 
-Source:
+Functional source:
 
 `2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
 
 `feat(discovery-v2): complete deterministic TV focus paths`
 
-The source commit touches only six intended files: four Discovery TV UI/focus files and two focused test files.
+The functional source commit touches only six intended files: four Discovery TV UI/focus files and two focused test files.
 
 Implemented:
 
@@ -66,16 +66,33 @@ Implemented:
 
 No catalogue/controller, Android package/signing, Smart-TV or live changes.
 
+### #125 — formatter-only failure
+
+Workflow **#125 / `34417981160`**, source `2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`:
+
+- route PASS
+- 486-lane catalogue/compiler + 8 Python tests PASS
+- Dart format failed on one site only in `homelab_discovery_see_all_screen.dart`
+- the only required diff collapsed the `homelab-discovery-deep-refresh` `ValueKey` to the formatter's single-line form
+- analyse/tests/Chrome/scope were skipped, so #125 provides no behavioural verdict on Slice 2
+
+Formatter-only recovery:
+
+- source `a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`
+- `style(discovery-v2): apply TV focus slice formatter output`
+- verified diff: exactly one file, +1/-3
+- no runtime behaviour or tests changed
+
 ### Current focused gate
 
-- **#125 / `34417981160`**
-- exact source `2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
+- **#126 / `34418234678`**
+- exact source `a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`
 - status at checkpoint: **in progress**
 - no full candidate requested
 
-Do not poll #125. Inspect it once on continuation.
+Do not poll #126. Inspect it once on continuation.
 
-## Remaining TV completion gate after #125 green
+## Remaining TV completion gate after #126 green
 
 1. confirm Back/detail return and re-entry coverage with the new focus bridge;
 2. validate off-screen focus/scroll at representative 1080p and 4K widths;
@@ -92,4 +109,4 @@ Shared semantic/personalisation work, catalogue/compiler, request-cost/paging/ca
 
 ## Exact next action
 
-Inspect #125 (`34417981160`) exactly once. If green, record its evidence and continue the remaining TV review beginning with Back/detail return and 1080p/4K off-screen focus/scroll. If red, inspect only the failing gate, fix the root cause, launch a replacement focused run, record exact source/run and stop under the long-CI rule.
+Inspect #126 (`34418234678`) exactly once. If green, record its evidence and continue the remaining TV review beginning with Back/detail return and representative 1080p/4K off-screen focus/scroll. If red, inspect only the failing gate, fix the root cause, launch a replacement focused run, record exact source/run and stop under the long-CI rule.
