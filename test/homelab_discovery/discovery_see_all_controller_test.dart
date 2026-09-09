@@ -78,6 +78,42 @@ void main() {
     },
   );
 
+  test(
+    'duplicate near-end paging joins one in-flight page request',
+    () async {
+      var secondPageRequests = 0;
+      final secondPage = Completer<HomeLabDiscoveryPageLoadResult>();
+      final controller = HomeLabDiscoverySeeAllController(
+        section: section,
+        maxEmptyPageReadAhead: 1,
+        loadPage: (_, {page = 1, forceRefresh = false}) {
+          if (page == 1) {
+            return Future.value(pageResult(1, [1], totalPages: 2));
+          }
+          secondPageRequests++;
+          return secondPage.future;
+        },
+      );
+
+      await controller.loadInitial();
+      final first = controller.loadMore();
+      final duplicate = controller.loadMore();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(secondPageRequests, 1);
+
+      secondPage.complete(pageResult(2, [2], totalPages: 2));
+      final firstState = await first;
+      final duplicateState = await duplicate;
+
+      expect(secondPageRequests, 1);
+      expect(firstState.items.map((value) => value.id), [1, 2]);
+      expect(duplicateState.items.map((value) => value.id), [1, 2]);
+      expect(firstState.throughPage, 2);
+      expect(duplicateState.throughPage, 2);
+    },
+  );
+
   test('load-more failure preserves items and retries the same page', () async {
     var secondPageAttempts = 0;
     final controller = HomeLabDiscoverySeeAllController(
