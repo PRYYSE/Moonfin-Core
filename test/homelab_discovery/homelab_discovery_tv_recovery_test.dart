@@ -96,6 +96,12 @@ Widget _tabHarness() {
   );
 }
 
+Future<void> _pumpTvScreenTransition(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 250));
+  await tester.pump();
+}
+
 void main() {
   setUp(() async {
     await GetIt.instance.reset();
@@ -176,7 +182,7 @@ void main() {
     await tester.pumpWidget(
       _materialHarness(HomeLabDiscoverySeeAllScreen(controller: controller)),
     );
-    await tester.pumpAndSettle();
+    await _pumpTvScreenTransition(tester);
 
     final refresh = find.byKey(
       const ValueKey<String>('homelab-discovery-deep-refresh-empty'),
@@ -185,7 +191,7 @@ void main() {
     expect(tester.widget<FilledButton>(refresh).autofocus, isTrue);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
-    await tester.pumpAndSettle();
+    await _pumpTvScreenTransition(tester);
 
     expect(forcedRefreshes, 1);
     expect(find.byType(HomeLabDiscoveryTvGrid), findsOneWidget);
@@ -209,7 +215,7 @@ void main() {
     await tester.pumpWidget(
       _materialHarness(HomeLabDiscoverySeeAllScreen(controller: controller)),
     );
-    await tester.pumpAndSettle();
+    await _pumpTvScreenTransition(tester);
 
     final retry = find.byKey(
       const ValueKey<String>('homelab-discovery-deep-retry'),
@@ -218,7 +224,7 @@ void main() {
     expect(tester.widget<FilledButton>(retry).autofocus, isTrue);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
-    await tester.pumpAndSettle();
+    await _pumpTvScreenTransition(tester);
 
     expect(attempts, 2);
     expect(find.byType(HomeLabDiscoveryTvGrid), findsOneWidget);
