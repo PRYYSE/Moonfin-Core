@@ -103,39 +103,42 @@ void main() {
     expect(controller.refreshNonce, 0);
   });
 
-  test('failed tab state is not cached and can retry without rotation', () async {
-    final only = section('only');
-    var loadCalls = 0;
-    final controller = HomeLabDiscoveryTabController(
-      tab: HomeLabDiscoveryTab(
-        id: 'movies',
-        title: 'Movies',
-        sections: [only],
-        initialLaneBudget: 1,
-        minimumLaneCount: 1,
-      ),
-      sessionSeed: 'server:user',
-      loadLane: (candidate) async {
-        loadCalls++;
-        if (loadCalls == 1) {
-          return HomeLabDiscoveryLaneLoadResult(
-            section: candidate,
-            error: StateError('temporary'),
-          );
-        }
-        return loaded(candidate, [7]);
-      },
-    );
+  test(
+    'failed tab state is not cached and can retry without rotation',
+    () async {
+      final only = section('only');
+      var loadCalls = 0;
+      final controller = HomeLabDiscoveryTabController(
+        tab: HomeLabDiscoveryTab(
+          id: 'movies',
+          title: 'Movies',
+          sections: [only],
+          initialLaneBudget: 1,
+          minimumLaneCount: 1,
+        ),
+        sessionSeed: 'server:user',
+        loadLane: (candidate) async {
+          loadCalls++;
+          if (loadCalls == 1) {
+            return HomeLabDiscoveryLaneLoadResult(
+              section: candidate,
+              error: StateError('temporary'),
+            );
+          }
+          return loaded(candidate, [7]);
+        },
+      );
 
-    final failed = await controller.load();
-    expect(failed.failedLanes, hasLength(1));
+      final failed = await controller.load();
+      expect(failed.failedLanes, hasLength(1));
 
-    final recovered = await controller.load();
-    expect(loadCalls, 2);
-    expect(recovered.usableLanes, hasLength(1));
-    expect(recovered.usableLanes.single.items.single.id, 7);
-    expect(controller.refreshNonce, 0);
-  });
+      final recovered = await controller.load();
+      expect(loadCalls, 2);
+      expect(recovered.usableLanes, hasLength(1));
+      expect(recovered.usableLanes.single.items.single.id, 7);
+      expect(controller.refreshNonce, 0);
+    },
+  );
 
   test(
     'unexpected lane exception is isolated without aborting the tab',
