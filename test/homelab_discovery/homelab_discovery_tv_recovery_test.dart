@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
+import 'package:jellyfin_preference/jellyfin_preference.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:moonfin/auth/repositories/user_repository.dart';
+import 'package:moonfin/data/models/aggregated_library.dart';
+import 'package:moonfin/data/repositories/user_views_repository.dart';
+import 'package:moonfin/data/services/plugin_sync_service.dart';
 import 'package:moonfin/data/services/seerr/seerr_api_models.dart';
 import 'package:moonfin/features/homelab_discovery/catalogue/discovery_catalogue.dart';
 import 'package:moonfin/features/homelab_discovery/data/discovery_lane_loader.dart';
@@ -9,8 +16,18 @@ import 'package:moonfin/features/homelab_discovery/ui/discovery_tab_strip.dart';
 import 'package:moonfin/features/homelab_discovery/ui/discovery_tv_grid.dart';
 import 'package:moonfin/features/homelab_discovery/ui/homelab_discovery_see_all_screen.dart';
 import 'package:moonfin/l10n/app_localizations.dart';
+import 'package:moonfin/preference/seerr_preferences.dart';
+import 'package:moonfin/preference/user_preferences.dart';
 import 'package:moonfin/ui/widgets/focus/hub_focus_memory.dart';
 import 'package:moonfin/util/platform_detection.dart';
+import 'package:playback_core/playback_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _MockUserViewsRepository extends Mock implements UserViewsRepository {}
+
+class _MockPluginSyncService extends Mock implements PluginSyncService {}
+
+class _MockSeerrPreferences extends Mock implements SeerrPreferences {}
 
 const _tabs = [
   HomeLabDiscoveryTab(id: 'movies', title: 'Movies', sections: []),
@@ -80,16 +97,47 @@ Widget _tabHarness() {
 }
 
 void main() {
-  setUp(() {
+  setUp(() async {
+    await GetIt.instance.reset();
+    SharedPreferences.setMockInitialValues({});
+
+    final store = PreferenceStore();
+    await store.init();
+    final preferences = UserPreferences(store);
+    await store.flushPendingWrites();
+
+    final userViews = _MockUserViewsRepository();
+    when(
+      () => userViews.getUserViews(),
+    ).thenAnswer((_) async => const <AggregatedLibrary>[]);
+
+    final pluginSync = _MockPluginSyncService();
+    when(() => pluginSync.seerrAvailable).thenReturn(false);
+
+    final seerrPreferences = _MockSeerrPreferences();
+    when(() => seerrPreferences.labelOrDefault(any())).thenAnswer(
+      (invocation) => invocation.positionalArguments.first as String,
+    );
+    when(() => seerrPreferences.isSeerrVariant).thenReturn(false);
+
+    GetIt.instance
+      ..registerSingleton<UserPreferences>(preferences)
+      ..registerSingleton<UserRepository>(UserRepository())
+      ..registerSingleton<UserViewsRepository>(userViews)
+      ..registerSingleton<PluginSyncService>(pluginSync)
+      ..registerSingleton<SeerrPreferences>(seerrPreferences)
+      ..registerSingleton<PlaybackManager>(PlaybackManager());
+
     PlatformDetection.setInterfaceLayout(InterfaceLayout.automatic);
     PlatformDetection.setTvMode(true);
     HubFocusMemory.clearAll();
   });
 
-  tearDown(() {
+  tearDown(() async {
     PlatformDetection.setTvMode(false);
     PlatformDetection.setInterfaceLayout(InterfaceLayout.automatic);
     HubFocusMemory.clearAll();
+    await GetIt.instance.reset();
   });
 
   testWidgets('TV tab strip is reachable and changes tab by D-pad selection', (
