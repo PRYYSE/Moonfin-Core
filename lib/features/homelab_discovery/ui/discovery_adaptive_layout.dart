@@ -1,5 +1,20 @@
+enum HomeLabDiscoveryWindowClass { compact, medium, expanded }
+
+HomeLabDiscoveryWindowClass homeLabDiscoveryWindowClass(double viewportWidth) {
+  if (!viewportWidth.isFinite || viewportWidth <= 0) {
+    return HomeLabDiscoveryWindowClass.compact;
+  }
+  if (viewportWidth < 600) return HomeLabDiscoveryWindowClass.compact;
+  if (viewportWidth < 840) return HomeLabDiscoveryWindowClass.medium;
+  return HomeLabDiscoveryWindowClass.expanded;
+}
+
 double homeLabDiscoveryLaneCardWidth(double viewportWidth) {
-  return viewportWidth < 600 ? 124.0 : 148.0;
+  return switch (homeLabDiscoveryWindowClass(viewportWidth)) {
+    HomeLabDiscoveryWindowClass.compact => 124.0,
+    HomeLabDiscoveryWindowClass.medium => 140.0,
+    HomeLabDiscoveryWindowClass.expanded => 148.0,
+  };
 }
 
 int homeLabDiscoveryGridColumns(double crossAxisExtent) {

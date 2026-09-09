@@ -17,6 +17,7 @@ class HomeLabDiscoveryTabStrip extends StatelessWidget {
         for (final tab in tabs)
           Tab(
             key: ValueKey<String>('homelab-discovery-tab-${tab.id}'),
+            height: PlatformDetection.isWeb ? null : kMinInteractiveDimension,
             text: tab.title,
           ),
       ],
