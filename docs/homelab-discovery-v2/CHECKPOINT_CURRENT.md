@@ -9,106 +9,96 @@ Do not restart completed work or modify the live server during GitHub-only compl
 
 ## Current boundary
 
-Shared personalisation and Web are verified complete. Android mobile/tablet is intentionally split into three slices to reduce timeout risk.
+Shared personalisation and Web are verified complete. Android mobile/tablet is split into three slices.
 
 - Slice 1 — adaptive/touch baseline: **VERIFIED**
-- Slice 2 — mobile UX/state robustness: **IMPLEMENTED; #117 VALIDATION IN PROGRESS**
-- Slice 3 — final Android validation: **NEXT after #117 green**
+- Slice 2 — mobile UX/state robustness: **IMPLEMENTED; FORMATTER-ONLY RECOVERY #118 IN PROGRESS**
+- Slice 3 — final Android validation: **NEXT only after #118 green**
 
-Current source-changing commit:
+## Slice 1 — VERIFIED
 
-- `0aeadfb6ef948502c5e64bface0374fe2ed66ceb`
-- `feat(discovery-v2): retain Android Discovery state safely`
+Source `086a41b0092f388d82c98ca2803e37b89dc6e46d`.
 
-Current focused workflow:
+Workflow **#116** / `34320947110` passed:
 
-- **#117** / ID `34322168040`
-- exact source `0aeadfb6ef948502c5e64bface0374fe2ed66ceb`
-- status at checkpoint: **in progress**
-- full candidate build not requested in this slice
+- route integration
+- 486-lane catalogue/compiler + 8 Python tests
+- Dart format
+- Flutter analyse
+- Discovery suite **96 passed, 5 Web-only skipped**
+- Chrome Web/route suite **12 passed**
+- narrow custom-scope gate
 
-Do not poll it. Inspect #117 once on continuation.
+Verified mobile baseline:
 
-## Android Slice 1 — VERIFIED
+- compact/medium/expanded breakpoints `<600`, `600–839`, `>=840` px
+- lane card widths `124 / 140 / 148` px
+- wide Web behaviour preserved
+- non-Web tabs retain 48 px minimum touch height
+- native regressions cover phone/tablet density, tab tapping and card fallback/touch activation
 
-Implementation source `086a41b0092f388d82c98ca2803e37b89dc6e46d`.
+## Slice 2 — implementation complete
 
-Workflow **#116** / `34320947110` passed focused validation:
+Functional source:
+
+`0aeadfb6ef948502c5e64bface0374fe2ed66ceb`
+
+Implemented:
+
+- tab controller retains last successful data across ordinary reconstruction/orientation/resume
+- concurrent normal tab loads share one in-flight request
+- failed results are not cached; Retry reloads without rotating
+- explicit Refresh clears retained state and rotates
+- session reset waits for active work then clears retained state/history
+- deep See All owns one active advance; duplicate paging joins it
+- pull-to-refresh waits for active paging before resetting/reloading
+- synchronous reset during active paging is deferred until completion
+
+Existing Android Back/lifecycle/loading/error/empty paths were reviewed and retained where already correct; no unnecessary product rewrite was made.
+
+## #117 result and recovery
+
+Workflow **#117** / `34322168040` on functional source `0aeadfb6...` failed **only** the Dart formatter gate.
 
 - route integration: PASS
 - 486-lane catalogue/compiler: PASS
-- catalogue Python tests: **8 passed**
-- format: **53 files, 0 changed**
-- Flutter analyse: **no issues**
-- Discovery suite: **96 passed, 5 Web-only skipped**
-- Chrome Web/route suite: **12 passed**
-- narrow-scope gate: PASS
-- full candidate job skipped as intended
+- formatter: one test file needed reformatting
+- analyse/tests/build: skipped after formatter failure
 
-Verified Slice 1 behaviour:
+CI's formatter diff changed only wrapping/indentation in:
 
-- compact/medium/expanded classes: `<600`, `600–839`, `>=840` px
-- lane-card widths: `124`, `140`, `148` px
-- wide Web sizing preserved
-- non-Web Discovery tabs explicitly retain a 48 px minimum touch height
-- mobile regressions cover breakpoint/grid density, tab tap/target size and card fallback/touch activation
+`test/homelab_discovery/discovery_tab_controller_test.dart`
 
-## Android Slice 2 — IMPLEMENTED, VALIDATION PENDING
+Formatter-only recovery commit:
 
-Source `0aeadfb6ef948502c5e64bface0374fe2ed66ceb` changes exactly four files:
+- `3cab6c5430eb6175320c4f16c4932218b41d42b8`
+- `style(discovery-v2): format Android state regression test`
+- exactly one test file changed
+- no runtime/product logic changed
 
-- `lib/features/homelab_discovery/engine/discovery_tab_controller.dart`
-- `lib/features/homelab_discovery/engine/discovery_see_all_controller.dart`
-- `test/homelab_discovery/discovery_tab_controller_test.dart`
-- `test/homelab_discovery/discovery_see_all_controller_test.dart`
+Current focused workflow:
 
-### Retained landing/tab state
+- **#118** / `34322882024`
+- exact source `3cab6c5430eb6175320c4f16c4932218b41d42b8`
+- status at checkpoint: **in progress**
+- full candidate build not requested
 
-`HomeLabDiscoveryTabController` now:
+Do not poll #118. Inspect it once on continuation.
 
-- coalesces concurrent ordinary `load()` calls
-- retains the last successful tab result across widget reconstruction/orientation/lifecycle resume
-- avoids duplicate lane/API I/O and accidental novelty/rotation mutation on ordinary rebuilds
-- does not cache failed results, preserving genuine Retry behaviour without rotation
-- clears retained state and rotates only on explicit Refresh
-- waits for active work and clears retained state on session reset
+## Slice 3 — final Android mobile/tablet validation
 
-New regressions prove retained/coalesced successful loading and failure-not-cached retry behaviour.
-
-### Deep refresh/paging sequencing
-
-`HomeLabDiscoverySeeAllController` now:
-
-- owns one active deep advance operation
-- joins duplicate near-end paging requests
-- waits for active paging before destructive pull-to-refresh reset/reload
-- prevents an old page response from repopulating a newly refreshed collection
-- defers synchronous reset until an active operation settles
-
-New regression explicitly starts page 2, requests Refresh while it is pending, proves refresh page 1 waits, then proves final refreshed state contains only the refreshed page data.
-
-### Reviewed and retained as already-correct
-
-No Android-specific rewrite was justified for:
-
-- Android Back: non-Web See All already uses `Navigator.push(MaterialPageRoute)` and system Back naturally pops to the retained landing route
-- lifecycle shell: `NavigationLayout` already observes resume without forcing a Discovery reload
-- loading/failure/empty paths: existing landing/deep UI already supplies progress, Retry and Refresh/pull-to-refresh actions on touch surfaces
-- local/external item routing and malformed local pointer: shared path already verified
-
-## Slice 3 — final Android validation
-
-After #117 is green:
+Only after #118 is green:
 
 1. mark Slice 2 verified;
-2. run a final mobile/tablet defect review only for remaining code-testable gaps;
-3. verify auth/local-state/update-safety behaviour that is practical in GitHub/CI;
-4. preserve production Android signing cert SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604` — never regenerate it;
-5. trigger the required full candidate workflow;
-6. record exact mobile build/artifact/signing evidence;
-7. close Android mobile/tablet in both durable checkpoints.
+2. do one final mobile/tablet code defect review;
+3. verify auth/local-state/update-safe app identity practical in GitHub/CI;
+4. preserve production signing certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604` — never regenerate it;
+5. trigger the required `[full-build]` candidate workflow from the exact final source;
+6. record exact Android mobile APK/artifact/build/signing evidence;
+7. close Android mobile/tablet in both checkpoints;
+8. stop before Android TV / Google TV.
 
-Physical-device acceptance remains deferred.
+Physical phone/tablet acceptance remains deferred.
 
 ## Last fully green full-build baseline
 
@@ -116,43 +106,36 @@ Until Slice 3 supersedes it:
 
 - source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`
 - workflow **#115** / `34291216084` — GREEN
-- Discovery suite: **93 passed, 5 Web-only skipped**
-- Chrome suite: **12 passed**
-- catalogue Python tests: **8 passed**
+- Discovery suite **93 passed, 5 Web-only skipped**
+- Chrome suite **12 passed**
+- catalogue Python tests **8 passed**
 - Web + `mobile-beta` + `androidTv-beta` candidate builds passed
 - artifact `10082137559`
 - digest `sha256:f2a7fc6b32667d3f4d38cf3a8e4165c2cce46d39facbd6dccb029687365e2abc`
 
-## Completed work that must not be redone
+## Do not redo
 
-- shared semantic/personalisation contract
-- 486-lane catalogue/compiler validation
-- guarded stock fallback
+- shared semantics/personalisation
+- 486-lane catalogue/compiler
 - request-cost/paging/cache/dedup/identity safeguards
+- guarded fallback
 - landing + deep See All foundations
 - local-vs-Seerr details routing
 - TV focus/D-pad foundations
-- Web completion at `1ac1499a...` / #115
-- Android Slice 1 at `086a41b...` / #116
-- advanced Smart-TV implementation at its separate checkpoint
+- verified Web completion
+- verified Android Slice 1
+- separately advanced Smart-TV work
 
 Unsupported structural/context semantics remain fail-closed.
 
 ## Exact next action
 
-Inspect **#117 (`34322168040`) once**.
+Inspect **#118 (`34322882024`) once**.
 
 ### If green
 
-1. mark Slice 2 verified;
-2. begin **Slice 3 — final Android validation**;
-3. do not redo shared/Web/Slice-1 work;
-4. keep physical-device testing deferred.
+Mark Slice 2 verified and begin Slice 3 without revisiting shared/Web/Slice-1 work.
 
 ### If red
 
-1. inspect only the exact failing gate/test;
-2. fix the root cause without weakening retained-state/paging coverage;
-3. trigger the appropriate focused workflow;
-4. record exact source/run here and in `docs/AI_PROJECT_STATE.md`;
-5. stop under the long-CI rule.
+Inspect only the failing gate, fix its root cause without weakening Slice-2 coverage, launch the appropriate focused workflow, record exact source/run, and stop under the long-CI rule.
