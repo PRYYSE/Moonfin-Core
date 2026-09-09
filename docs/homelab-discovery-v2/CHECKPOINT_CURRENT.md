@@ -10,7 +10,7 @@ Read this file with `docs/AI_PROJECT_STATE.md`. Do not restart completed work or
 - Shared semantics/personalisation: COMPLETE
 - Web: COMPLETE
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
-- Android TV / Google TV: **ACTIVE — Slice 1 replacement workflow #123 pending**
+- Android TV / Google TV: **ACTIVE — Slice 1 replacement workflow #124 pending**
 - Smart-TV/webOS: do not reconcile until Android TV is complete
 
 ## Android mobile/tablet closure
@@ -40,42 +40,36 @@ Product source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21` fixes the remote-recov
 
 No controller/catalogue/routing, Gradle/package/signing, Smart-TV or live changes.
 
-### #121
+### Recovery sequence
 
-Workflow #121 / `34331824783` failed only the two new screen tests because isolated `NavigationLayout` lacked app-service registrations. Route, 486-lane catalogue/compiler, 8 Python tests, format and analyse passed. Focused suite: **101 passed, 2 failed, 5 skipped**. TV tab-strip regression passed.
+#121 / `34331824783`: route/catalogue/format/analyse passed; focused suite **101 passed, 2 failed, 5 skipped** because the isolated screen harness lacked `NavigationLayout` app services. Harness bootstrap source: `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`. Production unchanged.
 
-Harness bootstrap recovery source: `ebbabb7cd8fe84a3dd9f5bd746dbf1aafb3ed136`. Production code unchanged.
+#122 / `34335668107`: structural gates passed again; focused suite **101 passed, 2 failed, 5 skipped**. Screen tests now mounted but `pumpAndSettle()` timed out against non-quiescing TV navigation chrome. Bounded-pump test recovery source: `373a1a44d68d375dff1b17a35da76f578820d4d5`. Production unchanged.
 
-### #122
+#123 / `34407316688`: structural gates passed again; focused suite **101 passed, 2 failed, 5 skipped**. Both deep recovery paths now completed successfully: remote Select triggered Refresh/Retry, controller state recovered and the TV grid rendered. The only failures were `find.text('Recovered Item'), findsOneWidget` because the TV card intentionally renders two title `Text` nodes.
 
-Workflow #122 / `34335668107` again passed route, 486-lane catalogue/compiler + 8 Python tests, format (54 files, 0 changed) and analyse.
-
-Focused suite: **101 passed, 2 failed, 5 skipped**. Both deep-recovery screen tests now mounted; their only failure was `pumpAndSettle timed out`, caused by waiting for the real TV navigation chrome to become globally quiescent.
-
-No product exception or failed product assertion was reported before the timeout.
-
-### Bounded-pump recovery / #123
+### Assertion recovery / #124
 
 Test-only source:
 
-`373a1a44d68d375dff1b17a35da76f578820d4d5`
+`955b5496d8e0d82d90ddb8de69b838737333243a`
 
-`test(discovery-v2): bound TV recovery screen pumps`
+`test(discovery-v2): assert TV recovery controller state`
 
-Exact diff from the prior checkpoint is one test file only (+10/-4). Broad screen-level `pumpAndSettle()` calls were replaced with bounded pumps around the state transitions under test. Product/runtime code remains unchanged.
+Exact diff from the prior checkpoint is one test file only (+2/-2). Each deep-recovery regression now proves the recovered item through `controller.state.items == [_item]`, retains the exact single-grid assertion, operation counts, autofocus and remote Select checks, and no longer assumes title presentation uses exactly one `Text` node. Product/runtime code remains unchanged.
 
 Replacement focused workflow:
 
-- **#123 / `34407316688`**
-- exact source `373a1a44d68d375dff1b17a35da76f578820d4d5`
+- **#124 / `34416882794`**
+- exact source `955b5496d8e0d82d90ddb8de69b838737333243a`
 - status at checkpoint: **in progress**
 - no full candidate requested
 
-Do not poll #123. Inspect it once on continuation.
+Do not poll #124. Inspect it once on continuation.
 
 ## Remaining TV completion gate
 
-After #123 is green, verify/fix:
+After #124 is green, verify/fix:
 
 1. deterministic navbar/tab/lane traversal and tab-strip ↔ active-lane re-entry;
 2. prevent inactive tab pages competing for TV autofocus;
@@ -94,4 +88,4 @@ Shared semantic/personalisation work, catalogue/compiler, request-cost/paging/ca
 
 ## Exact next action
 
-Inspect #123 (`34407316688`) exactly once. If green, close Slice 1 recovery and implement the remaining deterministic TV focus/remote-navigation slice. If red, fix only the failing gate, preserve the remote-recovery behaviour, launch replacement focused CI, record exact source/run and stop under the long-CI rule.
+Inspect #124 (`34416882794`) exactly once. If green, close Slice 1 recovery and implement the remaining deterministic TV focus/remote-navigation slice. If red, fix only the failing gate, preserve the remote-recovery behaviour, launch replacement focused CI, record exact source/run and stop under the long-CI rule.
