@@ -194,8 +194,8 @@ void main() {
     await _pumpTvScreenTransition(tester);
 
     expect(forcedRefreshes, 1);
+    expect(controller.state.items, const [_item]);
     expect(find.byType(HomeLabDiscoveryTvGrid), findsOneWidget);
-    expect(find.text('Recovered Item'), findsOneWidget);
   });
 
   testWidgets('TV deep-load failure autofocuses Retry and recovers by Select', (
@@ -227,7 +227,7 @@ void main() {
     await _pumpTvScreenTransition(tester);
 
     expect(attempts, 2);
+    expect(controller.state.items, const [_item]);
     expect(find.byType(HomeLabDiscoveryTvGrid), findsOneWidget);
-    expect(find.text('Recovered Item'), findsOneWidget);
   });
 }
