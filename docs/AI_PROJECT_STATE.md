@@ -63,44 +63,51 @@ Initial hardening source:
 
 `de783e5af94f528d319c6f469e977d129bbc4435` — `ci(discovery): harden release candidate verification [full-build]`
 
-Workflow **#133 / `34440033993` FAILED only in the new Android candidate verifier**. Its focused-validation job passed completely, and the release job successfully built Web, mobile-beta APK and androidTv-beta APK before the verifier failed. Packaging/upload were skipped after that gate.
+Workflow **#133 / `34440033993` FAILED only in the new Android candidate verifier**. Focused validation passed, and Web, mobile-beta and androidTv-beta all built successfully. Packaging/upload were skipped after the verifier failure.
 
-Root cause was a verifier-contract mistake, not an application defect:
+The first verifier defect tested the wrong Leanback distinction. The shared Android manifest intentionally contains both launcher categories; the meaningful flavour contract is mobile Leanback optional and Android-TV Leanback required.
 
-- the shared Android manifest intentionally contains both `LAUNCHER` and `LEANBACK_LAUNCHER`
-- mobile keeps `android.software.leanback` **optional**
-- the Android-TV flavour makes `android.software.leanback` **required**
-- the failed verifier incorrectly expected a mobile-vs-TV launcher-category split and searched for a non-authoritative `leanback-launcher:` badging line
-
-Verifier-only correction:
+Verifier-contract correction:
 
 `4f8dbec00b51800d7bf8d0ec321807207623bbfc` — `ci(discovery): verify leanback requirement split [full-build]`
 
-The corrected gate now verifies:
+Workflow **#134 / `34442473966` also FAILED only in `Verify Android candidate identity and signing`**. Its focused validation and all three candidate builds passed again.
+
+Exact #134 failure evidence:
+
+`Observed mobile Leanback badging:   uses-feature-not-required: name='android.software.leanback'`
+
+The APK already reported the correct mobile semantic. The verifier failed because `aapt dump badging` prefixes this valid line with leading spaces and the shell comparison expected column 1.
+
+Whitespace-normalisation correction:
+
+`41cfa0f33a392706a37c3c9ade13c575484597c1` — `ci(discovery): normalise aapt leanback badging [full-build]`
+
+Only `.github/workflows/homelab-discovery-v2.yml` changed; no application code or Android manifests changed. The gate still verifies:
 
 - both beta APKs identify as `org.moonfin.androidtv.beta`
-- mobile APK reports Leanback as optional
-- Android-TV APK reports Leanback as required
+- mobile reports Leanback optional
+- Android TV reports Leanback required
 - both APKs have the same CI signing certificate
-- CI certificate is not production SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
-- BUILD_INFO records the actual Leanback requirement split and both signing identities
+- CI certificate differs from production SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
+- BUILD_INFO records the requirement split and signing identities
 - CI candidates remain debug-fallback and are not deployment APKs
 
 Authoritative replacement full-build:
 
-- workflow **#134 / `34442473966`**
-- source `4f8dbec00b51800d7bf8d0ec321807207623bbfc`
+- workflow **#135 / `34448096121`**
+- source `41cfa0f33a392706a37c3c9ade13c575484597c1`
 - status at the single capture: **IN PROGRESS**
 
-Do not poll #134 again in this waiting cycle.
+Do not poll #135 again in this waiting cycle.
 
 ### Release-engineering acceptance gate
 
-Before closing this phase, #134 must pass focused validation plus Web/mobile-beta/androidTv-beta build, Android identity/Leanback/signing verification, packaging and artifact upload. Then record artifact ID/digest, `BUILD_INFO.txt`, and generated candidate SHA-256 values. No deployment or physical/live acceptance belongs to this phase.
+Before closing this phase, #135 must pass focused validation, Web/mobile-beta/androidTv-beta builds, Android identity/Leanback/signing verification, packaging and artifact upload. If green, record artifact ID/digest, `BUILD_INFO.txt`, actual CI signer SHA-256 and generated Web/mobile/Android-TV candidate SHA-256 values. No deployment or physical/live acceptance belongs to this phase.
 
 ## Known non-blocking CI debt
 
-Current GitHub runner logs warn that `actions/checkout@v4` / `actions/setup-java@v4` target deprecated Node 20 action runtimes and that setup-java v4 should move to v5. These warnings did not cause #133. Do not mix that maintenance into the verifier recovery; assess it after the authoritative release gate is green so a tooling migration is separately attributable.
+Current runner logs warn that `actions/checkout@v4` / `actions/setup-java@v4` target deprecated Node 20 action runtimes and that setup-java v4 is deprecated. These warnings did not cause #133 or #134. Keep that maintenance separate from verifier recovery; assess it after the authoritative release gate is green so a tooling migration is separately attributable.
 
 ## Environment limitation
 
@@ -108,10 +115,10 @@ The current execution container cannot resolve `github.com` and has no useful lo
 
 ## Exact next actions
 
-1. On the next continuation inspect **#134 / `34442473966` once**.
+1. On the next continuation inspect **#135 / `34448096121` once**.
 2. If failed, inspect only the failing job/step and fix the genuine failure.
 3. If green, capture artifact ID/digest, build metadata, signing identity and Web/mobile/Android-TV candidate hashes; mark whole-product CI/release engineering complete.
-4. Then move to **upstream-update automation/protocol integration**.
+4. Then move directly to **upstream-update automation/protocol integration**.
 
 ## Later stages
 
