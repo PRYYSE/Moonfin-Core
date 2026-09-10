@@ -3,7 +3,7 @@
 **Last updated:** 2026-09-10 Australia/Adelaide  
 **Primary branch:** `homelab/discovery-v2`
 
-Read this with `docs/AI_PROJECT_STATE.md` and `handover.md`. GitHub/current repo state is authoritative. Do not restart completed platform implementation or touch live services during GitHub-only work.
+Read this with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PARITY_MATRIX.md`. GitHub/current repo state is authoritative. Do not restart completed platform implementation or touch live services during GitHub-only work.
 
 ## Current boundary
 
@@ -12,9 +12,11 @@ Read this with `docs/AI_PROJECT_STATE.md` and `handover.md`. GitHub/current repo
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
 - Android TV / Google TV: **GITHUB/CODE COMPLETE**
 - Smart-TV/webOS: **GITHUB/CODE COMPLETE**
-- Next stage: **CROSS-PLATFORM PARITY + RECOMMENDATION QUALITY**
+- Cross-platform parity + recommendation quality: **IN PROGRESS — first evidence/fix slice committed**
 
-## Android TV final gate
+## Verified platform gates — do not redo
+
+### Android TV / Google TV
 
 Final source `15ccc28b84727543ad714ef19dd318f907d1a1d8`; workflow #128 / `34429841034` GREEN.
 
@@ -28,13 +30,13 @@ Final source `15ccc28b84727543ad714ef19dd318f907d1a1d8`; workflow #128 / `344298
 - app `2.5.1+30000149`; TV `2.5.1` build `2000016`; Flutter `3.44.1`
 - CI signing is debug fallback only; production certificate SHA-256 remains `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
 
-## Smart-TV/webOS final gate
+### Smart-TV/webOS
 
 Repo `PRYYSE/Smart-TV`, branch `homelab/webos-discovery-v2`.
 
 Final product source `42854590caf4dbf847696483d943a886d5ab8ed7`; workflow #51 / `34432674158` GREEN.
 
-Final reconciliation corrected one genuine semantic mismatch: `high-ratings` now uses real Jellyfin `UserData.Rating >= 8` seeds rather than Likes + Favourites; anime inherits the same source and the dynamic label now truthfully says `Because You Rated ... Highly`.
+Final reconciliation corrected one genuine semantic mismatch: `high-ratings` now uses real Jellyfin `UserData.Rating >= 8` seeds rather than Likes + Favourites; anime inherits the same source and the dynamic label truthfully says `Because You Rated ... Highly`.
 
 Evidence:
 
@@ -53,40 +55,66 @@ Preserve `homelab/webos-v1-staging` and candidate `f5c3078ba388f8ba1da85166f62eb
 
 webOS remains at a truthful static ceiling of 468 executable sections from 481 active. Thirteen structural/context lanes remain intentionally fail-closed until independently proven at acceptable old-TV cost. Do not re-enable them merely for nominal parity.
 
+## Cross-platform parity slice 1
+
+Implementation source commit: `572e32d54d14d0d50ba8066cd817d8938ffae572` (`feat(discovery): align refresh fallback and quality diagnostics`).
+
+Evidence matrix: `docs/homelab-discovery-v2/CROSS_PLATFORM_PARITY_MATRIX.md`.
+
+### Findings
+
+- Web, Android mobile/tablet and Android TV share one Flutter Discovery semantic core. Their meaningful platform differences are primarily input/presentation mechanics, not separate recommendation semantics.
+- Flutter and webOS are aligned on truthful source provenance for history/favourites/watchlist/high-ratings/likes/mixed-positive, membership/requestability/availability, TMDB/Jellyfin identity rules, dedup, rotation, sparse rows, bounded lane concurrency and deep-scan limits.
+- Structural/context strategies remain intentionally fail-closed on both clients.
+- webOS is truthfully stronger for dedicated `novelty`, `rewatch` and `anime-popular-but-not-in-your-library` sources. These are **share candidates**, not Flutter defects: do not enable them in Flutter until equivalent bounded source/library-resolution evidence exists.
+- One genuine shared-Flutter parity defect was found: a total explicit refresh failure could replace previously-good tab content, while webOS already had retained-refresh fallback semantics.
+- webOS also had stronger privacy-safe aggregate recommendation diagnostics.
+
+### Changes
+
+- Shared Flutter `HomeLabDiscoveryTabController` now retains the last good tab only when an explicit refresh totally fails; partial fresh results are never replaced with stale data.
+- Added focused regression tests for total refresh fallback and partial refresh behaviour.
+- Added shared Flutter aggregate recommendation-quality diagnostics analogous to webOS: duplicate ratio, missing artwork/identity, ownership ratio, underfill, hidden/failed lanes and per-section aggregate counts.
+- Diagnostic serialisation deliberately excludes media titles, TMDB IDs and Jellyfin IDs.
+- No recommendation source/ranking weights were changed.
+
+### Validation status
+
+Push workflow **#129 / `34436206490`** for source `572e32d54d14d0d50ba8066cd817d8938ffae572` was **IN PROGRESS** when this checkpoint was written.
+
+Do not continuously poll it. On continuation, inspect this exact run once. If green, record the focused gate as passed. If failed, diagnose only the genuine failing step and fix that failure.
+
+Local shell checkout was unavailable in the current execution environment because external GitHub DNS resolution failed; implementation was committed atomically through the GitHub API. CI is therefore the authoritative focused validation for this slice.
+
+## Recommendation-quality boundary
+
+Do not tune rankings from synthetic tests. The new aggregate analyser is instrumentation only and does not alter recommendation ranking. Real Home Lab diagnostic evidence should drive any later diversity/source/ranking changes when it becomes available without violating the current no-live-service boundary.
+
+Useful privacy-safe evidence: duplicate ratio, underfilled-lane count, missing-poster ratio, owned ratio, hidden/failed lanes and per-section aggregate counts. Titles and media IDs are unnecessary.
+
 ## Do not redo
 
 - shared catalogue/compiler and semantics foundations
-- request-cost, paging, caching, dedup and identity safeguards
 - Web completion
-- Android mobile/tablet adaptive/state work
-- Android TV remote recovery, focus bridge, paging/retry and wide-TV work
-- webOS Enact focus/deep/paging/legacy-WebKit/performance hardening
-- final high-rating provenance correction
+- Android mobile/tablet completion
+- Android TV completion
+- webOS completion/hardening
+- final webOS high-rating provenance correction
 - preserved webOS v1 rollback branch/candidate
+- platform physical acceptance
 - live services
 
-## Next stage: cross-platform parity + recommendation quality
+## Next actions
 
-Create an explicit platform matrix rather than assuming identical internals are required. Compare Web, Android mobile/tablet, Android TV and Enact/webOS on:
-
-- personalisation source provenance/strategy support
-- novelty/rotation/rewatch behaviour
-- anime/not-owned semantics
-- membership/availability/requestability
-- identity/detail routing
-- dedup/sparse/underfill behaviour
-- refresh/reset/retained state
-- deep paging/retry and bounded request cost
-- platform presentation/interaction differences
-- recommendation diversity/repeat/quality diagnostics
-
-Use evidence to decide whether differences are intentional, stronger platform-specific implementations, or genuine defects. Keep structural/context semantics fail-closed until proven.
-
-Do not tune recommendation quality from synthetic tests alone. Use the existing opt-in webOS aggregate quality diagnostics and equivalent real Home Lab evidence when practical, without exposing titles/Jellyfin IDs unnecessarily.
+1. Inspect Moonfin-Core workflow #129 / `34436206490` **once**.
+2. If green, mark parity slice 1 validated; if failed, fix only the actual failure and rerun the required focused gate.
+3. Continue parity/recommendation-quality work from `CROSS_PLATFORM_PARITY_MATRIX.md`, prioritising evidence collection rather than enabling unproven lanes.
+4. Do not port webOS novelty/rewatch/anime-not-owned merely for lane-count parity; first prove equivalent bounded Flutter adapters.
+5. If no real Home Lab aggregate recommendation evidence is available without crossing the live boundary, defer ranking tuning and advance to the next GitHub-only stage rather than guessing from synthetic fixtures.
 
 ## Later stages
 
-1. cross-platform parity + recommendation quality — **NEXT**
+1. cross-platform parity + recommendation quality — **CURRENT**
 2. whole-product CI/release engineering
 3. upstream-update automation/protocol integration
 4. explicit GitHub completion checkpoint
@@ -94,8 +122,4 @@ Do not tune recommendation quality from synthetic tests alone. Use the existing 
 
 ## Live boundary
 
-Live remains custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`, accepted legacy Discovery 481/486, Seerr enabled. Physical/device acceptance is still deferred.
-
-## Exact next action
-
-Start a new Home Lab chat. Read `handover.md` and `docs/AI_PROJECT_STATE.md`, reconcile both repositories against their current HEADs, then begin the cross-platform semantic/behaviour matrix. Do not reopen completed platform implementation unless parity evidence demonstrates a genuine defect.
+Live remains custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`, accepted legacy Discovery 481/486, Seerr enabled. Physical/device acceptance remains deferred.
