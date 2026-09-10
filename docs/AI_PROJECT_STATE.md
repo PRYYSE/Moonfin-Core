@@ -9,7 +9,7 @@ Complete everything reasonably possible in GitHub/code across Home Lab Moonfin D
 Repository: `PRYYSE/Moonfin-Core`  
 Branch: `homelab/discovery-v2`
 
-**Current phase:** Android TV / Google TV completion — TV recovery Slice 1 is verified complete; deterministic focus/navigation Slice 2 is implemented and replacement focused workflow **#126** is pending after #125 failed only the Dart format gate. Android mobile/tablet remains GitHub/code complete.
+**Current phase:** Android TV / Google TV completion — deterministic focus/navigation Slice 2 remains under focused validation. Workflow #126 exposed one real TV paging-retry defect after 105 tests passed; a narrow root-cause fix is prepared at source `b16a8fe9c9977610c857cbf9ca8706ffe49a64fb` but has not yet been published at this checkpoint.
 
 ## Completed platform foundations — do not redo
 
@@ -37,84 +37,74 @@ Physical mobile/tablet acceptance remains deferred.
 
 ### TV Slice 1 — VERIFIED COMPLETE
 
-Product source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21` (`feat(discovery-v2): make TV recovery remote-safe`) added remote-safe failure/empty recovery:
+Product source `9788338cb27a86cb4024ee8dbe57b82bfcf68f21` added remote-safe failure/empty recovery. Final recovery validation #124 / `34416882794` was GREEN with route, 486-lane catalogue + 8 Python tests, format, analyse, Discovery **103 passed / 5 skipped**, Chrome **12 passed**, scope gate PASS.
 
-- TV landing/runtime/tab failure or genuine-empty actions autofocus
-- deep genuine-empty exposes explicit TV Refresh and autofocuses it
-- deep initial failure Retry autofocuses
-- remote Select regressions cover tab selection, empty Refresh and failure Retry
+### TV Slice 2 — deterministic focus/navigation implemented
 
-Test-harness-only recoveries followed for missing isolated app services, non-quiescing TV chrome, and an over-strict duplicate-title-node assertion. No production behaviour was weakened.
+Primary feature source:
 
-Final Slice 1 gate:
+`2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
 
-- workflow **#124 / `34416882794`** — GREEN
-- exact source `955b5496d8e0d82d90ddb8de69b838737333243a`
-- focused job `102683613449`
+Formatter-only follow-up:
+
+`a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`
+
+Implemented:
+
+- single TV focus owner for the Discovery tab strip
+- left/right tab changes retain strip focus; Down/Select enters active content
+- first-lane Up returns to tab strip; remembered lane re-entry is deterministic
+- inactive TabBar pages no longer compete for autofocus
+- TV deep grid exposes vertical edge callbacks
+- populated deep browse exposes remote Refresh
+- paging-error Retry More is reachable from final-row Down
+- focused regressions cover these paths
+
+### #125 / #126 validation sequence
+
+#125 / `34417981160` failed only the Dart format gate; route and catalogue passed. Formatter-only source `a37ed60b...` corrected exactly one `ValueKey` formatting expression.
+
+#126 / `34418234678`, exact source `a37ed60b...`:
+
 - route PASS
 - 486-lane catalogue/compiler PASS
 - catalogue Python tests: 8 passed
 - format: 54 files, 0 changed
 - analyse: no issues
-- Discovery suite: **103 passed, 5 skipped**
-- Chrome Web/entry-route: **12 passed**
-- custom-scope gate PASS
-- full-build job skipped as expected because this was a focused recovery gate
+- focused Discovery suite: **105 passed, 1 failed, 5 skipped**
+- sole failure: `TV paging error reaches Retry More and restores grid focus`
 
-### TV Slice 2 — deterministic focus/navigation implemented
+Root cause is a real product issue in `HomeLabDiscoveryTvGrid`: every rebuilt controller state wraps unchanged media items in a fresh list object; `didUpdateWidget` used list identity to re-arm the near-end latch, so the first page-2 failure could immediately auto-trigger another `loadMore`, clearing the error before the Retry More button remained user-actionable.
 
-Functional source:
+### Narrow root-cause fix prepared
 
-`2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
+Prepared source:
 
-`feat(discovery-v2): complete deterministic TV focus paths`
+`b16a8fe9c9977610c857cbf9ca8706ffe49a64fb`
 
-Exact functional commit is one parented commit touching only six intended files: four Discovery TV UI/focus files plus two focused test files. No catalogue/controller, Android Gradle/package/signing, Smart-TV or live code changed.
+`fix(discovery-v2): keep TV paging errors user-actionable`
 
-Implemented:
+Exact diff from current checkpoint: one commit, two TV product files only:
 
-- `HomeLabDiscoveryTabStrip` has one TV focus owner; left/right changes tabs while retaining strip focus, Down/Select hands into active content, Up/horizontal boundary can return to host traversal
-- landing keeps stable per-tab view keys, remembers the last focused lane, makes first-lane Up explicitly return to the tab strip, and restores the remembered lane when re-entering content
-- first TV lanes no longer use framework `autofocus`; active-tab-only scheduled focus remains authoritative, preventing inactive `TabBarView` pages competing for focus
-- `HomeLabDiscoveryTvGrid` exposes deterministic vertical edge callbacks without changing normal row movement, partial-row clamping, Select, Back or paging behaviour
-- populated TV deep browse has an explicit Refresh action; grid Up at the first row reaches it and Refresh returns focus to the grid
-- paging-error Retry More is explicitly reachable from grid Down at the final row; Up returns to the grid and successful retry restores grid focus
-- focused regressions cover TV tab-strip focus ownership/content entry, grid vertical edges, populated deep Refresh and paging-error Retry More recovery
+- `discovery_tv_grid.dart`: +19/-2
+- `homelab_discovery_see_all_screen.dart`: +5/-3
 
-### #125 — formatter-only failure
+Fix semantics:
 
-Workflow **#125 / `34417981160`**, exact functional source `2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`:
+- near-end paging is re-armed only when the logical ordered media identity (`mediaType` + `id`) actually changes, not when the same media is wrapped in a new list object
+- explicit user Refresh can deliberately reset the near-end latch even when refreshed page 1 contains the same media, preserving fresh-session paging
+- Retry More and detail-return focus restoration do not implicitly re-arm paging
 
-- route PASS
-- 486-lane catalogue/compiler + 8 Python tests PASS
-- format gate failed because `dart format` changed exactly one formatting site in `homelab_discovery_see_all_screen.dart`
-- required change only collapsed the `homelab-discovery-deep-refresh` `ValueKey` constructor from three lines to the formatter's single-line form
-- analyse, focused tests, Chrome tests and scope gate were skipped after the format failure
-- no behavioural failure was observed because behavioural validation did not run
+No catalogue/controller, package/version/signing, Smart-TV or live changes.
 
-Exact formatter recovery:
+## Remaining TV completion after the replacement focused gate is green
 
-- source `a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`
-- commit `style(discovery-v2): apply TV focus slice formatter output`
-- verified diff from the prior checkpoint: one file only, +1/-3
-- no behaviour, tests, catalogue, package/signing, Smart-TV or live code changed
-
-### Current Slice 2 replacement gate
-
-- workflow **#126 / `34418234678`**
-- exact source `a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`
-- status at checkpoint: **in progress**
-- focused validation only; no `[full-build]`
-
-Per the long-CI rule, do not poll #126. Inspect this exact run once on continuation.
-
-### Remaining TV review after #126 green
-
-- confirm Back/detail return and re-entry coverage remains intact with the new focus bridge
-- validate off-screen focus/scroll behaviour at representative 1080p and 4K TV widths
-- confirm lifecycle/resume/retained-state inheritance from shared controllers
-- re-check package/version/signing/update invariants
-- run final targeted TV coverage and the required `[full-build]` candidate before declaring Android TV GitHub/code complete
+1. confirm Back/detail return and re-entry coverage with the new focus bridge;
+2. validate off-screen focus/scroll at representative 1080p and 4K widths;
+3. confirm lifecycle/resume/retained-state behaviour inherited from shared controllers;
+4. re-check TV package/version/signing/update identity unchanged;
+5. run final targeted TV coverage and required `[full-build]` candidate green;
+6. only then mark Android TV / Google TV GitHub/code complete.
 
 Physical TV acceptance remains deferred.
 
@@ -127,7 +117,7 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 1. shared semantics/personalisation — COMPLETE
 2. Web — COMPLETE
 3. Android mobile/tablet — COMPLETE
-4. Android TV / Google TV — **ACTIVE; Slice 2 #126 PENDING**
+4. Android TV / Google TV — **ACTIVE; Slice 2 paging-retry fix prepared**
 5. final webOS reconciliation
 6. cross-platform parity/recommendation quality
 7. whole-product CI/release engineering
@@ -137,4 +127,4 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 
 ## Exact next action
 
-Inspect workflow #126 (`34418234678`) exactly once. If green, record its focused evidence and continue the remaining Android-TV-specific review, starting with Back/detail return plus representative 1080p/4K off-screen focus/scroll behaviour. If red, inspect only the failing gate, fix the root cause without weakening the deterministic focus paths, launch a replacement focused run, checkpoint exact source/run and stop under the long-CI rule.
+Publish prepared source `b16a8fe9c9977610c857cbf9ca8706ffe49a64fb` to `homelab/discovery-v2`, capture the single replacement workflow run, update both durable checkpoints with its exact source/run and stop under the long-CI rule. On the following continuation, inspect that replacement run once; if green, proceed directly into the remaining TV closure review and final full candidate.
