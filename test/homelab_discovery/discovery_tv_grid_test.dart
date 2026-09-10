@@ -27,7 +27,15 @@ void main() {
     VoidCallback? onUpEdge,
     VoidCallback? onDownEdge,
     String hubKey = 'tv-grid-test',
+    Size? viewSize,
   }) async {
+    if (viewSize != null) {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = viewSize;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    }
+
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -35,8 +43,8 @@ void main() {
         home: Scaffold(
           body: Center(
             child: SizedBox(
-              width: 620,
-              height: 640,
+              width: viewSize?.width ?? 620,
+              height: viewSize?.height ?? 640,
               child: HomeLabDiscoveryTvGrid(
                 items: items(itemCount),
                 hubKey: hubKey,
@@ -170,6 +178,38 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
     expect(nearEndCalls, 1);
+  });
+
+  testWidgets('1080p and 4K keep off-screen D-pad focus in view', (
+    tester,
+  ) async {
+    const scenarios = [
+      (size: Size(1920, 1080), columns: 10, downs: 3, targetIndex: 30),
+      (size: Size(3840, 2160), columns: 12, downs: 4, targetIndex: 48),
+    ];
+
+    for (final scenario in scenarios) {
+      final state = await pumpGrid(
+        tester,
+        itemCount: 72,
+        onOpen: (_) {},
+        hubKey: 'tv-grid-wide-${scenario.size.width.toInt()}',
+        viewSize: scenario.size,
+      );
+      expect(state.columns, scenario.columns);
+
+      for (var step = 0; step < scenario.downs; step++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+      }
+
+      expect(state.focusedIndex, scenario.targetIndex);
+      final focusedTitle = find.text('Item ${scenario.targetIndex + 1}');
+      expect(focusedTitle, findsWidgets);
+      final focusedRect = tester.getRect(focusedTitle.first);
+      expect(focusedRect.bottom, greaterThan(0));
+      expect(focusedRect.top, lessThan(scenario.size.height));
+    }
   });
 
   testWidgets('focus memory restores the previous deep-grid card', (
