@@ -145,6 +145,51 @@ jobs:
           test -f "$apk"
           printf '%s\n' "$apk" > /tmp/tv-apk-path
 
+      - name: Verify Android candidate identity and signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -n "$sdk_root"
+          aapt_bin="$(find "$sdk_root/build-tools" -maxdepth 2 -type f -name aapt -print | sort -V | tail -n1)"
+          apksigner_bin="$(find "$sdk_root/build-tools" -maxdepth 2 -type f -name apksigner -print | sort -V | tail -n1)"
+          test -x "$aapt_bin"
+          test -x "$apksigner_bin"
+
+          mobile_apk="$(cat /tmp/mobile-apk-path)"
+          tv_apk="$(cat /tmp/tv-apk-path)"
+          mobile_badging="$($aapt_bin dump badging "$mobile_apk")"
+          tv_badging="$($aapt_bin dump badging "$tv_apk")"
+
+          expected_beta_id='org.moonfin.androidtv.beta'
+          grep -q "^package: name='$expected_beta_id'" <<<"$mobile_badging"
+          grep -q "^package: name='$expected_beta_id'" <<<"$tv_badging"
+
+          if grep -q '^leanback-launcher:' <<<"$mobile_badging"; then
+            echo 'Mobile beta unexpectedly exposes a Leanback launcher.' >&2
+            exit 1
+          fi
+          grep -q '^leanback-launcher:' <<<"$tv_badging"
+
+          cert_digest() {
+            "$apksigner_bin" verify --print-certs "$1" \
+              | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' \
+              | head -n1 \
+              | tr -d ':' \
+              | tr '[:upper:]' '[:lower:]'
+          }
+
+          mobile_cert="$(cert_digest "$mobile_apk")"
+          tv_cert="$(cert_digest "$tv_apk")"
+          production_cert='3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604'
+          test -n "$mobile_cert"
+          test "$mobile_cert" = "$tv_cert"
+          test "$mobile_cert" != "$production_cert"
+          printf '%s\n' "$mobile_cert" > /tmp/android-ci-cert-sha256
+          printf 'Verified beta application ID: %s\n' "$expected_beta_id"
+          printf 'Verified CI signing certificate SHA-256: %s\n' "$mobile_cert"
+          printf 'Verified Android TV Leanback launcher and mobile non-Leanback split.\n'
+
       - name: Package candidate artifacts
         shell: bash
         run: |
@@ -157,6 +202,7 @@ jobs:
           version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
           tv_version="$(awk '/android_tv_version:/{print $2; exit}' pubspec.yaml)"
           tv_build="$(awk '/android_tv_build_number:/{print $2; exit}' pubspec.yaml)"
+          ci_cert="$(cat /tmp/android-ci-cert-sha256)"
           cat > artifacts/BUILD_INFO.txt <<EOF
           source_sha=${GITHUB_SHA}
           flutter=${FLUTTER_VERSION}
@@ -166,8 +212,12 @@ jobs:
           web=release
           mobile_flavor=mobile-beta
           android_tv_flavor=androidTv-beta
+          android_beta_application_id=org.moonfin.androidtv.beta
+          android_tv_leanback_verified=true
           android_ci_signing=debug-fallback-not-for-deployment
+          android_ci_certificate_sha256=${ci_cert}
           production_android_signing=preserve-existing-homelab-certificate
+          production_android_certificate_sha256=3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604
           EOF
           (cd artifacts && sha256sum Moonfin_HomeLab_* > SHA256SUMS.txt)
           cat artifacts/BUILD_INFO.txt
