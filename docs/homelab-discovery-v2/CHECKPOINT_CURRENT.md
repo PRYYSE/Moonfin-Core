@@ -10,7 +10,7 @@ Read this file with `docs/AI_PROJECT_STATE.md`. Do not restart completed work or
 - Shared semantics/personalisation: COMPLETE
 - Web: COMPLETE
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
-- Android TV / Google TV: **ACTIVE — deterministic focus/navigation Slice 2 paging-retry fix ready for publication**
+- Android TV / Google TV: **ACTIVE — Slice 2 replacement focused workflow #127 pending**
 - Smart-TV/webOS: do not reconcile until Android TV is complete
 
 ## Verified foundations
@@ -37,7 +37,7 @@ Implemented:
 
 #125 / `34417981160`: route/catalogue passed; failed only Dart format.
 
-#126 / `34418234678`, source `a37ed60b...`:
+#126 / `34418234678`, source `a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`:
 
 - route PASS
 - 486-lane catalogue/compiler + 8 Python tests PASS
@@ -46,34 +46,50 @@ Implemented:
 - Discovery **105 passed, 1 failed, 5 skipped**
 - sole failure: `TV paging error reaches Retry More and restores grid focus`
 
-### Root cause / final rebased fix
+The failure exposed a real paging-latch defect: unchanged controller items arrive in fresh list wrappers, and list identity incorrectly re-armed near-end paging. A failed page-2 request could therefore be auto-retried immediately, clearing the error before Retry More stayed visible.
 
-The failure is a real TV paging-state defect. Rebuilt controller states wrap unchanged media in fresh list objects; the grid used list identity to reset its near-end latch, so a failed page-2 request could immediately auto-trigger another load-more request and clear the error before Retry More remained visible.
+### Root-cause fix — PUBLISHED
 
-Final rebased source ready for branch publication:
+Source:
 
-`20a6e609abca82f4eefc008632d77c9afd4632df`
+`5e0886a114dc1ee7ba783512e80e648634b915a7`
 
 `fix(discovery-v2): keep TV paging errors user-actionable`
 
+Verified source diff from parent `c8ce1001a9907824621863d569e886aa24e0101e`: exactly two TV product files:
+
+- `discovery_tv_grid.dart`: +19/-2
+- `homelab_discovery_see_all_screen.dart`: +5/-3
+
 Fix semantics:
 
-- unchanged ordered logical media (`mediaType` + `id`) does not re-arm near-end paging merely because the list wrapper changed
-- explicit user Refresh can deliberately reset the near-end latch, even if refreshed page 1 contains the same media
-- Retry More/detail-return focus restoration does not implicitly re-arm paging
-- exact source change remains two TV product files only; no controller/catalogue, package/signing, Smart-TV or live changes
+- same ordered logical media (`mediaType` + `id`) does not re-arm paging because only the list wrapper changed
+- actual logical media changes still re-arm paging
+- explicit user Refresh deliberately resets the latch
+- Retry More/detail-return focus restoration does not reset it
+- no controller/catalogue, package/version/signing, Smart-TV or live changes
 
-## Remaining TV completion after replacement focused validation green
+### Current focused gate
 
-1. confirm Back/detail return and re-entry coverage;
-2. validate off-screen focus/scroll at representative 1080p and 4K widths;
-3. confirm lifecycle/resume/retained-state behaviour inherited from shared controllers;
-4. re-check TV package/version/signing/update identity unchanged;
-5. run final targeted TV checks and required `[full-build]` candidate;
-6. then mark Android TV / Google TV GitHub/code complete.
+- **#127 / `34422202215`**
+- exact source **`5e0886a114dc1ee7ba783512e80e648634b915a7`**
+- status at checkpoint: **in progress**
+- no full candidate requested
+
+Do not poll #127. Inspect it exactly once on continuation.
+
+## Remaining TV completion after #127 green
+
+1. record #127 evidence and close the paging-retry defect;
+2. confirm Back/detail return and re-entry coverage;
+3. validate off-screen focus/scroll at representative 1080p and 4K widths;
+4. confirm lifecycle/resume/retained-state inheritance;
+5. re-check TV package/version/signing/update identity unchanged;
+6. run final targeted checks and required `[full-build]` candidate;
+7. then mark Android TV / Google TV GitHub/code complete.
 
 Physical TV acceptance remains deferred.
 
 ## Exact next action
 
-Publish source `20a6e609abca82f4eefc008632d77c9afd4632df` to `homelab/discovery-v2`, capture its single replacement workflow run, then update both durable checkpoints with exact source/run and stop under the long-CI rule. On continuation, inspect that exact run once; if green, proceed directly into the remaining TV closure review and final full candidate.
+Inspect #127 (`34422202215`) exactly once. If green, continue directly into the remaining TV closure review and final full-candidate preparation. If red, inspect only the failing gate, fix the root cause, launch one replacement focused run and checkpoint it.
