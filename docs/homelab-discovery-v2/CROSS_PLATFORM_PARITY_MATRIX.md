@@ -6,51 +6,62 @@
 
 ## Classification
 
-- **INTENTIONAL** — platform-specific implementation is truthful and appropriate; do not force identical internals.
-- **SHARE** — one platform has a stronger truthful behaviour worth adopting elsewhere where the same evidence/cost bounds exist.
-- **DEFECT** — externally meaningful behaviour is weaker or inconsistent without a platform justification.
+- **ALIGNED** — externally meaningful behaviour now matches closely enough; internals may differ.
+- **INTENTIONAL** — platform-specific difference is truthful/appropriate; do not force identical internals.
+- **DORMANT** — capability exists but no current authored lane depends on it.
+- **PENDING CI** — implementation is committed but current focused validation has not yet completed.
 
 ## Matrix
 
-| Area | Web | Android mobile/tablet | Android TV / Google TV | Enact/webOS | Classification / action |
-|---|---|---|---|---|---|
-| Semantic core | Shared Flutter Discovery catalogue/runtime/policies | Same shared Flutter core | Same shared Flutter core | Independent Enact implementation | **INTENTIONAL.** Compare advertised behaviour, not source structure. |
-| Personalisation provenance | Source adapters for history, favourites, watchlist, real high ratings, likes, mixed-positive, recently-added and trending anime; generic affinity policies remain separate | Same | Same | Equivalent truthful sources, including corrected real Jellyfin `UserData.Rating >= 8` high-rating seeds | **ALIGNED.** Previous webOS high-rating provenance defect is already fixed; do not reopen. |
-| Unsupported semantic claims | Unknown/context/structural strategies fail closed | Same | Same | 13 structural/context strategies fail closed; 468 executable-section ceiling | **INTENTIONAL.** Keep unproven structural/context semantics disabled. |
-| Eligibility | Personalised lanes admitted only when a truthful adapter/policy supports them | Same | Same | Independent executable-plan/personalisation support gate | **ALIGNED.** Dynamic capability gates are preferred to nominal lane-count parity. |
-| Generic novelty | Authored `Something Different` currently fails closed because Flutter has no `novelty` source policy | Same | Same | Bounded Jellyfin random source (`SortBy=Random`, seed limit 60) | **SHARE.** Flutter already has a bounded local-query primitive that can request `SortBy=Random` with a 60-item snapshot, so equivalent truthful support is feasible without new ranking heuristics or unbounded cost. Implement only after the current focused gate is green. |
-| Anime novelty | Authored lane is `Anime Outside Your Usual Genres`; Flutter currently fails `anime-novelty` closed | Same | Same | `anime-novelty` aliases generic random selection plus `animeOnly`; it does not derive or exclude the user's usual genres | **DEFECT in advertised semantics.** Random anime does not prove "outside your usual genres". Prefer a truthful catalogue label such as `Something Different in Anime` rather than inventing genre-preference inference during parity work. Then the same bounded random-anime source can be shared with Flutter. |
-| Rotation/cooldown | Deterministic seed + refresh nonce + persisted section/session cooldown history | Same | Same | Equivalent deterministic composer + persisted rotation history | **ALIGNED.** Storage mechanics differ intentionally. |
-| Rewatch | Dedicated `rewatch` strategy currently fails closed | Same | Same | `rewatch` is direct `positive` + `playedOnly`, but `positive` currently combines Likes + Favourites + all played History | **DEFECT in webOS source semantics / SHARE opportunity.** Because History already consists of played items, an arbitrary recently watched item can qualify as `Worth Rewatching` without a positive signal. Root fix should use positive evidence only, for example Likes + Favourites + real high ratings, then require played state. Flutter can implement the same semantics from its existing bounded/cached sources. |
-| Anime detection | Tag/genre anime, or animation + Japanese language/origin | Same | Same | Equivalent tag/genre/language/origin test | **ALIGNED.** |
-| Anime not-owned capability | Generic membership `notOwned` is supported when availability proves ownership; no current authored `anime-popular-but-not-in-your-library` lane was found | Same | Same | Adapter exists for popular anime with resolved-library exclusion, but no current authored catalogue lane uses that strategy | **DORMANT / no active parity gap.** Preserve the adapter, but do not add a lane merely for nominal parity. Revisit only if the product catalogue deliberately adds this behaviour later. |
-| Availability/requestability | Blacklist/NSFW filtering; requested status 2/3; available 4/5 or resolved local ownership; requestable excludes available/requested | Same | Same | Same status semantics and filtering | **ALIGNED.** |
-| Unwatched membership | Unknown watch state is treated as not-known-watched, preserving accepted v1 behaviour | Same | Same | Same | **ALIGNED.** This is an explicit compatibility choice, not proof that unknown means unwatched. |
-| Identity | External identity is TMDB media-type key; local Jellyfin IDs are never promoted to TMDB IDs; local ID may accompany proven external identity | Same | Same | Same TMDB-first discovery identity with optional resolved Jellyfin ID | **ALIGNED.** |
-| Detail routing | Flutter route/open helper selects the appropriate local/external detail path | Touch navigation mechanics | D-pad/focus restoration mechanics | Enact route/focus mechanics | **INTENTIONAL.** Navigation mechanics differ, identity contract should not. |
-| Per-page dedup | Media type + TMDB ID | Same | Same | Same | **ALIGNED.** |
-| Cross-row dedup | Deterministic post-fetch session dedup in catalogue order; backfills to lane minimum where possible | Same | Same | Equivalent session/shared-group dedup | **ALIGNED.** |
-| Personal preview diversity | Preview-only title/family diversity; See All preserves full source ranking | Same | Same | Recommendation output kept bounded; independent TV presentation | **INTENTIONAL/ALIGNED outcome.** Do not make preview diversity redefine ranking. |
-| Sparse/underfilled rows | Sparse successful rows hide below `minItems`; failed rows remain distinguishable | Same | Same | Same | **ALIGNED.** |
-| Ordinary rebuild/resume | Successful Flutter tab result cached; concurrent callers share in-flight work | Same | Same | Enact state retained by independent runtime/view lifecycle | **INTENTIONAL.** |
-| Explicit refresh | Rotates nonce and reloads; before parity slice 1 a total refresh failure could replace previously-good content | Same | Same | Has explicit retained-refresh fallback helper preserving previous ready/partial content and recording `refreshFailure` | **DEFECT in shared Flutter core, implementation committed.** Retain the last good tab only on total explicit-refresh failure; partial fresh results remain fresh. Focused CI validation is still pending after a format-only gate correction. |
-| Reset | Clears nonce, session dedup, rotation history and retained tab result | Same | Same | Clears session/rotation and invalidates deep-state scope | **ALIGNED outcome.** Internal deep-state lifecycle differs by client. |
-| Landing deep-scan cost | Non-personal lanes scan at most 6 source pages; personal landing preview uses bounded snapshots/recommendation seed caches | Same | Same | Non-personal max 6; personalised landing deliberately 1 logical page | **INTENTIONAL.** Both are bounded; webOS is stricter for old-TV cost. |
-| Personal recommendation cost | Source snapshots capped; at most 2 recommendation seeds per source-specific recommendation lane; caches shared within runtime | Same | Same | Explicit upstream fetch budget/caches tuned for legacy TV | **INTENTIONAL.** Do not force identical budgets where device costs differ. |
-| Lane concurrency | Max 6 concurrent selected-lane loads | Same | Same | Max 6 by controller | **ALIGNED.** |
-| See All/deep paging | Feature-local deep controller; page-based loading/retry, preview-only diversity bypassed | Same | TV focus state restored around deep navigation | Independent deep controller/state with explicit scope invalidation | **INTENTIONAL/ALIGNED outcome.** |
-| Retry/failure isolation | Lane exceptions isolated; failed initial tab is not cached so Retry can heal | Same | Same | Lane isolation plus refresh fallback | **ALIGNED after refresh-fallback implementation, pending focused CI confirmation.** |
-| Aggregate recommendation diagnostics | Shared privacy-safe analyser added in parity slice 1 | Same | Same | Privacy-safe aggregate quality analyser: duplicates, missing artwork/identity, ownership ratio, underfill/failures | **SHARE implementation committed.** The Flutter analyser is presentation-output-only, changes no ranking, and serialises no title or media identity. Focused CI confirmation is pending. |
-| Ranking/quality tuning | Upstream/source ranking remains authoritative; deterministic composition selects rows, not media ranking | Same | Same | Same principle; diagnostics available | **INTENTIONAL.** No ranking changes from synthetic tests. Real Home Lab diagnostic evidence is required before tuning. |
+| Area | Web / Android mobile-tablet / Android TV (shared Flutter core) | Enact/webOS | Classification / action |
+|---|---|---|---|
+| Semantic core | Shared Flutter catalogue/runtime/policies | Independent Enact implementation | **INTENTIONAL.** Compare behaviour, not source structure. |
+| Personalisation provenance | History, favourites, watchlist, real high ratings, likes, mixed-positive, recently-added, trending anime, novelty and rewatch use explicit source policies | Equivalent explicit sources; high-ratings uses real Jellyfin `UserData.Rating >= 8` | **ALIGNED**, slice 2 pending CI. Unknown strategies still fail closed. |
+| Eligibility | Personalised lane admitted only when an adapter/policy supports it | Independent support gate | **ALIGNED.** Capability gates beat nominal lane-count parity. |
+| Unsupported semantic claims | Structural/context strategies fail closed | 13 structural/context strategies fail closed; 468 executable-section ceiling | **INTENTIONAL.** Do not invent data to reach nominal 481/481. |
+| Generic novelty | Slice 2: bounded Jellyfin `Random` snapshot (max 60) supplies at most two recommendation seeds through existing cached transport | Bounded Jellyfin `SortBy=Random` seed source and recommendation transport | **ALIGNED after SHARE adoption; PENDING CI.** No synthetic ranking model added. |
+| Anime novelty | Slice 2: same bounded random source constrained to anime; display title normalised to `Something Different in Anime` | Same random-anime semantics; display title likewise normalised | **ALIGNED after defect fix; PENDING CI.** No longer claims proof of being outside the user's usual genres. |
+| Rotation / cooldown | Deterministic session seed + refresh nonce + persisted section/session cooldown | Equivalent composer + persisted rotation history | **ALIGNED.** Storage mechanics intentionally differ. |
+| Rewatch | Slice 2: direct source from played favourites + real high ratings + likes; neutral history excluded | Slice 2: `positive` source tightened to Likes + Favourites + real high ratings; direct + played-only retained | **ALIGNED after webOS defect fix; PENDING CI.** |
+| Anime detection | Tags/genre anime, or Animation + Japanese original language/origin; slice 2 extends source adapter fields/fallback accordingly | Equivalent tags/genres/language/location logic | **ALIGNED; PENDING CI for Flutter extension.** |
+| Anime not-owned | Generic `notOwned` membership works where ownership is proven; no authored popular-anime-not-library lane | Dedicated popular-anime-not-library adapter exists but no current authored lane uses it | **DORMANT.** Preserve capability; do not add a lane merely for parity. |
+| Availability / requestability | Blacklist/NSFW filtering; requested status 2/3; available 4/5 or resolved local ownership; requestable excludes available/requested | Same status semantics/filtering | **ALIGNED.** |
+| Unwatched membership | Unknown watch state remains not-known-watched for accepted v1 compatibility | Same | **ALIGNED.** This is compatibility semantics, not proof unknown means unwatched. |
+| Identity | TMDB media-type key is external identity; Jellyfin ID only accompanies proven external identity | Same TMDB-first contract with optional resolved Jellyfin ID | **ALIGNED.** Never promote a local Jellyfin ID to TMDB. |
+| Detail routing | Same identity contract; Web uses web route, mobile touch navigation, TV D-pad/focus restoration | Enact route/focus mechanics | **INTENTIONAL.** Routing mechanics differ by platform. |
+| Per-page dedup | Media type + TMDB identity | Same | **ALIGNED.** |
+| Cross-row dedup | Deterministic session dedup in catalogue order; backfill to lane minimum where possible | Equivalent shared/session dedup | **ALIGNED.** |
+| Personal preview diversity | Preview-only family/title diversity; See All preserves source ranking | Bounded recommendation output with TV-specific presentation | **INTENTIONAL/ALIGNED outcome.** Preview diversity must not redefine ranking. |
+| Sparse / underfilled rows | Successful rows below `minItems` hide; failures remain distinguishable | Same outcome | **ALIGNED.** |
+| Ordinary rebuild / resume | Successful tab cached; concurrent callers share in-flight work | Enact lifecycle retains independent runtime/view state | **INTENTIONAL.** |
+| Explicit refresh | Slice 1: total failed explicit refresh retains last good tab; partial fresh result remains authoritative | Existing retained-refresh fallback | **ALIGNED.** Slice 1 validated by Moonfin workflow #130. |
+| Reset | Clears nonce, session dedup, rotation history and retained tab | Clears session/rotation and invalidates deep state | **ALIGNED outcome.** |
+| Landing/deep scan | Non-personal lanes scan max 6 source pages; personal source snapshots/recommendation seeds bounded | Non-personal max 6; personal landing deliberately one logical page | **INTENTIONAL.** webOS remains stricter for old-TV cost. |
+| Personal request cost | Snapshot max 60, rated candidates max 100, watchlist max 2 pages, max 2 recommendation seeds; caches shared | Seed limit 60, high-rating 100, cache max 24 rows, upstream fetch budget 4 | **INTENTIONAL/BOUNDED.** Do not force identical budgets. |
+| Lane concurrency | Max 6 concurrent selected-lane loads | Max 6 | **ALIGNED.** |
+| See All / deep paging | Feature-local deep controller, retry, preview-diversity bypass; TV restores focus | Independent deep controller/state and scope invalidation | **INTENTIONAL/ALIGNED outcome.** |
+| Retry / failure isolation | Per-lane exceptions isolated; failed initial tab not cached; refresh fallback from slice 1 | Per-lane isolation + refresh fallback | **ALIGNED.** |
+| Aggregate quality diagnostics | Slice 1 privacy-safe report: duplicate/unique/repeated cards, missing identity/art, ownership ratio, underfill, hidden/failed, refresh failure, per-section counts | Equivalent aggregate quality analyser | **ALIGNED.** No titles or media IDs need to be serialised. |
+| Ranking / recommendation quality | Upstream/source ranking remains authoritative; composer selects lanes rather than re-ranking media | Same principle | **INTENTIONAL.** No ranking changes from synthetic tests. Real Home Lab aggregate evidence is required before tuning. |
 
-## Current parity decisions
+## Slice status
 
-1. **No completed platform stage is broadly reopened.** Web, mobile/tablet and Android TV continue to share one semantic core. webOS may be touched only for the two parity-proven semantic defects described above.
-2. **Finish validation of parity slice 1 before stacking product changes.** Run #129 failed only because two new test files were not committed in `dart format` form. Format-only commit `9ccb89927ca23bb4d3f00043f70ba138a6239beb` corrected exactly that output; run #130 / `34436806830` is the authoritative pending focused gate.
-3. **Next bounded semantic slice after that gate:** make the anime novelty label truthful; add bounded generic/anime novelty source support to Flutter; change webOS rewatch to positive signals only; add equivalent bounded Flutter rewatch support. Do not alter ranking weights.
-4. **Do not create a popular-anime-not-library lane during parity work.** The webOS adapter is currently dormant and there is no authored lane to make parity with.
-5. **Keep structural/context strategies fail-closed.** The 468 webOS ceiling and Flutter capability gates remain truthful differences, not defects.
+### Slice 1 — validated
 
-## Recommendation-quality evidence boundary
+Moonfin implementation `572e32d54d14d0d50ba8066cd817d8938ffae572`; format-only recovery `9ccb89927ca23bb4d3f00043f70ba138a6239beb`; workflow **#130 / `34436806830` GREEN**.
 
-Synthetic unit tests may verify counting, dedup, privacy, provenance and state transitions. They must not be used to tune ranking weights or source preference. The quality pass should compare aggregate diagnostics from real Home Lab Discovery output only when such evidence is available without crossing the current no-live-service boundary. Useful fields are duplicate ratio, underfilled-lane count, missing-poster ratio, owned ratio, hidden/failed lanes and per-section aggregate counts. Titles and media identifiers are unnecessary for that decision.
+### Slice 2 — implementation committed, validation pending
+
+Moonfin product `b800e5be18109963e4ae00b3739550b924c7204f`; workflow #131 / `34438702403` failed at Format gate only. Exact formatter output committed as `e654668f89af49470df417d4fcc444e73c53121e`; replacement workflow **#132 / `34439296054` IN PROGRESS** at its single permitted check.
+
+Smart-TV product `a9dfa657a220a3f8f77753261bd7d8e902c0d837`; workflow **#52 / `34439022624` IN PROGRESS** at its single permitted check.
+
+Do not poll either active run again in the same waiting cycle.
+
+## Decisions that remain locked
+
+1. Do not reopen completed Web/mobile/Android-TV/webOS platform passes without new defect evidence.
+2. Keep the 13 structural/context webOS strategies and equivalent unproven Flutter semantics fail-closed.
+3. Do not add an authored popular-anime-not-library lane merely because webOS has a dormant adapter.
+4. Do not tune ranking/source preference from synthetic tests. Use real privacy-safe Home Lab aggregate diagnostics when allowed.
+5. If slice 2 CI is green and real quality evidence remains outside the no-live boundary, cross-platform parity correctness is complete for the current GitHub-only phase and work should advance to whole-product CI/release engineering.

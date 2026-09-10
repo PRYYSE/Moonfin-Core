@@ -11,83 +11,91 @@ Read this with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PAR
 - Web: **GITHUB/CODE COMPLETE**
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
 - Android TV / Google TV: **GITHUB/CODE COMPLETE**
-- Smart-TV/webOS: **GITHUB/CODE COMPLETE baseline**
-- Cross-platform parity + recommendation quality: **IN PROGRESS**
+- Smart-TV/webOS: **GITHUB/CODE COMPLETE baseline + parity slice 2 committed**
+- Cross-platform parity + recommendation quality: **IMPLEMENTATION COMPLETE FOR CURRENT EVIDENCE; CI PENDING**
 
 ## Verified platform gates — do not redo
 
-### Android TV / Google TV
+- Web source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`, workflow #115.
+- Android mobile/tablet source `4af01af054d9b7cbe8e230b7ded482cb8fea330c`, workflow #120 / `34326151119` GREEN.
+- Android TV final source `15ccc28b84727543ad714ef19dd318f907d1a1d8`, workflow #128 / `34429841034` GREEN.
+- Smart-TV/webOS pre-parity baseline `42854590caf4dbf847696483d943a886d5ab8ed7`, workflow #51 / `34432674158` GREEN, 86/86 tests.
+- Earlier webOS high-rating provenance correction is complete; do not reopen.
+- webOS stays at truthful **468 executable / 481 active**. Thirteen structural/context strategies stay fail-closed.
+- Preserve Smart-TV `homelab/webos-v1-staging` and candidate `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`.
+- Production Android signing certificate SHA-256 remains `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`.
 
-Final source `15ccc28b84727543ad714ef19dd318f907d1a1d8`; workflow #128 / `34429841034` GREEN.
+## Parity slice 1 — VALIDATED
 
-- Discovery 107 passed / 5 skipped
-- Chrome 12 passed
-- route, 486-lane catalogue + 8 Python tests, format, analyse and scope PASS
-- 1920x1080 + 3840x2160 off-screen TV focus/scroll regression PASS
-- Web + mobile-beta + androidTv-beta release candidates built
-- production Android signing certificate SHA-256 remains `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
+Implementation `572e32d54d14d0d50ba8066cd817d8938ffae572`:
+
+- total explicit-refresh failure retains the last good Flutter tab; partial fresh results remain authoritative
+- privacy-safe aggregate recommendation diagnostics added to Flutter
+- focused state/privacy tests
+- no ranking/source-weight changes
+
+Workflow #129 / `34436206490` failed only on formatting. Format-only correction `9ccb89927ca23bb4d3f00043f70ba138a6239beb`; replacement workflow **#130 / `34436806830` GREEN**.
+
+## Parity slice 2 — IMPLEMENTED
+
+### Moonfin-Core
+
+Product commit `b800e5be18109963e4ae00b3739550b924c7204f`:
+
+- bounded generic novelty using a local Jellyfin `Random` snapshot and existing recommendation transport
+- bounded anime novelty using the same source constrained to anime
+- anime novelty display title truthfully normalised to `Something Different in Anime`
+- direct positive-only rewatch from favourites + real high ratings + likes; neutral history excluded
+- source anime detection aligned for tags/genre or Animation + Japanese language/origin
+- focused tests added
+- no ranking weights changed
+
+Workflow #131 / `34438702403` failed at **Format gate only**; route/catalogue passed and later checks were skipped. Exact `dart format` output was reproduced and Git-hash verified.
+
+Format-only follow-up `e654668f89af49470df417d4fcc444e73c53121e`; authoritative workflow **#132 / `34439296054` IN PROGRESS** at the single permitted check. Do not poll it again in this waiting cycle.
 
 ### Smart-TV/webOS
 
-Final product baseline `42854590caf4dbf847696483d943a886d5ab8ed7`; workflow #51 / `34432674158` GREEN, 86/86 tests.
+Product commit `a9dfa657a220a3f8f77753261bd7d8e902c0d837`:
 
-The earlier `high-ratings` provenance defect is already fixed: real Jellyfin `UserData.Rating >= 8` seeds and truthful dynamic labelling. Do not reopen it.
+- anime novelty display title normalised to `Something Different in Anime`
+- rewatch positive source tightened to Likes + Favourites + real high ratings, removing neutral History
+- direct played-only semantics retained
+- focused tests verify positive-only rewatch and truthful anime novelty
+- local `node --check` passed; exact source/test blob hashes verified before publication
 
-webOS remains at a truthful ceiling of **468 executable sections** from 481 active. Thirteen structural/context strategies remain intentionally fail-closed. Preserve `homelab/webos-v1-staging` and candidate `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`.
+Workflow **#52 / `34439022624` IN PROGRESS** at the single permitted check. Do not poll it again in this waiting cycle.
 
-## Parity slice 1
+## Current parity classifications
 
-Implementation source: `572e32d54d14d0d50ba8066cd817d8938ffae572`.
-
-Implemented in shared Flutter core:
-
-- total explicit-refresh failure retains the last good tab; partial fresh results remain authoritative
-- privacy-safe aggregate recommendation diagnostics equivalent in purpose to webOS
-- focused regression tests
-- no ranking/source-weight changes
-
-### Validation recovery
-
-Workflow #129 / `34436206490` **FAILED at Format gate only**. Route and 486-lane catalogue gates passed first. `dart format` changed exactly two newly-added tests, so analyse/tests were skipped rather than reporting a product-code failure.
-
-Format-only correction: `9ccb89927ca23bb4d3f00043f70ba138a6239beb`.
-
-Replacement workflow: **#130 / `34436806830`**, source `9ccb89927ca23bb4d3f00043f70ba138a6239beb`. It was **IN PROGRESS** at the single permitted check during this continuation. Do not poll it again in the same waiting cycle; inspect this exact run once on the next continuation.
-
-## Refined parity findings
-
-Canonical matrix: `docs/homelab-discovery-v2/CROSS_PLATFORM_PARITY_MATRIX.md`.
-
-1. **Generic novelty is a SHARE candidate.** webOS truthfully uses bounded Jellyfin `SortBy=Random` with a 60-item seed limit. Flutter's existing bounded local-query primitive can support the same semantics without new ranking logic.
-2. **Anime novelty has a genuine advertised-semantic defect.** The catalogue says `Anime Outside Your Usual Genres`, but webOS only does random anime. Preferred fix is a truthful label such as `Something Different in Anime`, not synthetic preference inference.
-3. **webOS rewatch has a genuine semantic/quality defect.** `rewatch = positive + playedOnly`, while `positive` currently contains Likes + Favourites + all played History. This allows arbitrary recent history into `Worth Rewatching`. Preferred fix is positive signals only, e.g. Likes + Favourites + real high ratings, then require played state. Flutter can share the same bounded semantics.
-4. **Popular-anime-not-library is dormant, not an active parity gap.** webOS has an adapter, but no current authored lane using it was found. Do not add a lane merely for parity.
-5. **Unsupported structural/context strategies stay fail-closed.**
+- **Generic novelty:** aligned after SHARE adoption; both clients now have bounded random-source semantics.
+- **Anime novelty:** previous advertised-semantic defect corrected at user-facing presentation; neither client claims actual usual-genre exclusion.
+- **Rewatch:** previous webOS defect corrected; both implementations now require positive played evidence rather than neutral history.
+- **Anime detection:** aligned, including local Animation + Japanese language/origin in Flutter source adapters.
+- **Popular anime not in library:** dormant webOS capability, not an active parity gap; no authored lane. Do not add one merely for parity.
+- **Structural/context strategies:** intentionally fail-closed.
+- **Ranking/quality:** no synthetic tuning performed.
 
 ## Recommendation-quality boundary
 
-The aggregate analyser is instrumentation, not ranking logic. Do not tune rankings from synthetic tests. Use real privacy-safe Home Lab aggregate evidence when it becomes available without crossing the current no-live-service boundary; otherwise defer ranking tuning.
+Use real privacy-safe Home Lab aggregate evidence before changing ranking/diversity/source preference. Useful fields: duplicate ratio, underfilled-lane count, missing-poster ratio, owned ratio, hidden/failed lanes and per-section counts. If obtaining these requires crossing the current no-live boundary, defer tuning.
 
 ## Exact next actions
 
-1. Inspect run **#130 / `34436806830` once**.
-2. If failed, fix only its actual failing step. If green, mark parity slice 1 validated.
-3. Implement parity slice 2 as one coherent semantic unit:
-   - rename the anime novelty lane to a truthful random-anime label
-   - add bounded generic/anime novelty support in shared Flutter personal sources
-   - correct webOS rewatch to positive signals only
-   - add equivalent bounded Flutter rewatch support
-   - add focused regression tests on both repos
-4. Run focused CI for affected repos; record exact run IDs and do not continuously poll.
-5. If correctness is green and real ranking evidence remains outside the no-live boundary, advance to whole-product CI/release engineering.
+1. Inspect Moonfin-Core **#132 / `34439296054` once**.
+2. Inspect Smart-TV **#52 / `34439022624` once**.
+3. Fix only genuine failing steps if required.
+4. If both green, mark cross-platform parity correctness complete under the GitHub-only/no-live boundary.
+5. If real recommendation-quality evidence is still out of scope, advance to **whole-product CI/release engineering** rather than guessing.
 
 ## Do not redo
 
-- platform completion passes
 - shared catalogue/compiler foundations
-- Android TV focus/deep-paging work
+- Web completion
+- Android mobile/tablet completion
+- Android TV completion/focus work
 - webOS old-TV hardening
-- prior webOS high-rating correction
+- high-rating provenance correction
 - live services or physical-device acceptance
 
 ## Live boundary
