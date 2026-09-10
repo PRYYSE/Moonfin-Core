@@ -116,6 +116,17 @@ android {
         }
     }
 
+    // mobile-beta and androidTv-beta are sibling product flavors rather than
+    // variants of mobile/androidTv, so explicitly share their device manifests.
+    sourceSets {
+        getByName("mobile-beta") {
+            manifest.srcFile("src/mobile/AndroidManifest.xml")
+        }
+        getByName("androidTv-beta") {
+            manifest.srcFile("src/androidTv/AndroidManifest.xml")
+        }
+    }
+
     signingConfigs {
         create("release") {
             if (hasReleaseKeystore) {
