@@ -38,19 +38,11 @@ Parity slice 2:
 
 - Moonfin product `b800e5be18109963e4ae00b3739550b924c7204f`
 - Moonfin format-only follow-up `e654668f89af49470df417d4fcc444e73c53121e`
-- Moonfin workflow **#132 / `34439296054` GREEN**: route, catalogue + 8 Python tests, format, analyse, Flutter Discovery tests, Chrome interaction tests and custom-scope verification passed
+- Moonfin workflow **#132 / `34439296054` GREEN**
 - Smart-TV product `a9dfa657a220a3f8f77753261bd7d8e902c0d837`
-- Smart-TV workflow **#52 / `34439022624` GREEN**: Discovery service tests, webOS package build, preserved identity/package verification and candidate upload passed
+- Smart-TV workflow **#52 / `34439022624` GREEN**
 
-Resolved semantics:
-
-- bounded generic novelty aligned
-- anime novelty truthfully presented as `Something Different in Anime`
-- rewatch requires positive played evidence; neutral history is excluded
-- Flutter source anime detection covers tags/genre or Animation + Japanese language/origin
-- dormant popular-anime-not-library support remains dormant
-- unsupported structural/context strategies remain fail-closed
-- no ranking/source-weight tuning from synthetic fixtures
+Resolved semantics remain locked: bounded novelty, truthful `Something Different in Anime`, positive-only rewatch, aligned anime detection, dormant popular-anime-not-library support, structural/context fail-closed semantics and no ranking/source-weight tuning from synthetic fixtures.
 
 Real recommendation-quality tuning is deferred because privacy-safe production aggregate evidence would cross the current no-live boundary.
 
@@ -65,31 +57,50 @@ Smart-TV release candidate is already validated by workflow #52:
 - size `4,312,826` bytes
 - ZIP digest `sha256:9d5ccfed0889a680fa6b4d3532725ce1877f950d306d9599bb6916e9d150c47f`
 
-Flutter candidate workflow hardening source:
+### Flutter candidate gate
+
+Initial hardening source:
 
 `de783e5af94f528d319c6f469e977d129bbc4435` — `ci(discovery): harden release candidate verification [full-build]`
 
-Added release gates:
+Workflow **#133 / `34440033993` FAILED only in the new Android candidate verifier**. Its focused-validation job passed completely, and the release job successfully built Web, mobile-beta APK and androidTv-beta APK before the verifier failed. Packaging/upload were skipped after that gate.
 
-- both Android beta APKs must identify as `org.moonfin.androidtv.beta`
-- mobile beta must not expose Leanback launcher semantics
-- Android TV beta must expose Leanback launcher semantics
-- actual CI signer SHA-256 is extracted from both APKs and must match between them
-- CI signer must not equal preserved production certificate `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
-- CI signer and production fingerprint are recorded in `BUILD_INFO.txt`
-- CI candidates remain debug-fallback and not for deployment
+Root cause was a verifier-contract mistake, not an application defect:
 
-Authoritative full candidate run:
+- the shared Android manifest intentionally contains both `LAUNCHER` and `LEANBACK_LAUNCHER`
+- mobile keeps `android.software.leanback` **optional**
+- the Android-TV flavour makes `android.software.leanback` **required**
+- the failed verifier incorrectly expected a mobile-vs-TV launcher-category split and searched for a non-authoritative `leanback-launcher:` badging line
 
-- workflow **#133 / `34440033993`**
-- source `de783e5af94f528d319c6f469e977d129bbc4435`
+Verifier-only correction:
+
+`4f8dbec00b51800d7bf8d0ec321807207623bbfc` — `ci(discovery): verify leanback requirement split [full-build]`
+
+The corrected gate now verifies:
+
+- both beta APKs identify as `org.moonfin.androidtv.beta`
+- mobile APK reports Leanback as optional
+- Android-TV APK reports Leanback as required
+- both APKs have the same CI signing certificate
+- CI certificate is not production SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
+- BUILD_INFO records the actual Leanback requirement split and both signing identities
+- CI candidates remain debug-fallback and are not deployment APKs
+
+Authoritative replacement full-build:
+
+- workflow **#134 / `34442473966`**
+- source `4f8dbec00b51800d7bf8d0ec321807207623bbfc`
 - status at the single capture: **IN PROGRESS**
 
-Do not poll this run again in the same waiting cycle.
+Do not poll #134 again in this waiting cycle.
 
 ### Release-engineering acceptance gate
 
-Before closing this phase, run #133 must pass focused validation plus Web/mobile-beta/androidTv-beta build, Android identity/signing verification, packaging and artifact upload. Then record artifact ID/digest, `BUILD_INFO.txt`, and generated candidate SHA-256 values. No deployment or physical/live acceptance belongs to this phase.
+Before closing this phase, #134 must pass focused validation plus Web/mobile-beta/androidTv-beta build, Android identity/Leanback/signing verification, packaging and artifact upload. Then record artifact ID/digest, `BUILD_INFO.txt`, and generated candidate SHA-256 values. No deployment or physical/live acceptance belongs to this phase.
+
+## Known non-blocking CI debt
+
+Current GitHub runner logs warn that `actions/checkout@v4` / `actions/setup-java@v4` target deprecated Node 20 action runtimes and that setup-java v4 should move to v5. These warnings did not cause #133. Do not mix that maintenance into the verifier recovery; assess it after the authoritative release gate is green so a tooling migration is separately attributable.
 
 ## Environment limitation
 
@@ -97,15 +108,15 @@ The current execution container cannot resolve `github.com` and has no useful lo
 
 ## Exact next actions
 
-1. On the next continuation inspect **#133 / `34440033993` once**.
+1. On the next continuation inspect **#134 / `34442473966` once**.
 2. If failed, inspect only the failing job/step and fix the genuine failure.
-3. If green, capture artifact ID/digest, build metadata, signing identity and Web/mobile/Android-TV candidate hashes; mark release engineering complete.
+3. If green, capture artifact ID/digest, build metadata, signing identity and Web/mobile/Android-TV candidate hashes; mark whole-product CI/release engineering complete.
 4. Then move to **upstream-update automation/protocol integration**.
 
 ## Later stages
 
 1. cross-platform parity + recommendation quality — **COMPLETE for GitHub/code evidence**
-2. whole-product CI/release engineering — **CURRENT; full build running**
+2. whole-product CI/release engineering — **CURRENT; replacement full build running**
 3. upstream-update automation/protocol integration
 4. explicit GitHub completion checkpoint
 5. physical/live acceptance
