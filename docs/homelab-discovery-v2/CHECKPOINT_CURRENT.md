@@ -3,7 +3,7 @@
 **Last updated:** 2026-09-10 Australia/Adelaide  
 **Primary branch:** `homelab/discovery-v2`
 
-Read this with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PARITY_MATRIX.md`. GitHub/current repo state is authoritative. Do not restart completed platform implementation or touch live services during GitHub-only work.
+Read with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PARITY_MATRIX.md`. GitHub/current repo state is authoritative. Do not restart completed platform implementation or touch live services during GitHub-only work.
 
 ## Current boundary
 
@@ -11,93 +11,81 @@ Read this with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PAR
 - Web: **GITHUB/CODE COMPLETE**
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
 - Android TV / Google TV: **GITHUB/CODE COMPLETE**
-- Smart-TV/webOS: **GITHUB/CODE COMPLETE baseline + parity slice 2 committed**
-- Cross-platform parity + recommendation quality: **IMPLEMENTATION COMPLETE FOR CURRENT EVIDENCE; CI PENDING**
+- Smart-TV/webOS: **GITHUB/CODE COMPLETE + PARITY VALIDATED**
+- Cross-platform parity + recommendation quality: **COMPLETE for current GitHub/code evidence**
+- Whole-product CI / release engineering: **CURRENT**
 
-## Verified platform gates — do not redo
-
-- Web source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`, workflow #115.
-- Android mobile/tablet source `4af01af054d9b7cbe8e230b7ded482cb8fea330c`, workflow #120 / `34326151119` GREEN.
-- Android TV final source `15ccc28b84727543ad714ef19dd318f907d1a1d8`, workflow #128 / `34429841034` GREEN.
-- Smart-TV/webOS pre-parity baseline `42854590caf4dbf847696483d943a886d5ab8ed7`, workflow #51 / `34432674158` GREEN, 86/86 tests.
-- Earlier webOS high-rating provenance correction is complete; do not reopen.
-- webOS stays at truthful **468 executable / 481 active**. Thirteen structural/context strategies stay fail-closed.
-- Preserve Smart-TV `homelab/webos-v1-staging` and candidate `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`.
-- Production Android signing certificate SHA-256 remains `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`.
-
-## Parity slice 1 — VALIDATED
-
-Implementation `572e32d54d14d0d50ba8066cd817d8938ffae572`:
-
-- total explicit-refresh failure retains the last good Flutter tab; partial fresh results remain authoritative
-- privacy-safe aggregate recommendation diagnostics added to Flutter
-- focused state/privacy tests
-- no ranking/source-weight changes
-
-Workflow #129 / `34436206490` failed only on formatting. Format-only correction `9ccb89927ca23bb4d3f00043f70ba138a6239beb`; replacement workflow **#130 / `34436806830` GREEN**.
-
-## Parity slice 2 — IMPLEMENTED
+## Parity closure
 
 ### Moonfin-Core
 
-Product commit `b800e5be18109963e4ae00b3739550b924c7204f`:
+Parity slice 1:
 
-- bounded generic novelty using a local Jellyfin `Random` snapshot and existing recommendation transport
-- bounded anime novelty using the same source constrained to anime
-- anime novelty display title truthfully normalised to `Something Different in Anime`
-- direct positive-only rewatch from favourites + real high ratings + likes; neutral history excluded
-- source anime detection aligned for tags/genre or Animation + Japanese language/origin
-- focused tests added
-- no ranking weights changed
+- implementation `572e32d54d14d0d50ba8066cd817d8938ffae572`
+- format correction `9ccb89927ca23bb4d3f00043f70ba138a6239beb`
+- workflow #130 / `34436806830` GREEN
 
-Workflow #131 / `34438702403` failed at **Format gate only**; route/catalogue passed and later checks were skipped. Exact `dart format` output was reproduced and Git-hash verified.
+Parity slice 2:
 
-Format-only follow-up `e654668f89af49470df417d4fcc444e73c53121e`; authoritative workflow **#132 / `34439296054` IN PROGRESS** at the single permitted check. Do not poll it again in this waiting cycle.
+- product `b800e5be18109963e4ae00b3739550b924c7204f`
+- format-only follow-up `e654668f89af49470df417d4fcc444e73c53121e`
+- workflow **#132 / `34439296054` GREEN**
+- route, catalogue + 8 Python tests, format, analyse, Flutter Discovery tests, Chrome interaction tests and scope verification all passed
 
 ### Smart-TV/webOS
 
-Product commit `a9dfa657a220a3f8f77753261bd7d8e902c0d837`:
+- parity product `a9dfa657a220a3f8f77753261bd7d8e902c0d837`
+- workflow **#52 / `34439022624` GREEN**
+- Discovery service tests, webOS package build, app identity/package verification and candidate upload passed
+- artifact `10137277340`
+- ZIP digest `sha256:9d5ccfed0889a680fa6b4d3532725ce1877f950d306d9599bb6916e9d150c47f`
 
-- anime novelty display title normalised to `Something Different in Anime`
-- rewatch positive source tightened to Likes + Favourites + real high ratings, removing neutral History
-- direct played-only semantics retained
-- focused tests verify positive-only rewatch and truthful anime novelty
-- local `node --check` passed; exact source/test blob hashes verified before publication
+## Final parity decisions
 
-Workflow **#52 / `34439022624` IN PROGRESS** at the single permitted check. Do not poll it again in this waiting cycle.
+- Generic novelty: aligned with bounded random-source semantics.
+- Anime novelty: truthful `Something Different in Anime`; no unsupported usual-genre claim.
+- Rewatch: positive played evidence only; neutral history excluded.
+- Anime detection: aligned for tag/genre and Animation + Japanese language/origin.
+- Popular anime not in library: dormant adapter only; no authored lane, so no parity lane added.
+- Structural/context strategies: intentionally fail-closed.
+- Ranking/source weights: unchanged; real Home Lab aggregate evidence required before tuning.
 
-## Current parity classifications
+Recommendation-quality tuning is deferred because real aggregate evidence would cross the current no-live boundary.
 
-- **Generic novelty:** aligned after SHARE adoption; both clients now have bounded random-source semantics.
-- **Anime novelty:** previous advertised-semantic defect corrected at user-facing presentation; neither client claims actual usual-genre exclusion.
-- **Rewatch:** previous webOS defect corrected; both implementations now require positive played evidence rather than neutral history.
-- **Anime detection:** aligned, including local Animation + Japanese language/origin in Flutter source adapters.
-- **Popular anime not in library:** dormant webOS capability, not an active parity gap; no authored lane. Do not add one merely for parity.
-- **Structural/context strategies:** intentionally fail-closed.
-- **Ranking/quality:** no synthetic tuning performed.
+## Whole-product CI / release engineering
 
-## Recommendation-quality boundary
+Scope is Web + Android mobile/tablet + Android TV/Google TV + webOS only. Do not expand into unrelated upstream platform release work.
 
-Use real privacy-safe Home Lab aggregate evidence before changing ranking/diversity/source preference. Useful fields: duplicate ratio, underfilled-lane count, missing-poster ratio, owned ratio, hidden/failed lanes and per-section counts. If obtaining these requires crossing the current no-live boundary, defer tuning.
+Current Flutter candidate workflow already supports `[full-build]` and builds Web, `mobile-beta`, and `androidTv-beta` candidates after focused validation.
+
+Release hardening to apply before the fresh full build:
+
+- verify both Android beta APK package IDs are `org.moonfin.androidtv.beta`
+- verify mobile candidate does not expose Leanback launcher semantics
+- verify Android TV candidate does expose Leanback launcher semantics
+- record actual CI APK signer SHA-256
+- assert CI signer is not production certificate `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
+- preserve debug-fallback CI status; these candidates are not deployment APKs
 
 ## Exact next actions
 
-1. Inspect Moonfin-Core **#132 / `34439296054` once**.
-2. Inspect Smart-TV **#52 / `34439022624` once**.
-3. Fix only genuine failing steps if required.
-4. If both green, mark cross-platform parity correctness complete under the GitHub-only/no-live boundary.
-5. If real recommendation-quality evidence is still out of scope, advance to **whole-product CI/release engineering** rather than guessing.
+1. Patch `.github/workflows/homelab-discovery-v2.yml` with the narrow Android candidate identity/signing gate.
+2. Commit with `[full-build]` to trigger focused validation + Web/mobile-beta/androidTv-beta candidate build.
+3. Record the exact new workflow run ID in the durable checkpoint.
+4. Do not continuously poll the long build.
+5. Next continuation: inspect that exact run once; fix genuine failure or, if green, capture artifact ID/digest/candidate SHA-256 values and close release engineering.
+6. Then move to upstream-update automation/protocol integration.
 
 ## Do not redo
 
-- shared catalogue/compiler foundations
-- Web completion
-- Android mobile/tablet completion
-- Android TV completion/focus work
+- platform completion passes
+- catalogue/compiler foundations
+- Android TV focus/deep-paging work
 - webOS old-TV hardening
 - high-rating provenance correction
+- parity slices 1/2
 - live services or physical-device acceptance
 
 ## Live boundary
 
-Live remains custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`, accepted legacy Discovery 481/486, Seerr enabled. Physical/device acceptance remains deferred.
+Live remains custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`, accepted legacy Discovery 481/486, Seerr enabled. Physical/device/live acceptance remains deferred.
