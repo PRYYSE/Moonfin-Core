@@ -69,7 +69,7 @@ class _HomeLabDiscoverySeeAllScreenState
     final state = await widget.controller.refresh();
     if (!mounted) return;
     setState(() => _state = state);
-    _restoreTvGridFocus();
+    _restoreTvGridFocus(resetNearEndPaging: true);
   }
 
   void _onScroll() {
@@ -110,11 +110,13 @@ class _HomeLabDiscoverySeeAllScreenState
     _restoreTvGridFocus();
   }
 
-  void _restoreTvGridFocus() {
+  void _restoreTvGridFocus({bool resetNearEndPaging = false}) {
     if (!mounted || !PlatformDetection.isTV) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _tvGridKey.currentState?.requestFocusFromMemory();
+      _tvGridKey.currentState?.requestFocusFromMemory(
+        resetNearEndPaging: resetNearEndPaging,
+      );
     });
   }
 

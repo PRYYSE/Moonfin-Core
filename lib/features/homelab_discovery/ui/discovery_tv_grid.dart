@@ -87,7 +87,7 @@ class HomeLabDiscoveryTvGridState extends State<HomeLabDiscoveryTvGrid> {
       _focusedIndex = 0;
     } else {
       _focusedIndex = _focusedIndex.clamp(0, widget.items.length - 1);
-      if (!identical(oldWidget.items, widget.items)) {
+      if (!_sameLogicalItems(oldWidget.items, widget.items)) {
         _lastNearEndItemCount = null;
       }
     }
@@ -110,12 +110,29 @@ class HomeLabDiscoveryTvGridState extends State<HomeLabDiscoveryTvGrid> {
     super.dispose();
   }
 
-  void requestFocusFromMemory() {
+  void requestFocusFromMemory({bool resetNearEndPaging = false}) {
+    if (resetNearEndPaging) _lastNearEndItemCount = null;
     if (widget.items.isEmpty || !_focusNode.canRequestFocus) return;
     final index = HubFocusMemory.getForHub(widget.hubKey, widget.items.length);
     _setFocusedIndex(index, notifyNearEnd: false);
     _focusNode.requestFocus();
     _scrollToFocused();
+  }
+
+  bool _sameLogicalItems(
+    List<SeerrDiscoverItem> previous,
+    List<SeerrDiscoverItem> current,
+  ) {
+    if (identical(previous, current)) return true;
+    if (previous.length != current.length) return false;
+    for (var index = 0; index < previous.length; index++) {
+      final before = previous[index];
+      final after = current[index];
+      if (before.id != after.id || before.mediaType != after.mediaType) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _handleFocusChange() {
