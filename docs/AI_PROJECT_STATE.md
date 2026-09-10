@@ -9,7 +9,7 @@ Complete everything reasonably possible in GitHub/code across Home Lab Moonfin D
 Repository: `PRYYSE/Moonfin-Core`  
 Branch: `homelab/discovery-v2`
 
-**Current phase:** final Smart-TV / webOS reconciliation. Android TV / Google TV is now GitHub/code complete.
+**Current phase:** final Smart-TV/webOS semantic reconciliation. Android TV / Google TV is GitHub/code complete. A narrow webOS high-rating provenance correction is under its required Smart-TV CI gate.
 
 ## Completed foundations — do not redo
 
@@ -23,54 +23,79 @@ Physical mobile/tablet/TV acceptance remains deferred.
 
 ## Android TV / Google TV — CLOSED
 
-Primary deterministic-focus source:
+Final wide-TV/full-build source `15ccc28b84727543ad714ef19dd318f907d1a1d8`.
 
-`2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
+Required full candidate workflow **#128 / `34429841034`** was GREEN:
 
-Paging-error root-cause fix:
-
-`5e0886a114dc1ee7ba783512e80e648634b915a7`
-
-Final wide-TV/full-build source:
-
-`15ccc28b84727543ad714ef19dd318f907d1a1d8`
-
-Final focused pre-candidate gate #127 / `34422202215` was GREEN with route integration PASS, catalogue 486 + 8 Python tests PASS, format 54 files/0 changed, analyse no issues, Discovery 106 passed/5 skipped, Chrome 12 passed and custom-scope PASS.
-
-### Final required full candidate — #128 GREEN
-
-Workflow **#128 / `34429841034`**, exact source `15ccc28b84727543ad714ef19dd318f907d1a1d8`:
-
-- focused validation job `102722801700`: **GREEN**
-- Web + `mobile-beta` + `androidTv-beta` build job `102723571678`: **GREEN**
-- Web release built successfully
-- mobile-beta release APK built successfully, 128.1 MB
-- androidTv-beta release APK built successfully, 127.1 MB
+- focused job `102722801700` GREEN
+- Web + mobile-beta + androidTv-beta job `102723571678` GREEN
+- Web release built
+- mobile-beta release APK 128.1 MB built
+- androidTv-beta release APK 127.1 MB built
 - Flutter `3.44.1`
 - app `2.5.1+30000149`
 - Android TV `2.5.1`, build `2000016`
 - Android TV uses `MOONFIN_FORCE_TV=true`
-- CI signing remains `debug-fallback-not-for-deployment`; production signing remains the existing Home Lab certificate
+- CI signing remains `debug-fallback-not-for-deployment`
 
-Candidate hashes:
+Candidate SHA-256:
 
-- Android TV APK SHA-256 `39406273a5cf6d5cfb3d0a3316fb08b8cee6a5feec985056d51829096981279f`
-- Android mobile APK SHA-256 `a9aaa9b32735e59c2ff9530a7a52c27d6a22c8b8fbbbd608da095c511fa88819`
-- Web tar.gz SHA-256 `97084634a83e2d4ddf84976d0176bcf35d3ebea3ba11e04c6621af02f7e768e1`
+- Android TV APK `39406273a5cf6d5cfb3d0a3316fb08b8cee6a5feec985056d51829096981279f`
+- Android mobile APK `a9aaa9b32735e59c2ff9530a7a52c27d6a22c8b8fbbbd608da095c511fa88819`
+- Web tar.gz `97084634a83e2d4ddf84976d0176bcf35d3ebea3ba11e04c6621af02f7e768e1`
 
-Uploaded candidate artifact:
-
-- ID `10134675199`
-- size `304720354` bytes
-- ZIP digest `sha256:c3f45b293d5d0b17b0e0086aa6f1724eaf6566d936e91840a0c23cbe0262014e`
+Artifact ID `10134675199`, size `304720354` bytes, ZIP digest `sha256:c3f45b293d5d0b17b0e0086aa6f1724eaf6566d936e91840a0c23cbe0262014e`.
 
 Production signing certificate invariant remains SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`; never regenerate or replace it.
 
-## Smart-TV / webOS and live
+## Smart-TV / webOS — current gate
 
-Smart-TV/webOS may now be inspected/reconciled. Do a narrow recovery from its live branch/current checkpoint; do not restart prior webOS work.
+Repo `PRYYSE/Smart-TV`, branch `homelab/webos-discovery-v2`.
 
-Live remains untouched: custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`, accepted legacy Discovery 481/486, Seerr enabled. Existing archive/recovery refs remain intact.
+Narrow reconciliation confirmed the pre-correction Smart-TV branch HEAD `7f2fc28c8224ffe426645ed28dc35651eec31fa3` differed from its last verified product source `a3a3317894a90bbab8b12cc7764187a8c5591369` only by the checkpoint document. There were no hidden unverified source changes.
+
+The established #50 candidate remains the last verified webOS package until the current gate completes:
+
+- workflow `34184420915` / #50 GREEN
+- 16/16 focused suites, 85/85 tests
+- strict Enact lint, legacy CSS checks, production build and IPK packaging passed
+- artifact `10040048352`
+- artifact digest `sha256:6e765d2ad65fcd0cfb487bfc13075da209332e3f5004ea3e14a434b8d2661eef`
+- IPK manifest SHA-256 `24e7a3af27c6ddf77d747b9990780073edb692ad6cef6453957d3afc45ee8e06`
+- identity remains `org.moonfin.webos` / `2.7.0` / `index.html`
+
+### Narrow high-rating provenance correction — CI PENDING
+
+Catalogue semantics explicitly advertise `Based on Your Highest Ratings` and `Similar to Anime You Rated Highly`. The webOS source still used Likes + Favourites for `high-ratings`, while Jellyfin exposes numeric per-user `UserData.Rating` and Moonfin-Core's newer proven source logic uses ratings >=8/10.
+
+Smart-TV product source:
+
+`42854590caf4dbf847696483d943a886d5ab8ed7` — `fix(discovery-v2): use real Jellyfin high-rating seeds`
+
+Changes:
+
+- `high-ratings` now uses one bounded Jellyfin query with `Limit: 100`, recent played Movie/Series candidates and `UserData.Rating >= 8`
+- `anime-high-ratings` inherits the same true rating source plus existing anime filtering
+- dynamic title corrected from `Because You Liked ...` to `Because You Rated ... Highly`
+- focused regression covers source query, numeric filtering, chosen recommendation seed and anime alias policy
+- request fan-out is reduced from two parallel Jellyfin source requests to one
+- no catalogue, structural semantics, UI/focus, package identity or live changes
+
+Required Smart-TV workflow:
+
+- **#51 / `34432674158`**
+- exact source `42854590caf4dbf847696483d943a886d5ab8ed7`
+- status when checkpointed: **in progress**
+
+Do not poll #51 repeatedly. Next continuation inspects this exact run once.
+
+## Cross-platform parity debt after webOS closes
+
+Do not regress webOS to Flutter's old slot/hash behaviour. Current evidence instead calls for an explicit semantic matrix: keep truthful real-source implementations on each platform, reconcile webOS-proven novelty/rewatch/anime-not-owned behaviour with current Flutter fail-closed handling, preserve stronger Moonfin-Core provenance sources where applicable, and keep the 13 structural/context lanes fail-closed until independently proven. Real-data recommendation-quality tuning remains a later evidence-driven step.
+
+## Live
+
+Untouched: custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`, accepted legacy Discovery 481/486, Seerr enabled. Existing archive/recovery refs remain intact.
 
 ## Completion order
 
@@ -78,7 +103,7 @@ Live remains untouched: custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba2
 2. Web — COMPLETE
 3. Android mobile/tablet — COMPLETE
 4. Android TV / Google TV — COMPLETE
-5. final webOS reconciliation — **ACTIVE**
+5. final webOS reconciliation — **ACTIVE: #51 pending**
 6. cross-platform parity/recommendation quality
 7. whole-product CI/release engineering
 8. upstream-update automation/protocol integration
@@ -87,4 +112,4 @@ Live remains untouched: custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba2
 
 ## Exact next action
 
-Inspect the live `PRYYSE/Smart-TV` webOS Discovery branch and its newest current-state/checkpoint material, reconcile it against the already-complete shared Discovery semantics and accepted live webOS baseline, and continue only the remaining webOS work. Do not re-audit Moonfin-Core or touch live services.
+Inspect Smart-TV workflow **#51 / `34432674158` once**. If green, record exact tests/build/package/identity/artifact hashes, mark webOS GitHub reconciliation complete and continue into cross-platform parity. If red, inspect only the failing gate and fix that root cause. Do not re-audit completed Moonfin-Core work or touch live services.
