@@ -165,11 +165,19 @@ jobs:
           grep -q "^package: name='$expected_beta_id'" <<<"$mobile_badging"
           grep -q "^package: name='$expected_beta_id'" <<<"$tv_badging"
 
-          if grep -q '^leanback-launcher:' <<<"$mobile_badging"; then
-            echo 'Mobile beta unexpectedly exposes a Leanback launcher.' >&2
+          mobile_leanback="$(grep 'android.software.leanback' <<<"$mobile_badging" | head -n1 || true)"
+          tv_leanback="$(grep 'android.software.leanback' <<<"$tv_badging" | head -n1 || true)"
+
+          if [[ "$mobile_leanback" != uses-feature-not-required:* ]]; then
+            echo 'Mobile beta must keep android.software.leanback optional.' >&2
+            printf 'Observed mobile Leanback badging: %s\n' "${mobile_leanback:-<missing>}" >&2
             exit 1
           fi
-          grep -q '^leanback-launcher:' <<<"$tv_badging"
+          if [[ "$tv_leanback" != uses-feature:* ]]; then
+            echo 'Android TV beta must require android.software.leanback.' >&2
+            printf 'Observed TV Leanback badging: %s\n' "${tv_leanback:-<missing>}" >&2
+            exit 1
+          fi
 
           cert_digest() {
             "$apksigner_bin" verify --print-certs "$1" \
@@ -188,7 +196,7 @@ jobs:
           printf '%s\n' "$mobile_cert" > /tmp/android-ci-cert-sha256
           printf 'Verified beta application ID: %s\n' "$expected_beta_id"
           printf 'Verified CI signing certificate SHA-256: %s\n' "$mobile_cert"
-          printf 'Verified Android TV Leanback launcher and mobile non-Leanback split.\n'
+          printf 'Verified Leanback requirement split: optional on mobile, required on Android TV.\n'
 
       - name: Package candidate artifacts
         shell: bash
@@ -213,7 +221,8 @@ jobs:
           mobile_flavor=mobile-beta
           android_tv_flavor=androidTv-beta
           android_beta_application_id=org.moonfin.androidtv.beta
-          android_tv_leanback_verified=true
+          mobile_leanback_required=false
+          android_tv_leanback_required=true
           android_ci_signing=debug-fallback-not-for-deployment
           android_ci_certificate_sha256=${ci_cert}
           production_android_signing=preserve-existing-homelab-certificate
