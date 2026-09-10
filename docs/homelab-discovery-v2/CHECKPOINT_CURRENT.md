@@ -10,7 +10,7 @@ Read this file with `docs/AI_PROJECT_STATE.md`. Do not restart completed work or
 - Shared semantics/personalisation: COMPLETE
 - Web: COMPLETE
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
-- Android TV / Google TV: **ACTIVE — deterministic focus/navigation Slice 2 paging-retry fix prepared**
+- Android TV / Google TV: **ACTIVE — deterministic focus/navigation Slice 2 paging-retry fix ready for publication**
 - Smart-TV/webOS: do not reconcile until Android TV is complete
 
 ## Verified foundations
@@ -23,13 +23,7 @@ Production signing invariant remains SHA-256 `3163e01792e429ce972097a8e3ff9a4626
 
 ## Android TV / Google TV — Slice 2
 
-Primary deterministic focus source:
-
-`2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`
-
-Formatter-only follow-up:
-
-`a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`
+Primary deterministic focus source `2a204646fd296df1f57bd4dc4d7d3d1f969d7e6a`; formatter-only follow-up `a37ed60b9a996f4e292fe75e747fe1d95dcf16f4`.
 
 Implemented:
 
@@ -52,18 +46,22 @@ Implemented:
 - Discovery **105 passed, 1 failed, 5 skipped**
 - sole failure: `TV paging error reaches Retry More and restores grid focus`
 
-### Root cause / prepared fix
+### Root cause / final rebased fix
 
-The failure is a real TV paging-state defect, not a bad assertion. `HomeLabDiscoverySeeAllController.state` returns a new unmodifiable list wrapper on rebuild even when media contents are unchanged. `HomeLabDiscoveryTvGrid.didUpdateWidget` used list identity to reset its near-end paging latch, so a failed page-2 request could immediately auto-trigger another load-more request and clear the error before the Retry More action stayed visible.
+The failure is a real TV paging-state defect. Rebuilt controller states wrap unchanged media in fresh list objects; the grid used list identity to reset its near-end latch, so a failed page-2 request could immediately auto-trigger another load-more request and clear the error before Retry More remained visible.
 
-Prepared root-cause fix source content was first staged as `b16a8fe9c9977610c857cbf9ca8706ffe49a64fb`; after this durable docs checkpoint advanced the branch, the same exact two-file source content is being rebased cleanly rather than force-pushed.
+Final rebased source ready for branch publication:
+
+`20a6e609abca82f4eefc008632d77c9afd4632df`
+
+`fix(discovery-v2): keep TV paging errors user-actionable`
 
 Fix semantics:
 
 - unchanged ordered logical media (`mediaType` + `id`) does not re-arm near-end paging merely because the list wrapper changed
 - explicit user Refresh can deliberately reset the near-end latch, even if refreshed page 1 contains the same media
 - Retry More/detail-return focus restoration does not implicitly re-arm paging
-- no controller/catalogue, package/signing, Smart-TV or live changes
+- exact source change remains two TV product files only; no controller/catalogue, package/signing, Smart-TV or live changes
 
 ## Remaining TV completion after replacement focused validation green
 
@@ -78,4 +76,4 @@ Physical TV acceptance remains deferred.
 
 ## Exact next action
 
-Publish the rebased two-file paging-latch fix to `homelab/discovery-v2`, capture its single replacement workflow run, update both durable checkpoints with the exact source/run and stop under the long-CI rule. On the following continuation, inspect that exact run once; if green, continue directly into the remaining TV closure review and final full candidate.
+Publish source `20a6e609abca82f4eefc008632d77c9afd4632df` to `homelab/discovery-v2`, capture its single replacement workflow run, then update both durable checkpoints with exact source/run and stop under the long-CI rule. On continuation, inspect that exact run once; if green, proceed directly into the remaining TV closure review and final full candidate.
