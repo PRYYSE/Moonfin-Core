@@ -165,8 +165,8 @@ jobs:
           grep -q "^package: name='$expected_beta_id'" <<<"$mobile_badging"
           grep -q "^package: name='$expected_beta_id'" <<<"$tv_badging"
 
-          mobile_leanback="$(grep 'android.software.leanback' <<<"$mobile_badging" | head -n1 || true)"
-          tv_leanback="$(grep 'android.software.leanback' <<<"$tv_badging" | head -n1 || true)"
+          mobile_leanback="$(grep 'android.software.leanback' <<<"$mobile_badging" | head -n1 | sed 's/^[[:space:]]*//' || true)"
+          tv_leanback="$(grep 'android.software.leanback' <<<"$tv_badging" | head -n1 | sed 's/^[[:space:]]*//' || true)"
 
           if [[ "$mobile_leanback" != uses-feature-not-required:* ]]; then
             echo 'Mobile beta must keep android.software.leanback optional.' >&2
