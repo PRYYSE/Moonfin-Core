@@ -93,7 +93,7 @@ class HomeLabDiscoveryPersonalisation {
         .toList(growable: false);
 
     return HomeLabDiscoveryPersonalPage(
-      title: section.title,
+      title: _sourceDisplayTitle(section),
       page: SeerrDiscoverPage(
         page: loaded.page,
         totalPages: loaded.totalPages,
@@ -172,6 +172,15 @@ class HomeLabDiscoveryPersonalisation {
   void clear() {
     _rows.clear();
     _personalSources?.clear();
+  }
+
+  static String _sourceDisplayTitle(HomeLabDiscoverySection section) {
+    final strategy = (section.query.seedStrategy ?? '').trim().toLowerCase();
+    if (strategy == 'anime-novelty' ||
+        strategy == 'anime-something-different') {
+      return 'Something Different in Anime';
+    }
+    return section.title;
   }
 
   bool _matches(HomeLabDiscoveryPersonalPolicy policy, AggregatedItem item) {

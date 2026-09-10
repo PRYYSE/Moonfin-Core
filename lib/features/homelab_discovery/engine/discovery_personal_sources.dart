@@ -12,6 +12,8 @@ enum HomeLabDiscoveryPersonalSourceKind {
   highRatings,
   likes,
   mixedPositive,
+  random,
+  rewatchPositive,
   recentlyAdded,
   trendingAnime,
 }
@@ -64,6 +66,24 @@ HomeLabDiscoveryPersonalSourcePolicy? homeLabDiscoveryPersonalSourcePolicy(
       kind: HomeLabDiscoveryPersonalSourceKind.mixedPositive,
       mode: recommendations,
     ),
+    'novelty' => const HomeLabDiscoveryPersonalSourcePolicy(
+      kind: HomeLabDiscoveryPersonalSourceKind.random,
+      mode: recommendations,
+    ),
+    'something-completely-different' =>
+      const HomeLabDiscoveryPersonalSourcePolicy(
+        kind: HomeLabDiscoveryPersonalSourceKind.random,
+        mode: recommendations,
+      ),
+    'rewatch' => const HomeLabDiscoveryPersonalSourcePolicy(
+      kind: HomeLabDiscoveryPersonalSourceKind.rewatchPositive,
+      mode: direct,
+    ),
+    'comfort-rewatch-candidates' =>
+      const HomeLabDiscoveryPersonalSourcePolicy(
+        kind: HomeLabDiscoveryPersonalSourceKind.rewatchPositive,
+        mode: direct,
+      ),
     'anime-recent-history' => const HomeLabDiscoveryPersonalSourcePolicy(
       kind: HomeLabDiscoveryPersonalSourceKind.recentHistory,
       mode: recommendations,
@@ -84,6 +104,17 @@ HomeLabDiscoveryPersonalSourcePolicy? homeLabDiscoveryPersonalSourcePolicy(
       mode: recommendations,
       animeOnly: true,
     ),
+    'anime-novelty' => const HomeLabDiscoveryPersonalSourcePolicy(
+      kind: HomeLabDiscoveryPersonalSourceKind.random,
+      mode: recommendations,
+      animeOnly: true,
+    ),
+    'anime-something-different' =>
+      const HomeLabDiscoveryPersonalSourcePolicy(
+        kind: HomeLabDiscoveryPersonalSourceKind.random,
+        mode: recommendations,
+        animeOnly: true,
+      ),
     'recently-added' => const HomeLabDiscoveryPersonalSourcePolicy(
       kind: HomeLabDiscoveryPersonalSourceKind.recentlyAdded,
       mode: direct,
@@ -136,7 +167,8 @@ class HomeLabDiscoveryPersonalSources {
   static const String _sourceFields =
       'DateCreated,Type,UserData,Overview,Genres,CommunityRating,'
       'OfficialRating,RunTimeTicks,ProductionYear,ImageTags,BackdropImageTags,'
-      'ProviderIds,Tags,People,Studios,SeriesId';
+      'ProviderIds,Tags,People,Studios,SeriesId,OriginalLanguage,'
+      'ProductionLocations';
 
   final String serverId;
   final MediaServerClient? _client;
@@ -309,6 +341,14 @@ class HomeLabDiscoveryPersonalSources {
         return _dedupe(
           pools.expand((items) => items).toList(growable: false),
         ).take(_maxSnapshotItems).toList(growable: false);
+      case HomeLabDiscoveryPersonalSourceKind.random:
+        return _queryLocal(
+          includeItemTypes: const ['Movie', 'Series'],
+          sortBy: 'Random',
+          limit: _maxSnapshotItems,
+        );
+      case HomeLabDiscoveryPersonalSourceKind.rewatchPositive:
+        return _loadRewatchPositive();
       case HomeLabDiscoveryPersonalSourceKind.recentlyAdded:
         return _queryLocal(
           includeItemTypes: const ['Movie', 'Series'],
@@ -328,6 +368,24 @@ class HomeLabDiscoveryPersonalSources {
     sortOrder: 'Descending',
     limit: _maxRatedCandidates,
   );
+
+  Future<List<AggregatedItem>> _loadRewatchPositive() async {
+    final pools = await Future.wait([
+      _queryLocal(
+        includeItemTypes: const ['Movie', 'Series'],
+        filters: const ['IsPlayed'],
+        isFavorite: true,
+        sortBy: 'DatePlayed',
+        sortOrder: 'Descending',
+        limit: _maxSnapshotItems,
+      ),
+      _pool(HomeLabDiscoveryPersonalSourceKind.highRatings),
+      _pool(HomeLabDiscoveryPersonalSourceKind.likes),
+    ]);
+    return _dedupe(
+      pools.expand((items) => items).toList(growable: false),
+    ).take(_maxSnapshotItems).toList(growable: false);
+  }
 
   Future<List<AggregatedItem>> _loadRecentHistory() async {
     final raw = await _queryLocal(
@@ -560,18 +618,27 @@ class HomeLabDiscoveryPersonalSources {
     final tags = (item.rawData['Tags'] as List? ?? const []).map(
       (value) => value.toString().toLowerCase(),
     );
-    final genres = item.genres.map((value) => value.toLowerCase());
+    final genres = item.genres.map((value) => value.toLowerCase()).toSet();
     if (tags.any((value) => value.contains('anime')) ||
         genres.any((value) => value.contains('anime'))) {
       return true;
     }
 
-    if (item.serverId != 'seerr') return false;
-    final genreIds = (item.rawData['GenreIds'] as List? ?? const [])
-        .map((value) => value is int ? value : int.tryParse(value.toString()))
-        .whereType<int>();
     final language = item.rawData['OriginalLanguage']?.toString().toLowerCase();
-    return genreIds.contains(16) && language == 'ja';
+    final japanese =
+        language == 'ja' || language == 'jpn' || language == 'japanese';
+    if (item.serverId == 'seerr') {
+      final genreIds = (item.rawData['GenreIds'] as List? ?? const [])
+          .map((value) => value is int ? value : int.tryParse(value.toString()))
+          .whereType<int>();
+      return genreIds.contains(16) && japanese;
+    }
+
+    final isAnimated = genres.contains('animation');
+    final fromJapan = item.productionLocations.any(
+      (value) => value.toLowerCase() == 'japan',
+    );
+    return isAnimated && (japanese || fromJapan);
   }
 
   static List<AggregatedItem> _dedupe(List<AggregatedItem> items) {
