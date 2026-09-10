@@ -13,7 +13,7 @@ Read with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PARITY_M
 - Android TV / Google TV: **GITHUB/CODE COMPLETE**
 - Smart-TV/webOS: **GITHUB/CODE COMPLETE + PARITY VALIDATED**
 - Cross-platform parity + recommendation quality: **COMPLETE for current GitHub/code evidence**
-- Whole-product CI / release engineering: **CURRENT — REPLACEMENT FULL BUILD RUNNING**
+- Whole-product CI / release engineering: **CURRENT — REPLACEMENT FULL BUILD #136 RUNNING**
 
 ## Parity closure
 
@@ -42,56 +42,62 @@ Final parity decisions remain locked: bounded novelty, truthful anime novelty ti
 
 Scope is Web + Android mobile/tablet + Android TV/Google TV + webOS only.
 
-Initial release-hardening source:
+### Release-gate recovery
 
-`de783e5af94f528d319c6f469e977d129bbc4435` — `ci(discovery): harden release candidate verification [full-build]`
+- **#133 / `34440033993`**: failed only in the new Android verifier after focused validation and all three builds passed; original verifier contract was wrong.
+- `4f8dbec00b51800d7bf8d0ec321807207623bbfc`: corrected the verifier to test mobile Leanback optional vs TV Leanback required.
+- **#134 / `34442473966`**: failed only because `aapt` indented the otherwise-correct mobile Leanback line.
+- `41cfa0f33a392706a37c3c9ade13c575484597c1`: normalised leading `aapt` whitespace.
+- **#135 / `34448096121`**: focused validation and Web/mobile/TV builds passed; verifier then proved the built `androidTv-beta` APK itself still exposed Leanback as optional. Packaging/upload were skipped.
 
-### Verifier recovery
+Exact #135 evidence:
 
-Workflow **#133 / `34440033993`** failed only at the new Android candidate verifier after focused validation and Web/mobile/TV builds passed. Its verifier tested the wrong Leanback distinction.
+`Observed TV Leanback badging: uses-feature-not-required: name='android.software.leanback'`
 
-Verifier-contract correction:
+Root cause is now identified as beta flavour source-set wiring:
 
-`4f8dbec00b51800d7bf8d0ec321807207623bbfc` — `ci(discovery): verify leanback requirement split [full-build]`
+- `mobile`, `mobile-beta`, `androidTv` and `androidTv-beta` are sibling product flavours.
+- `src/androidTv/AndroidManifest.xml` correctly marks Leanback required, but Android Gradle Plugin selects flavour source sets by exact flavour name.
+- `androidTv-beta` therefore did not inherit the `androidTv` manifest automatically.
 
-Workflow **#134 / `34442473966`** also failed only at `Verify Android candidate identity and signing`; focused validation and all three builds passed again.
+Root-cause fix:
 
-Exact observed #134 output:
+`e655545cbbc9902e24bf30c5aa8a43a86b39ce9d` — `fix(android): share device manifests with beta flavours [full-build]`
 
-`Observed mobile Leanback badging:   uses-feature-not-required: name='android.software.leanback'`
+It explicitly maps:
 
-This proves the mobile APK already had the expected optional Leanback semantic. `aapt` added leading whitespace and the verifier compared from column 1.
+- `mobile-beta` → `src/mobile/AndroidManifest.xml`
+- `androidTv-beta` → `src/androidTv/AndroidManifest.xml`
 
-Whitespace-only verifier correction:
+Only Gradle source-set wiring changed. No Discovery Dart/catalogue semantics, production signing material or live services changed.
 
-`41cfa0f33a392706a37c3c9ade13c575484597c1` — `ci(discovery): normalise aapt leanback badging [full-build]`
-
-Only the workflow changed; no app code or manifests changed. Current release checks still require:
+Current release checks still require:
 
 - beta package ID `org.moonfin.androidtv.beta`
 - mobile Leanback optional
 - Android-TV Leanback required
 - same CI signer on both APKs
 - CI signer different from production SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
-- truthful BUILD_INFO signing/Leanback metadata
+- truthful `BUILD_INFO.txt` signing/Leanback metadata
+- package/upload candidate bundle
 
 CI candidates remain debug-fallback and are not deployment APKs.
 
 ### Authoritative replacement gate
 
-- workflow **#135 / `34448096121`**
-- source `41cfa0f33a392706a37c3c9ade13c575484597c1`
+- workflow **#136 / `34466334114`**
+- source `e655545cbbc9902e24bf30c5aa8a43a86b39ce9d`
 - captured status: **IN PROGRESS**
 
-Do not poll #135 again in this waiting cycle.
+Do not poll #136 again in this waiting cycle.
 
 ## Known non-blocking CI debt
 
-Runner logs warn about Node-20-targeted action runtimes (`actions/checkout@v4`, `actions/setup-java@v4`) and setup-java v4 deprecation. These warnings did not cause #133 or #134. Keep that maintenance separate until the current release gate is green.
+Runner logs warn about Node-20-targeted action runtimes (`actions/checkout@v4`, `actions/setup-java@v4`) and setup-java v4 deprecation. These warnings did not cause #133–#135. Keep that maintenance separate until the release gate is green.
 
 ## Exact next actions
 
-1. Next continuation: inspect **#135 / `34448096121` once**.
+1. Next continuation: inspect **#136 / `34466334114` once**.
 2. If failed, inspect only the failing job/step and fix the genuine failure.
 3. If green, capture artifact ID/digest, `BUILD_INFO.txt`, CI signer and Web/mobile/Android-TV SHA-256 values.
 4. Mark whole-product CI/release engineering complete.
