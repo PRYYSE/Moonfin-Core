@@ -9,7 +9,7 @@ Complete everything reasonably possible in GitHub/code across Home Lab Moonfin D
 Repository: `PRYYSE/Moonfin-Core`  
 Branch: `homelab/discovery-v2`
 
-**Current phase:** Android TV / Google TV completion — deterministic focus/navigation Slice 2 remains under focused validation. Workflow #126 exposed one real TV paging-retry defect after 105 tests passed; a narrow root-cause fix is prepared at source `b16a8fe9c9977610c857cbf9ca8706ffe49a64fb` but has not yet been published at this checkpoint.
+**Current phase:** Android TV / Google TV completion — deterministic focus/navigation Slice 2 remains under focused validation. Workflow #126 exposed one real TV paging-retry defect after 105 tests passed; the root-cause fix has been rebased cleanly as source `be69146480f9c9c334d1f2d948ccdbbde702037f` and is ready for branch publication.
 
 ## Completed platform foundations — do not redo
 
@@ -76,28 +76,28 @@ Implemented:
 
 Root cause is a real product issue in `HomeLabDiscoveryTvGrid`: every rebuilt controller state wraps unchanged media items in a fresh list object; `didUpdateWidget` used list identity to re-arm the near-end latch, so the first page-2 failure could immediately auto-trigger another `loadMore`, clearing the error before the Retry More button remained user-actionable.
 
-### Narrow root-cause fix prepared
+### Root-cause fix ready to publish
 
-Prepared source:
+Final rebased source:
 
-`b16a8fe9c9977610c857cbf9ca8706ffe49a64fb`
+`be69146480f9c9c334d1f2d948ccdbbde702037f`
 
 `fix(discovery-v2): keep TV paging errors user-actionable`
 
-Exact diff from current checkpoint: one commit, two TV product files only:
+Exact source diff remains two TV product files only:
 
-- `discovery_tv_grid.dart`: +19/-2
-- `homelab_discovery_see_all_screen.dart`: +5/-3
+- `discovery_tv_grid.dart`: logical item identity now controls near-end latch re-arming; requestFocusFromMemory can explicitly reset the latch for a user Refresh
+- `homelab_discovery_see_all_screen.dart`: explicit Refresh requests that reset; Retry More/detail return do not
 
 Fix semantics:
 
-- near-end paging is re-armed only when the logical ordered media identity (`mediaType` + `id`) actually changes, not when the same media is wrapped in a new list object
-- explicit user Refresh can deliberately reset the near-end latch even when refreshed page 1 contains the same media, preserving fresh-session paging
-- Retry More and detail-return focus restoration do not implicitly re-arm paging
+- unchanged ordered logical media (`mediaType` + `id`) does not re-arm near-end paging merely because the list wrapper changed
+- explicit user Refresh can deliberately reset the near-end latch, even if refreshed page 1 contains the same media
+- Retry More/detail-return focus restoration does not implicitly re-arm paging
 
 No catalogue/controller, package/version/signing, Smart-TV or live changes.
 
-## Remaining TV completion after the replacement focused gate is green
+## Remaining TV completion after replacement focused validation green
 
 1. confirm Back/detail return and re-entry coverage with the new focus bridge;
 2. validate off-screen focus/scroll at representative 1080p and 4K widths;
@@ -117,7 +117,7 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 1. shared semantics/personalisation — COMPLETE
 2. Web — COMPLETE
 3. Android mobile/tablet — COMPLETE
-4. Android TV / Google TV — **ACTIVE; Slice 2 paging-retry fix prepared**
+4. Android TV / Google TV — **ACTIVE; Slice 2 paging-retry fix ready to publish**
 5. final webOS reconciliation
 6. cross-platform parity/recommendation quality
 7. whole-product CI/release engineering
@@ -127,4 +127,4 @@ Do not inspect or modify Smart-TV/webOS until Android TV / Google TV is complete
 
 ## Exact next action
 
-Publish prepared source `b16a8fe9c9977610c857cbf9ca8706ffe49a64fb` to `homelab/discovery-v2`, capture the single replacement workflow run, update both durable checkpoints with its exact source/run and stop under the long-CI rule. On the following continuation, inspect that replacement run once; if green, proceed directly into the remaining TV closure review and final full candidate.
+Publish source `be69146480f9c9c334d1f2d948ccdbbde702037f` to `homelab/discovery-v2`, capture its replacement workflow run ID/source, update both durable checkpoints with that exact run, then stop under the long-CI rule. On the following continuation, inspect that exact run once; if green, proceed directly into the remaining TV closure review and final full candidate.
