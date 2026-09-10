@@ -13,73 +13,81 @@ Read with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PARITY_M
 - Android TV / Google TV: **GITHUB/CODE COMPLETE**
 - Smart-TV/webOS: **GITHUB/CODE COMPLETE + PARITY VALIDATED**
 - Cross-platform parity + recommendation quality: **COMPLETE for current GitHub/code evidence**
-- Whole-product CI / release engineering: **CURRENT**
+- Whole-product CI / release engineering: **CURRENT — FULL BUILD RUNNING**
 
 ## Parity closure
 
-### Moonfin-Core
+Moonfin slice 1:
 
-Parity slice 1:
-
-- implementation `572e32d54d14d0d50ba8066cd817d8938ffae572`
-- format correction `9ccb89927ca23bb4d3f00043f70ba138a6239beb`
+- `572e32d54d14d0d50ba8066cd817d8938ffae572`
+- formatter correction `9ccb89927ca23bb4d3f00043f70ba138a6239beb`
 - workflow #130 / `34436806830` GREEN
 
-Parity slice 2:
+Moonfin slice 2:
 
 - product `b800e5be18109963e4ae00b3739550b924c7204f`
-- format-only follow-up `e654668f89af49470df417d4fcc444e73c53121e`
+- formatter-only follow-up `e654668f89af49470df417d4fcc444e73c53121e`
 - workflow **#132 / `34439296054` GREEN**
-- route, catalogue + 8 Python tests, format, analyse, Flutter Discovery tests, Chrome interaction tests and scope verification all passed
+- route, catalogue + 8 Python tests, format, analyse, Flutter Discovery tests, Chrome tests and custom-scope verification all passed
 
-### Smart-TV/webOS
+Smart-TV/webOS parity:
 
-- parity product `a9dfa657a220a3f8f77753261bd7d8e902c0d837`
+- product `a9dfa657a220a3f8f77753261bd7d8e902c0d837`
 - workflow **#52 / `34439022624` GREEN**
-- Discovery service tests, webOS package build, app identity/package verification and candidate upload passed
-- artifact `10137277340`
+- Discovery service tests, webOS package build, preserved identity/package verification and candidate upload passed
+- candidate artifact `10137277340`
 - ZIP digest `sha256:9d5ccfed0889a680fa6b4d3532725ce1877f950d306d9599bb6916e9d150c47f`
 
-## Final parity decisions
+Final parity decisions:
 
-- Generic novelty: aligned with bounded random-source semantics.
-- Anime novelty: truthful `Something Different in Anime`; no unsupported usual-genre claim.
-- Rewatch: positive played evidence only; neutral history excluded.
-- Anime detection: aligned for tag/genre and Animation + Japanese language/origin.
-- Popular anime not in library: dormant adapter only; no authored lane, so no parity lane added.
-- Structural/context strategies: intentionally fail-closed.
-- Ranking/source weights: unchanged; real Home Lab aggregate evidence required before tuning.
-
-Recommendation-quality tuning is deferred because real aggregate evidence would cross the current no-live boundary.
+- novelty aligned and bounded
+- anime novelty truthfully labelled `Something Different in Anime`
+- rewatch uses positive played evidence only
+- anime detection aligned
+- popular-anime-not-library remains dormant
+- structural/context strategies remain fail-closed
+- ranking/source weights unchanged pending real Home Lab aggregate evidence
 
 ## Whole-product CI / release engineering
 
-Scope is Web + Android mobile/tablet + Android TV/Google TV + webOS only. Do not expand into unrelated upstream platform release work.
+Scope is Web + Android mobile/tablet + Android TV/Google TV + webOS only.
 
-Current Flutter candidate workflow already supports `[full-build]` and builds Web, `mobile-beta`, and `androidTv-beta` candidates after focused validation.
+Release-hardening source:
 
-Release hardening to apply before the fresh full build:
+`de783e5af94f528d319c6f469e977d129bbc4435` — `ci(discovery): harden release candidate verification [full-build]`
 
-- verify both Android beta APK package IDs are `org.moonfin.androidtv.beta`
-- verify mobile candidate does not expose Leanback launcher semantics
-- verify Android TV candidate does expose Leanback launcher semantics
-- record actual CI APK signer SHA-256
-- assert CI signer is not production certificate `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
-- preserve debug-fallback CI status; these candidates are not deployment APKs
+The Home Lab full-build workflow now additionally verifies:
+
+- both beta APK package IDs are `org.moonfin.androidtv.beta`
+- mobile beta has no Leanback launcher
+- Android TV beta has Leanback launcher
+- both APKs have the same CI signing certificate
+- CI certificate is not production SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
+- CI and production fingerprints are recorded in `BUILD_INFO.txt`
+
+CI candidates remain debug-fallback and are not deployment APKs.
+
+### Authoritative full-build gate
+
+- workflow **#133 / `34440033993`**
+- source `de783e5af94f528d319c6f469e977d129bbc4435`
+- captured status: **IN PROGRESS**
+
+Do not poll #133 again in this waiting cycle.
 
 ## Exact next actions
 
-1. Patch `.github/workflows/homelab-discovery-v2.yml` with the narrow Android candidate identity/signing gate.
-2. Commit with `[full-build]` to trigger focused validation + Web/mobile-beta/androidTv-beta candidate build.
-3. Record the exact new workflow run ID in the durable checkpoint.
-4. Do not continuously poll the long build.
-5. Next continuation: inspect that exact run once; fix genuine failure or, if green, capture artifact ID/digest/candidate SHA-256 values and close release engineering.
-6. Then move to upstream-update automation/protocol integration.
+1. Next continuation: inspect **#133 / `34440033993` once**.
+2. If failed, inspect only the failing job/step and fix the genuine failure.
+3. If green, capture its artifact ID/digest, `BUILD_INFO.txt`, CI signer and Web/mobile/Android-TV SHA-256 values.
+4. Mark whole-product CI/release engineering complete.
+5. Move directly to **upstream-update automation/protocol integration**.
 
 ## Do not redo
 
-- platform completion passes
-- catalogue/compiler foundations
+- shared catalogue/compiler foundations
+- Web completion
+- Android mobile/tablet completion
 - Android TV focus/deep-paging work
 - webOS old-TV hardening
 - high-rating provenance correction

@@ -26,92 +26,86 @@ Smart-TV repo/branch: `PRYYSE/Smart-TV` / `homelab/webos-discovery-v2`
 
 ## Cross-platform parity + recommendation quality — COMPLETE for GitHub/code evidence
 
-Canonical semantic evidence remains `docs/homelab-discovery-v2/CROSS_PLATFORM_PARITY_MATRIX.md`.
+Canonical semantic evidence: `docs/homelab-discovery-v2/CROSS_PLATFORM_PARITY_MATRIX.md`.
 
-### Parity slice 1
+Parity slice 1:
 
-Implementation `572e32d54d14d0d50ba8066cd817d8938ffae572`; format-only correction `9ccb89927ca23bb4d3f00043f70ba138a6239beb`.
+- implementation `572e32d54d14d0d50ba8066cd817d8938ffae572`
+- format correction `9ccb89927ca23bb4d3f00043f70ba138a6239beb`
+- workflow #130 / `34436806830` GREEN
 
-Workflow #130 / `34436806830` GREEN.
+Parity slice 2:
 
-Validated:
+- Moonfin product `b800e5be18109963e4ae00b3739550b924c7204f`
+- Moonfin format-only follow-up `e654668f89af49470df417d4fcc444e73c53121e`
+- Moonfin workflow **#132 / `34439296054` GREEN**: route, catalogue + 8 Python tests, format, analyse, Flutter Discovery tests, Chrome interaction tests and custom-scope verification passed
+- Smart-TV product `a9dfa657a220a3f8f77753261bd7d8e902c0d837`
+- Smart-TV workflow **#52 / `34439022624` GREEN**: Discovery service tests, webOS package build, preserved identity/package verification and candidate upload passed
 
-- explicit-refresh total-failure fallback retains last good Flutter tab while partial fresh results stay authoritative
-- privacy-safe aggregate recommendation-quality diagnostics
-- state/privacy regression coverage
-- no ranking/source-weight changes
+Resolved semantics:
 
-### Parity slice 2
-
-Moonfin product source `b800e5be18109963e4ae00b3739550b924c7204f`; formatter-only follow-up `e654668f89af49470df417d4fcc444e73c53121e`.
-
-Workflow **#132 / `34439296054` GREEN**. Its focused-validation job passed route integration, authoring catalogue + 8 Python tests, format, analyse, Flutter Discovery tests, Chrome interaction tests and custom-scope verification. Candidate build was intentionally skipped because this was not a full-build trigger.
-
-Smart-TV parity source `a9dfa657a220a3f8f77753261bd7d8e902c0d837`.
-
-Workflow **#52 / `34439022624` GREEN**. `validate-and-package` passed Discovery service tests, webOS package build, preserved app identity/package verification and candidate upload.
-
-Resolved parity semantics:
-
-- generic novelty uses bounded random-source semantics on both clients
-- anime novelty is truthfully presented as `Something Different in Anime`; neither client claims proven exclusion of the user's usual genres
-- rewatch requires positive played evidence rather than neutral recent history
-- Flutter source anime detection includes tags/genre or Animation + Japanese language/origin
-- dormant popular-anime-not-library support remains dormant; no lane was added merely for parity
+- bounded generic novelty aligned
+- anime novelty truthfully presented as `Something Different in Anime`
+- rewatch requires positive played evidence; neutral history is excluded
+- Flutter source anime detection covers tags/genre or Animation + Japanese language/origin
+- dormant popular-anime-not-library support remains dormant
 - unsupported structural/context strategies remain fail-closed
+- no ranking/source-weight tuning from synthetic fixtures
 
-### Recommendation-quality boundary
-
-No ranking weights or source preferences were tuned from synthetic fixtures. Real Home Lab privacy-safe aggregate evidence is required for ranking changes. Because obtaining that evidence crosses the current no-live-service boundary, recommendation tuning is deferred rather than guessed.
+Real recommendation-quality tuning is deferred because privacy-safe production aggregate evidence would cross the current no-live boundary.
 
 ## Whole-product CI / release engineering — CURRENT
 
-Project release scope is the four implemented client surfaces: Web, Android mobile/tablet, Android TV/Google TV and Smart-TV/webOS. Do not broaden this stage into unrelated upstream iOS/macOS/Windows/Linux release work.
+Scope is Web + Android mobile/tablet + Android TV/Google TV + Smart-TV/webOS. Do not broaden this phase into unrelated upstream iOS/macOS/Windows/Linux release work.
 
-Existing Home Lab workflow `.github/workflows/homelab-discovery-v2.yml` is the authoritative Flutter candidate path. A `[full-build]` push runs focused validation and then builds:
-
-- Web release candidate
-- Android `mobile-beta` release APK
-- Android `androidTv-beta` release APK with `MOONFIN_FORCE_TV=true`
-- `BUILD_INFO.txt` and SHA-256 sums
-
-CI Android candidates intentionally use debug fallback signing and are **not deployment APKs**. Production signing identity must remain untouched.
-
-Smart-TV workflow #52 already produced the current webOS candidate artifact:
+Smart-TV release candidate is already validated by workflow #52:
 
 - artifact ID `10137277340`
-- artifact name `Moonfin-HomeLab-webOS-DiscoveryV2-a9dfa657a220a3f8f77753261bd7d8e902c0d837`
+- name `Moonfin-HomeLab-webOS-DiscoveryV2-a9dfa657a220a3f8f77753261bd7d8e902c0d837`
 - size `4,312,826` bytes
 - ZIP digest `sha256:9d5ccfed0889a680fa6b4d3532725ce1877f950d306d9599bb6916e9d150c47f`
 
+Flutter candidate workflow hardening source:
+
+`de783e5af94f528d319c6f469e977d129bbc4435` — `ci(discovery): harden release candidate verification [full-build]`
+
+Added release gates:
+
+- both Android beta APKs must identify as `org.moonfin.androidtv.beta`
+- mobile beta must not expose Leanback launcher semantics
+- Android TV beta must expose Leanback launcher semantics
+- actual CI signer SHA-256 is extracted from both APKs and must match between them
+- CI signer must not equal preserved production certificate `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
+- CI signer and production fingerprint are recorded in `BUILD_INFO.txt`
+- CI candidates remain debug-fallback and not for deployment
+
+Authoritative full candidate run:
+
+- workflow **#133 / `34440033993`**
+- source `de783e5af94f528d319c6f469e977d129bbc4435`
+- status at the single capture: **IN PROGRESS**
+
+Do not poll this run again in the same waiting cycle.
+
 ### Release-engineering acceptance gate
 
-Before closing this phase:
-
-1. Harden the Flutter candidate workflow so the built Android beta APKs verify expected package identity, mobile-vs-TV Leanback distinction and actual CI signing certificate.
-2. Assert the CI certificate is not the preserved production certificate.
-3. Trigger the Home Lab workflow with `[full-build]` from the current parity-complete branch.
-4. Require focused validation and Web/mobile-beta/androidTv-beta candidate build/package/upload to pass.
-5. Record exact workflow/run, artifact ID/digest and generated candidate SHA-256 values.
-6. Do not deploy or perform physical/live acceptance in this phase.
+Before closing this phase, run #133 must pass focused validation plus Web/mobile-beta/androidTv-beta build, Android identity/signing verification, packaging and artifact upload. Then record artifact ID/digest, `BUILD_INFO.txt`, and generated candidate SHA-256 values. No deployment or physical/live acceptance belongs to this phase.
 
 ## Environment limitation
 
-The current execution container cannot resolve `github.com` and has no useful local Flutter checkout. GitHub Actions remains the authoritative Flutter/analyse/build gate. GitHub API writes must remain narrow and branch state is authoritative.
+The current execution container cannot resolve `github.com` and has no useful local Flutter checkout. GitHub Actions remains the authoritative Flutter/analyse/build gate. GitHub API writes must remain narrow and current branch state is authoritative.
 
 ## Exact next actions
 
-1. Apply the narrow candidate identity/signing verification hardening to `.github/workflows/homelab-discovery-v2.yml`.
-2. Commit it with `[full-build]` so the parity-complete branch produces fresh Web/mobile/Android TV candidates.
-3. Record the exact run ID, update this checkpoint, then stop polling if the run is still active.
-4. On continuation, inspect that exact run once. Fix only genuine failures.
-5. If green, capture artifact metadata/hashes and mark whole-product CI/release engineering complete.
-6. Then move to **upstream-update automation/protocol integration**.
+1. On the next continuation inspect **#133 / `34440033993` once**.
+2. If failed, inspect only the failing job/step and fix the genuine failure.
+3. If green, capture artifact ID/digest, build metadata, signing identity and Web/mobile/Android-TV candidate hashes; mark release engineering complete.
+4. Then move to **upstream-update automation/protocol integration**.
 
 ## Later stages
 
 1. cross-platform parity + recommendation quality — **COMPLETE for GitHub/code evidence**
-2. whole-product CI/release engineering — **CURRENT**
+2. whole-product CI/release engineering — **CURRENT; full build running**
 3. upstream-update automation/protocol integration
 4. explicit GitHub completion checkpoint
 5. physical/live acceptance
