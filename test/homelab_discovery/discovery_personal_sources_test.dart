@@ -60,7 +60,8 @@ void main() {
       'likes': HomeLabDiscoveryPersonalSourceKind.likes,
       'mixed-positive': HomeLabDiscoveryPersonalSourceKind.mixedPositive,
       'novelty': HomeLabDiscoveryPersonalSourceKind.random,
-      'something-completely-different': HomeLabDiscoveryPersonalSourceKind.random,
+      'something-completely-different':
+          HomeLabDiscoveryPersonalSourceKind.random,
       'rewatch': HomeLabDiscoveryPersonalSourceKind.rewatchPositive,
       'comfort-rewatch-candidates':
           HomeLabDiscoveryPersonalSourceKind.rewatchPositive,
@@ -88,7 +89,9 @@ void main() {
       HomeLabDiscoveryPersonalSourceMode.direct,
     );
     expect(
-      homeLabDiscoveryPersonalSourcePolicy(personal('anime-novelty'))?.animeOnly,
+      homeLabDiscoveryPersonalSourcePolicy(
+        personal('anime-novelty'),
+      )?.animeOnly,
       isTrue,
     );
 
@@ -137,47 +140,57 @@ void main() {
     expect(seeds.length, 2);
   });
 
-  test('novelty uses the bounded random source as recommendation seeds', () async {
-    HomeLabDiscoveryPersonalSourceKind? loadedKind;
-    var recommendationCalls = 0;
-    final service = HomeLabDiscoveryPersonalSources.forTesting(
-      serverId: 'server-1',
-      loadPool: (kind) async {
-        loadedKind = kind;
-        return [sourceItem(501), sourceItem(502)];
-      },
-      loadRecommendations: (_) async {
-        recommendationCalls++;
-        return [sourceItem(900 + recommendationCalls, serverId: 'seerr')];
-      },
-    );
+  test(
+    'novelty uses the bounded random source as recommendation seeds',
+    () async {
+      HomeLabDiscoveryPersonalSourceKind? loadedKind;
+      var recommendationCalls = 0;
+      final service = HomeLabDiscoveryPersonalSources.forTesting(
+        serverId: 'server-1',
+        loadPool: (kind) async {
+          loadedKind = kind;
+          return [sourceItem(501), sourceItem(502)];
+        },
+        loadRecommendations: (_) async {
+          recommendationCalls++;
+          return [sourceItem(900 + recommendationCalls, serverId: 'seerr')];
+        },
+      );
 
-    final result = await service.load(personal('novelty', mediaType: 'movie'));
-    expect(loadedKind, HomeLabDiscoveryPersonalSourceKind.random);
-    expect(recommendationCalls, 2);
-    expect(result.items.map((item) => item.tmdbId), ['901', '902']);
-  });
+      final result = await service.load(
+        personal('novelty', mediaType: 'movie'),
+      );
+      expect(loadedKind, HomeLabDiscoveryPersonalSourceKind.random);
+      expect(recommendationCalls, 2);
+      expect(result.items.map((item) => item.tmdbId), ['901', '902']);
+    },
+  );
 
-  test('rewatch is a direct positive source and skips recommendation transport', () async {
-    HomeLabDiscoveryPersonalSourceKind? loadedKind;
-    var calls = 0;
-    final service = HomeLabDiscoveryPersonalSources.forTesting(
-      serverId: 'server-1',
-      loadPool: (kind) async {
-        loadedKind = kind;
-        return [sourceItem(501), sourceItem(502)];
-      },
-      loadRecommendations: (_) async {
-        calls++;
-        return const [];
-      },
-    );
+  test(
+    'rewatch is a direct positive source and skips recommendation transport',
+    () async {
+      HomeLabDiscoveryPersonalSourceKind? loadedKind;
+      var calls = 0;
+      final service = HomeLabDiscoveryPersonalSources.forTesting(
+        serverId: 'server-1',
+        loadPool: (kind) async {
+          loadedKind = kind;
+          return [sourceItem(501), sourceItem(502)];
+        },
+        loadRecommendations: (_) async {
+          calls++;
+          return const [];
+        },
+      );
 
-    final result = await service.load(personal('rewatch', mediaType: 'movie'));
-    expect(loadedKind, HomeLabDiscoveryPersonalSourceKind.rewatchPositive);
-    expect(result.items.map((item) => item.tmdbId), ['501', '502']);
-    expect(calls, 0);
-  });
+      final result = await service.load(
+        personal('rewatch', mediaType: 'movie'),
+      );
+      expect(loadedKind, HomeLabDiscoveryPersonalSourceKind.rewatchPositive);
+      expect(result.items.map((item) => item.tmdbId), ['501', '502']);
+      expect(calls, 0);
+    },
+  );
 
   test('direct source skips recommendation transport', () async {
     var calls = 0;
@@ -221,39 +234,44 @@ void main() {
     expect(result.items.map((item) => item.tmdbId), ['701']);
   });
 
-  test('anime novelty accepts Japanese animation and uses a truthful label', () async {
-    var genericLoads = 0;
-    final sources = HomeLabDiscoveryPersonalSources.forTesting(
-      serverId: 'server-1',
-      loadPool: (kind) async {
-        expect(kind, HomeLabDiscoveryPersonalSourceKind.random);
-        return [japaneseAnimationItem(801), sourceItem(802, type: 'Series')];
-      },
-      loadRecommendations: (_) async => [
-        sourceItem(901, type: 'Series', serverId: 'seerr', anime: true),
-        sourceItem(902, type: 'Series', serverId: 'seerr'),
-      ],
-    );
-    final service = HomeLabDiscoveryPersonalisation.forTesting(
-      serverId: 'server-1',
-      loadRow: (_, slot) async {
-        genericLoads++;
-        return HomeRow(
-          id: 'unused-$slot',
-          title: 'Unused',
-          rowType: HomeRowType.latestMedia,
-        );
-      },
-      loadMore: ({required row, required serverId, offset}) async =>
-          (row.items, row.totalCount),
-      personalSources: sources,
-    );
+  test(
+    'anime novelty accepts Japanese animation and uses a truthful label',
+    () async {
+      var genericLoads = 0;
+      final sources = HomeLabDiscoveryPersonalSources.forTesting(
+        serverId: 'server-1',
+        loadPool: (kind) async {
+          expect(kind, HomeLabDiscoveryPersonalSourceKind.random);
+          return [japaneseAnimationItem(801), sourceItem(802, type: 'Series')];
+        },
+        loadRecommendations: (_) async => [
+          sourceItem(901, type: 'Series', serverId: 'seerr', anime: true),
+          sourceItem(902, type: 'Series', serverId: 'seerr'),
+        ],
+      );
+      final service = HomeLabDiscoveryPersonalisation.forTesting(
+        serverId: 'server-1',
+        loadRow: (_, slot) async {
+          genericLoads++;
+          return HomeRow(
+            id: 'unused-$slot',
+            title: 'Unused',
+            rowType: HomeRowType.latestMedia,
+          );
+        },
+        loadMore: ({required row, required serverId, offset}) async =>
+            (row.items, row.totalCount),
+        personalSources: sources,
+      );
 
-    final result = await service.load(personal('anime-novelty', mediaType: 'tv'));
-    expect(genericLoads, 0);
-    expect(result.title, 'Something Different in Anime');
-    expect(result.page.results.map((item) => item.id), [901]);
-  });
+      final result = await service.load(
+        personal('anime-novelty', mediaType: 'tv'),
+      );
+      expect(genericLoads, 0);
+      expect(result.title, 'Something Different in Anime');
+      expect(result.page.results.map((item) => item.id), [901]);
+    },
+  );
 
   test('force refresh clears source snapshots', () async {
     var poolLoads = 0;

@@ -79,11 +79,10 @@ HomeLabDiscoveryPersonalSourcePolicy? homeLabDiscoveryPersonalSourcePolicy(
       kind: HomeLabDiscoveryPersonalSourceKind.rewatchPositive,
       mode: direct,
     ),
-    'comfort-rewatch-candidates' =>
-      const HomeLabDiscoveryPersonalSourcePolicy(
-        kind: HomeLabDiscoveryPersonalSourceKind.rewatchPositive,
-        mode: direct,
-      ),
+    'comfort-rewatch-candidates' => const HomeLabDiscoveryPersonalSourcePolicy(
+      kind: HomeLabDiscoveryPersonalSourceKind.rewatchPositive,
+      mode: direct,
+    ),
     'anime-recent-history' => const HomeLabDiscoveryPersonalSourcePolicy(
       kind: HomeLabDiscoveryPersonalSourceKind.recentHistory,
       mode: recommendations,
@@ -109,12 +108,11 @@ HomeLabDiscoveryPersonalSourcePolicy? homeLabDiscoveryPersonalSourcePolicy(
       mode: recommendations,
       animeOnly: true,
     ),
-    'anime-something-different' =>
-      const HomeLabDiscoveryPersonalSourcePolicy(
-        kind: HomeLabDiscoveryPersonalSourceKind.random,
-        mode: recommendations,
-        animeOnly: true,
-      ),
+    'anime-something-different' => const HomeLabDiscoveryPersonalSourcePolicy(
+      kind: HomeLabDiscoveryPersonalSourceKind.random,
+      mode: recommendations,
+      animeOnly: true,
+    ),
     'recently-added' => const HomeLabDiscoveryPersonalSourcePolicy(
       kind: HomeLabDiscoveryPersonalSourceKind.recentlyAdded,
       mode: direct,
