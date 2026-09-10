@@ -17,10 +17,12 @@ typedef HomeLabDiscoverySectionEligibility =
 class HomeLabDiscoveryTabLoadResult {
   final List<HomeLabDiscoverySection> selectedSections;
   final List<HomeLabDiscoveryLaneLoadResult> lanes;
+  final Object? refreshFailure;
 
   const HomeLabDiscoveryTabLoadResult({
     required this.selectedSections,
     required this.lanes,
+    this.refreshFailure,
   });
 
   List<HomeLabDiscoveryLaneLoadResult> get usableLanes =>
@@ -77,17 +79,41 @@ class HomeLabDiscoveryTabController {
 
   /// Returns retained tab data on ordinary rebuilds/resume instead of turning
   /// widget recycling into another recommendation load. Concurrent callers
-  /// share the same in-flight work. Explicit refresh still rotates the lane
-  /// selection; failed results are deliberately not cached so Retry can heal.
+  /// share the same in-flight work. Explicit refresh rotates the lane
+  /// selection. A total refresh failure keeps the previous good result visible
+  /// and records the refresh error; initial failures remain uncached so Retry
+  /// can heal normally.
   Future<HomeLabDiscoveryTabLoadResult> load({bool rotate = false}) {
     if (rotate) {
       final active = _inFlightLoad;
       if (active != null) {
         return active.then((_) => load(rotate: true));
       }
+      final previous = _cachedResult;
       _refreshNonce++;
       _cachedResult = null;
-      return _loadFresh();
+      return _loadFresh().then((next) {
+        if (previous == null ||
+            next.usableLanes.isNotEmpty ||
+            next.failedLanes.isEmpty) {
+          return next;
+        }
+
+        Object? failure;
+        for (final lane in next.failedLanes) {
+          if (lane.error != null) {
+            failure = lane.error;
+            break;
+          }
+        }
+        final retained = HomeLabDiscoveryTabLoadResult(
+          selectedSections: previous.selectedSections,
+          lanes: previous.lanes,
+          refreshFailure: failure ?? StateError('Discovery refresh failed'),
+        );
+        _cachedResult = retained;
+        return retained;
+      });
     }
 
     final cached = _cachedResult;
