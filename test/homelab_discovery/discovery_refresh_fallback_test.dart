@@ -27,43 +27,46 @@ HomeLabDiscoveryLaneLoadResult _loaded(
 );
 
 void main() {
-  test('total explicit refresh failure retains the previous good tab', () async {
-    final only = _section('only');
-    var calls = 0;
-    final controller = HomeLabDiscoveryTabController(
-      tab: HomeLabDiscoveryTab(
-        id: 'movies',
-        title: 'Movies',
-        sections: [only],
-        initialLaneBudget: 1,
-        minimumLaneCount: 1,
-      ),
-      sessionSeed: 'server:user',
-      loadLane: (section) async {
-        calls++;
-        if (calls == 1) return _loaded(section, 7);
-        return HomeLabDiscoveryLaneLoadResult(
-          section: section,
-          error: StateError('temporary refresh failure'),
-        );
-      },
-    );
+  test(
+    'total explicit refresh failure retains the previous good tab',
+    () async {
+      final only = _section('only');
+      var calls = 0;
+      final controller = HomeLabDiscoveryTabController(
+        tab: HomeLabDiscoveryTab(
+          id: 'movies',
+          title: 'Movies',
+          sections: [only],
+          initialLaneBudget: 1,
+          minimumLaneCount: 1,
+        ),
+        sessionSeed: 'server:user',
+        loadLane: (section) async {
+          calls++;
+          if (calls == 1) return _loaded(section, 7);
+          return HomeLabDiscoveryLaneLoadResult(
+            section: section,
+            error: StateError('temporary refresh failure'),
+          );
+        },
+      );
 
-    final initial = await controller.load();
-    expect(initial.usableLanes.single.items.single.id, 7);
-    expect(initial.refreshFailure, isNull);
+      final initial = await controller.load();
+      expect(initial.usableLanes.single.items.single.id, 7);
+      expect(initial.refreshFailure, isNull);
 
-    final refreshed = await controller.refresh();
-    expect(calls, 2);
-    expect(controller.refreshNonce, 1);
-    expect(refreshed.usableLanes.single.items.single.id, 7);
-    expect(refreshed.failedLanes, isEmpty);
-    expect(refreshed.refreshFailure, isA<StateError>());
+      final refreshed = await controller.refresh();
+      expect(calls, 2);
+      expect(controller.refreshNonce, 1);
+      expect(refreshed.usableLanes.single.items.single.id, 7);
+      expect(refreshed.failedLanes, isEmpty);
+      expect(refreshed.refreshFailure, isA<StateError>());
 
-    final resumed = await controller.load();
-    expect(calls, 2);
-    expect(identical(refreshed, resumed), isTrue);
-  });
+      final resumed = await controller.load();
+      expect(calls, 2);
+      expect(identical(refreshed, resumed), isTrue);
+    },
+  );
 
   test('partial refresh is not replaced by stale data', () async {
     final first = _section('first');

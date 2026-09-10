@@ -32,76 +32,75 @@ SeerrDiscoverItem _item(
   backdropPath: backdropPath,
   mediaInfo: jellyfinMediaId == null
       ? null
-      : SeerrMediaInfo(
-          tmdbId: id,
-          status: 5,
-          jellyfinMediaId: jellyfinMediaId,
-        ),
+      : SeerrMediaInfo(tmdbId: id, status: 5, jellyfinMediaId: jellyfinMediaId),
 );
 
 void main() {
-  test('quality report mirrors aggregate parity metrics without media identity', () {
-    final first = _section('first');
-    final second = _section('second');
-    final hidden = _section('hidden');
-    final failed = _section('failed');
+  test(
+    'quality report mirrors aggregate parity metrics without media identity',
+    () {
+      final first = _section('first');
+      final second = _section('second');
+      final hidden = _section('hidden');
+      final failed = _section('failed');
 
-    final result = HomeLabDiscoveryTabLoadResult(
-      selectedSections: [first, second, hidden, failed],
-      lanes: [
-        HomeLabDiscoveryLaneLoadResult(
-          section: first,
-          items: [
-            _item(
-              1,
-              posterPath: '/one.jpg',
-              backdropPath: '/one-bg.jpg',
-              jellyfinMediaId: 'private-jellyfin-id',
-            ),
-            _item(2),
-          ],
-        ),
-        HomeLabDiscoveryLaneLoadResult(
-          section: second,
-          items: [
-            _item(2),
-            _item(3, posterPath: '/three.jpg'),
-          ],
-        ),
-        HomeLabDiscoveryLaneLoadResult(section: hidden),
-        HomeLabDiscoveryLaneLoadResult(
-          section: failed,
-          error: StateError('temporary'),
-        ),
-      ],
-      refreshFailure: StateError('refresh failed'),
-    );
+      final result = HomeLabDiscoveryTabLoadResult(
+        selectedSections: [first, second, hidden, failed],
+        lanes: [
+          HomeLabDiscoveryLaneLoadResult(
+            section: first,
+            items: [
+              _item(
+                1,
+                posterPath: '/one.jpg',
+                backdropPath: '/one-bg.jpg',
+                jellyfinMediaId: 'private-jellyfin-id',
+              ),
+              _item(2),
+            ],
+          ),
+          HomeLabDiscoveryLaneLoadResult(
+            section: second,
+            items: [
+              _item(2),
+              _item(3, posterPath: '/three.jpg'),
+            ],
+          ),
+          HomeLabDiscoveryLaneLoadResult(section: hidden),
+          HomeLabDiscoveryLaneLoadResult(
+            section: failed,
+            error: StateError('temporary'),
+          ),
+        ],
+        refreshFailure: StateError('refresh failed'),
+      );
 
-    final report = HomeLabDiscoveryQuality.analyse(result);
+      final report = HomeLabDiscoveryQuality.analyse(result);
 
-    expect(report.laneCount, 2);
-    expect(report.totalCards, 4);
-    expect(report.uniqueCards, 3);
-    expect(report.repeatedCards, 1);
-    expect(report.duplicateDistinctItems, 1);
-    expect(report.duplicateRatio, 0.25);
-    expect(report.missingIdentityCards, 0);
-    expect(report.missingPosterCards, 2);
-    expect(report.missingPosterRatio, 0.5);
-    expect(report.missingBackdropCards, 3);
-    expect(report.ownedCards, 1);
-    expect(report.ownedRatio, 0.25);
-    expect(report.underfilledLaneCount, 2);
-    expect(report.hiddenLaneCount, 1);
-    expect(report.failedLaneCount, 1);
-    expect(report.refreshFailure, isTrue);
-    expect(report.laneSummaries[1].repeatedFromEarlierLanes, 1);
+      expect(report.laneCount, 2);
+      expect(report.totalCards, 4);
+      expect(report.uniqueCards, 3);
+      expect(report.repeatedCards, 1);
+      expect(report.duplicateDistinctItems, 1);
+      expect(report.duplicateRatio, 0.25);
+      expect(report.missingIdentityCards, 0);
+      expect(report.missingPosterCards, 2);
+      expect(report.missingPosterRatio, 0.5);
+      expect(report.missingBackdropCards, 3);
+      expect(report.ownedCards, 1);
+      expect(report.ownedRatio, 0.25);
+      expect(report.underfilledLaneCount, 2);
+      expect(report.hiddenLaneCount, 1);
+      expect(report.failedLaneCount, 1);
+      expect(report.refreshFailure, isTrue);
+      expect(report.laneSummaries[1].repeatedFromEarlierLanes, 1);
 
-    final serialised = report.toJson().toString();
-    expect(serialised, isNot(contains('Secret Title')));
-    expect(serialised, isNot(contains('private-jellyfin-id')));
-    expect(serialised, isNot(contains('movie:1')));
-  });
+      final serialised = report.toJson().toString();
+      expect(serialised, isNot(contains('Secret Title')));
+      expect(serialised, isNot(contains('private-jellyfin-id')));
+      expect(serialised, isNot(contains('movie:1')));
+    },
+  );
 
   test('invalid item identity is counted but never serialised', () {
     final lane = _section('identity');
