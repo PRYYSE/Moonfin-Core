@@ -5,11 +5,11 @@
 
 GitHub/current repo is authoritative. Completed GitHub/code stages must not be restarted without current fault evidence.
 
-## Status — GitHub/code COMPLETE
+## Status — real-world acceptance started
 
-> No known GitHub/code-side work remains. Remaining work requires real devices, real services, deployment infrastructure, or subjective visual/recommendation acceptance.
+> GitHub/code remains COMPLETE. No known GitHub/code-side work remains unless real acceptance exposes a genuine defect.
 
-The next boundary is physical/live acceptance. Do not promote accepted/rollback refs or touch live services until explicitly entering that phase.
+Android mobile acceptance is **prepared but not yet physically tested**. No accepted/live product, signing identity, live service or rollback ref has been promoted or changed.
 
 ## Locked completion evidence
 
@@ -20,6 +20,31 @@ The next boundary is physical/live acceptance. Do not promote accepted/rollback 
 - cross-platform parity/recommendation: #132 / `34439296054` GREEN, source `e654668f89af49470df417d4fcc444e73c53121e`.
 - whole-product Flutter release gate: #139 / `34571653740` GREEN, source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`.
 - upstream-update detector/protocol automation: COMPLETE; official stable releases rechecked as Core `2.5.1`, Smart-TV `2.8.2`.
+
+## Real-world acceptance checkpoint
+
+See `docs/homelab-discovery-v2/REAL_WORLD_ACCEPTANCE_CHECKPOINT.md`.
+
+Locked physical device order:
+
+1. Android mobile
+2. LG OLED65C6PSA / webOS
+3. Android TV / Google TV
+
+### Android mobile candidate
+
+- status: PREPARED / NOT RUN
+- source: `fd06ec5602351e53f0eacb56b2457ad0e80f169e`
+- workflow: #139 / `34571653740` GREEN
+- artifact: `10188826944`
+- APK: `Moonfin_HomeLab_Android_fd06ec560235.apk`
+- APK SHA-256: `117e633f0f6c97a969a7a0095b5ae3419ab626f82a5f672b92e5cf6122c00fb5`
+- beta identity: `org.moonfin.androidtv.beta` / `Moonfin Beta`
+- production identity remains `org.moonfin.androidtv`
+- beta is suitable for side-by-side functional acceptance without the production signer
+- production in-place update/signature compatibility remains a separate later promotion gate if required
+
+Before installation, verify read-only that `<server>/Moonfin/Web/homelab/discovery.catalogue.json` serves supported schema v3. Missing/unsupported catalogue intentionally falls back to stock Discovery and must not be counted as Discovery-v2 acceptance.
 
 ## Smart-TV 2.8.2 validated candidate
 
@@ -35,17 +60,14 @@ The next boundary is physical/live acceptance. Do not promote accepted/rollback 
 - conflict-probe PR #1: CLOSED, unmerged, retired.
 - accepted branch and rollback ref remain unchanged pending physical LG acceptance.
 
-## Completion record
-
-See `docs/homelab-discovery-v2/GITHUB_COMPLETION_CHECKPOINT.md` for the whole-product Phase-10 closure evidence.
-
 ## Locked invariants
 
 - Android production signing cert `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`.
+- production Android signing material remains outside Git at `/srv/appdata/moonfin/android-signing`; never regenerate/replace it for acceptance.
 - webOS app ID `org.moonfin.webos`, entry `index.html`, Node 20 for legacy LG C6 compatibility.
 - rollback `homelab/webos-v1-staging` / `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`.
 - live systems remain untouched.
 
 ## Exact next action
 
-When explicitly entering the next phase, begin controlled physical/live acceptance using the completion checkpoint as the source of truth. Do not redo completed GitHub/code work unless acceptance exposes a genuine defect.
+Read-only verify the live Moonbase schema-v3 catalogue endpoint. If present, verify/install the exact #139 mobile beta side-by-side and begin Android physical acceptance. If absent, establish only the minimum reversible catalogue/Web deployment prerequisite and then continue from Android installation.
