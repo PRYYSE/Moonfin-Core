@@ -7,7 +7,7 @@ GitHub/current repo is authoritative. Completed implementation must not be resta
 
 ## Status
 
-**Discovery v2 server cutover PASSED.** External Moonfin Web and the live server-driven catalogue are active. Next gate is Android mobile beta physical acceptance.
+**Discovery v2 server cutover PASSED.** External Moonfin Web and the live server-driven catalogue are active. Android mobile beta physical acceptance is now in progress.
 
 ## Live server cutover — complete
 
@@ -55,17 +55,21 @@ Whole-product #139 / `34571653740`, source `fd06ec5602351e53f0eacb56b2457ad0e80f
 - Android beta package `org.moonfin.androidtv.beta`; production package `org.moonfin.androidtv`.
 - beta signer intentionally differs from production; do not infer production update compatibility from beta acceptance.
 
-## Exact next action — Android mobile physical acceptance
+## Android mobile acceptance — current state
 
-Install the exact mobile beta candidate side-by-side; do **not** uninstall production Moonfin. Prefer a fresh beta app-data first launch so live catalogue loading is exercised without cached LKG data.
+Initial beta connection appeared to fail over both Tailscale/LAN while regular Moonfin worked from the same phone.
 
-Acceptance gates:
+Root cause confirmed on-device: **Tailscale Android app-based split tunnelling excluded `org.moonfin.androidtv.beta`**. Regular Moonfin uses `org.moonfin.androidtv`, so only production was being routed through Tailscale.
 
-1. launch, server discovery/manual connection as appropriate, authentication, session persistence and restart;
-2. prove custom Discovery v2 is active rather than stock fallback;
-3. real recommendation quality across For You / Movies / Series / Anime, including personalised Jellyfin/Seerr-backed rows, See All, refresh and retention;
-4. touch/scroll, portrait/landscape, back/background, artwork and performance;
-5. owned Jellyfin detail/playback and external Seerr request-state behaviour;
-6. only investigate defects actually observed on-device.
+This is resolved configuration state, not a Moonfin code/server defect. Do not rebuild the APK or change server networking for this issue.
+
+## Exact next action
+
+With Moonfin Beta removed from Tailscale's excluded-app list:
+
+1. connect/authenticate to the live Jellyfin server;
+2. fully close/reopen beta and confirm session persistence;
+3. open Discovery and prove the custom v2 structure is active rather than stock fallback: For You / Movies / Series / Anime / New/Upcoming / Lists;
+4. once that passes, continue recommendation-quality and interaction acceptance only on observed behaviour.
 
 If mobile passes, checkpoint it and proceed to LG OLED65C6PSA/webOS, then Android TV/Google TV.
