@@ -178,6 +178,46 @@ class CatalogueTests(unittest.TestCase):
             )
         )
 
+    def test_reviewed_anime_romcom_semantics_do_not_use_removed_keyword(self):
+        keywords, providers = self._lookups()
+        romance_id = keywords[compiler.normalise("romance")]
+        keywords.pop(compiler.normalise("romantic comedy"), None)
+
+        catalogue, diagnostics = compiler.compile_catalogue(keywords, providers)
+        sections = {
+            section["id"]: section
+            for tab in catalogue["tabs"]
+            for section in tab["sections"]
+        }
+        romcom = sections["anime-theme-romantic-comedy"]
+        filters = romcom["query"]["filters"]
+
+        self.assertEqual(filters["genre"], "16,35")
+        self.assertEqual(filters["language"], "ja")
+        self.assertEqual(filters["keywords"], str(romance_id))
+        self.assertFalse(
+            any(
+                drop["id"] == "anime-theme-romantic-comedy"
+                for drop in diagnostics["droppedSections"]
+            )
+        )
+
+        keywords.pop(compiler.normalise("romance"), None)
+        catalogue, diagnostics = compiler.compile_catalogue(keywords, providers)
+        ids = {
+            section["id"]
+            for tab in catalogue["tabs"]
+            for section in tab["sections"]
+        }
+        self.assertNotIn("anime-theme-romantic-comedy", ids)
+        self.assertTrue(
+            any(
+                drop["id"] == "anime-theme-romantic-comedy"
+                and drop["unresolved"] == ["keyword:romance"]
+                for drop in diagnostics["droppedSections"]
+            )
+        )
+
     def test_provider_compilation_uses_current_seerr_pipe_semantics(self):
         keywords, providers = self._lookups()
         catalogue, _ = compiler.compile_catalogue(keywords, providers)
