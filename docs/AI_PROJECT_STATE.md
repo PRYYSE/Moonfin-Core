@@ -50,7 +50,7 @@ Selected first functional candidate:
 
 The beta package is the intended side-by-side functional acceptance route and does not require the protected production signer. #139's CI/debug-fallback signer is intentionally distinct from production. Side-by-side beta acceptance does not prove a later production in-place update; retain that as a separate promotion gate if required.
 
-Before installing, read-only verify `<server>/Moonfin/Web/homelab/discovery.catalogue.json` serves an accepted schema-v3 catalogue. The recorded live Web source predates the Discovery-v2 catalogue path, but this does not prove the live filesystem lacks a separately deployed/generated catalogue. If the catalogue is absent/unsupported the app deliberately falls back to stock Discovery, which must not be counted as Discovery-v2 acceptance.
+Before installing, read-only verify `<server>/Moonfin/Web/homelab/discovery.catalogue.json` serves a valid catalogue with supported `schemaVersion` `1` or `2`. The recorded live Web source predates the Discovery-v2 catalogue path, but this does not prove the live filesystem lacks a separately deployed/generated catalogue. If the catalogue is absent/unsupported the app deliberately falls back to stock Discovery, which must not be counted as Discovery-v2 acceptance.
 
 ## Smart-TV 2.8.2 — GitHub/code validated candidate
 
@@ -88,7 +88,7 @@ Final release check on 2026-09-11:
 
 ## Exact next action
 
-Read-only check the live Moonbase catalogue endpoint. If schema-v3 is present, verify/install the exact #139 mobile beta side-by-side and begin the Android-mobile physical acceptance pass. If absent, deploy only the minimum reversible catalogue/Web prerequisite needed for Android acceptance, then continue from installation rather than reopening completed code stages.
+Read-only check the live Moonbase catalogue endpoint. If a supported catalogue (`schemaVersion` `1` or `2`) is present, verify/install the exact #139 mobile beta side-by-side and begin the Android-mobile physical acceptance pass. If absent, deploy only the minimum reversible catalogue/Web prerequisite needed for Android acceptance, then continue from installation rather than reopening completed code stages.
 
 ## Non-blocking maintenance debt
 
