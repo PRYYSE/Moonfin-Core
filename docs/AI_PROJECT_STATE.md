@@ -4,128 +4,108 @@
 
 ## Current objective
 
-Complete the **pre-acceptance live server cutover** for Home Lab Moonfin Discovery v2, verify the real Jellyfin/Moonbase/Seerr/Web/catalogue path, then begin physical acceptance in the locked device order.
+Complete the **pre-acceptance live server cutover** for Home Lab Moonfin Discovery v2, then begin physical acceptance in the locked order: Android mobile -> LG webOS -> Android TV/Google TV.
 
 Primary repo/branch: `PRYYSE/Moonfin-Core` / `homelab/discovery-v2`  
 Smart-TV accepted branch: `PRYYSE/Smart-TV` / `homelab/webos-discovery-v2`  
 Smart-TV validated update candidate: `PRYYSE/Smart-TV` / `update/webos-2.8.2`
 
-GitHub/code implementation is complete. The current phase is **PRE-ACCEPTANCE SERVER CUTOVER**.
+GitHub/client implementation remains complete. Do not reopen completed platform work without current defect evidence.
 
-## Live server evidence — 2026-09-11
+## Current live server state
 
-Read-only audits against `docker01` established the real current state:
+Host: `docker01` / `192.168.50.12`.
 
-- Jellyfin: `10.11.11`, container `jellyfin`, image `lscr.io/linuxserver/jellyfin:latest`.
-- Jellyfin LAN endpoint: `http://192.168.50.12:8096`.
-- authoritative Compose project: `media` in `/opt/stacks/media` using `compose.yaml` + `compose.jellyfin-opencl.yml`.
-- `/srv/appdata/jellyfin -> /config`, `/srv/appdata/jellyfin-transcode -> /transcode`, `/data/media -> /data/media:ro`.
-- Intel `/dev/dri` remains passed through; OpenCL mod remains `linuxserver/mods:jellyfin-opencl-intel`.
-- PUID `1000`, PGID `1001`, TZ `Australia/Adelaide`.
-- `MOONFIN_WEB_ROOT` is currently unset.
-- `/Moonfin/Web/` = HTTP 200; `/Moonfin/Web/config.json` = HTTP 200.
-- `/Moonfin/Web/homelab/discovery.catalogue.json` = HTTP 404, confirming the Discovery-v2 server catalogue is not deployed yet.
-- persistent `/srv/appdata/moonfin` currently contains only the protected `android-signing/` area; `web/` and `discovery/` are not yet present.
-- Seerr container: `seerr`, image `ghcr.io/seerr-team/seerr:latest`.
+- Jellyfin `10.11.11`, container `jellyfin`, image `lscr.io/linuxserver/jellyfin:latest`.
+- Compose project `media` at `/opt/stacks/media/compose.yaml` + `compose.jellyfin-opencl.yml`.
+- mounts: `/srv/appdata/jellyfin:/config`, `/srv/appdata/jellyfin-transcode:/transcode`, `/data/media:/data/media:ro`, `/dev/dri:/dev/dri`.
+- PUID `1000`, PGID `1001`, TZ `Australia/Adelaide`; Intel OpenCL mod retained.
+- `MOONFIN_WEB_ROOT` remains unset.
+- existing `/Moonfin/Web/` and `/Moonfin/Web/config.json` return 200; Discovery v2 catalogue route remains unserved.
+- `/srv/appdata/moonfin/web` remains absent.
+- `/srv/appdata/moonfin/discovery` now contains only unserved output from the aborted first cutover compile.
+- `/srv/appdata/moonfin/android-signing` remains protected/untouched.
+- Seerr container `seerr` / `ghcr.io/seerr-team/seerr:latest`.
 
-### Moonbase correction
+## Moonbase state
 
-The old checkpoint assumption that live Moonbase remained custom `2.0.3.1` was stale.
+Do **not** reinstall Moonbase.
 
-Current plugin root is `/srv/appdata/jellyfin/data/plugins/` and contains `Moonbase_2.1.0.0` plus `Moonbase_2.2.0.0`. The 2.2.0 metadata reports version `2.2.0.0` and status `Active`.
+- installed plugin dirs include `Moonbase_2.1.0.0` and `Moonbase_2.2.0.0`.
+- official Moonbase 2.2.0 ZIP MD5 verified: `205728081ECEA212F9FEA419FC2EFD77`.
+- official-vs-installed comparison: 172 exact package files, 0 missing, only `meta.json` differs.
+- installed `Moonfin.Server.dll` exactly matches official payload SHA-256 `f4863466ea6fe7763f9e8ad128cc050142246f0a48bde5069408f4b2487fc01c`.
+- Jellyfin `/Plugins` pre-cutover reports `Moonbase 2.1.0.0 / Superseded` and `Moonfin 2.2.0.0 / Restart`.
+- revised cutover accepts 2.2.0 `Restart` before the planned recreate and requires 2.2.0 `Active` afterwards.
 
-The official Moonbase 2.2.0 release ZIP was verified against official MD5 `205728081ECEA212F9FEA419FC2EFD77`. Comparing all 173 official package files against the installed `Moonbase_2.2.0.0` directory produced:
+## Exact release candidate
 
-- 172 exact matches;
-- 0 missing files;
-- exactly 1 differing file: `meta.json`;
-- installed/official-matching `Moonfin.Server.dll` SHA-256 `f4863466ea6fe7763f9e8ad128cc050142246f0a48bde5069408f4b2487fc01c`.
+Whole-product #139 / run `34571653740`, source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`, artifact `10188826944`.
 
-Therefore **do not reinstall Moonbase**. The cutover preflight will query Jellyfin `/Plugins` using an existing API key without printing it and must confirm 2.2.0 is actually loaded before the first authoritative live change.
+- Web `Moonfin_HomeLab_Web_fd06ec560235.tar.gz`: SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`; Moonfin `2.5.1`, build `30000149`.
+- Android mobile: SHA-256 `117e63325942dddcf352a5756e2926a16340d86317e3d8706d540febeda7ae9c`.
+- Android TV: SHA-256 `71c2b017cb827e216ef4e5eb23bb4bc40e595b1eb1255aff24cd51298be3e1e8`.
+- live compilation tooling restored in `14706f9e5534392be3f1035d41a0253bcc7241d2`.
 
-## Discovery-v2 deployment inputs
+## First cutover attempt — safely aborted
 
-Whole-product workflow #139 / `34571653740` is GREEN at source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`; artifact `10188826944` remains the exact candidate source.
+The first cutover package passed Web/Moonbase preflight and then force-compiled current live Seerr/TMDb semantics to **480/486** with **6 semantic drops** and **0 provider drops**. The regression gate aborted before any Compose edit, Web-root switch or Jellyfin recreate.
 
-The artifact was downloaded and independently hashed:
+Current drops:
 
-- Web: `Moonfin_HomeLab_Web_fd06ec560235.tar.gz`
-  - SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`
-  - embedded Moonfin `2.5.1`, build `30000149`
-  - compiled JS contains `/Moonfin/Web/homelab/discovery.catalogue.json` loader path.
-- Android mobile: `Moonfin_HomeLab_Android_fd06ec560235.apk`
-  - corrected SHA-256 `117e63325942dddcf352a5756e2926a16340d86317e3d8706d540febeda7ae9c`.
-- Android TV: `Moonfin_HomeLab_AndroidTV_fd06ec560235.apk`
-  - SHA-256 `71c2b017cb827e216ef4e5eb23bb4bc40e595b1eb1255aff24cd51298be3e1e8`.
+- movie: `heist movies`
+- series: `high school & teen drama`, `supernatural mysteries`
+- anime: `giant robots`, `parallel worlds`, `romantic comedy`
 
-The previously recorded Android-mobile SHA beginning `117e633f...` was incorrect and must not be used.
+Historical accepted cache contained `romantic comedy=380334`. Current Seerr lookup now returns null for keyword `380334`; searching `romantic comedy` returns only `380026 / lighthearted romantic comedy`.
 
-The missing live catalogue wrapper was restored to the v2 branch in commit `14706f9e5534392be3f1035d41a0253bcc7241d2`. Its purpose is safe read-only Jellyfin/Seerr metadata resolution plus atomic catalogue output; no secrets are printed.
+Decision: do **not** map the broad lane to the narrower current keyword.
 
-## Prepared server cutover — NOT YET EXECUTED
+## Reviewed Romantic Comedy semantic repair
 
-A bounded cutover package has been prepared from the exact #139 Web tarball. Local verification passed:
+Keep lane ID/title `anime-theme-romantic-comedy`, but represent it as:
 
-- deployment script `bash -n`: PASS;
-- Compose text patch simulated against the audited Jellyfin service: PASS;
-- package ZIP integrity: PASS;
-- embedded Web tar SHA-256 reverified: PASS.
+- `discoverTv`
+- Animation + Comedy genres: `16,35`
+- Japanese: `ja`
+- `voteCountGte=5`
+- exact broad keyword `romance`
 
-The deployment script is fail-closed and must, before altering authoritative Compose:
+`romance` already resolves in the current live semantic pass. This should restore exactly one lane while leaving the five genuinely unresolved semantics fail-closed.
 
-1. require root/sudo and the exact audited Jellyfin/Moonbase paths;
-2. verify exact Web SHA and official-matching Moonbase DLL SHA;
-3. fetch pinned catalogue tooling;
-4. query Jellyfin `/Plugins` without printing credentials and require loaded Moonbase 2.2.0;
-5. live-compile the catalogue against existing Jellyfin/Seerr configuration;
-6. require schema v2, **481/486**, exactly 5 reviewed semantic drops and **0 provider drops**;
-7. stage `/srv/appdata/moonfin/web/releases/fd06ec560235` and canonical `/srv/appdata/moonfin/discovery`;
-8. create a timestamped rollback checkpoint;
-9. set `web/current -> releases/fd06ec560235`;
-10. add `MOONFIN_WEB_ROOT=/moonfin-web/current` and read-only `/srv/appdata/moonfin/web:/moonfin-web` mount to the authoritative Jellyfin Compose service;
-11. validate effective Compose before recreating only Jellyfin;
-12. verify Jellyfin, Moonbase 2.2.0, Seerr config, Moonfin Web and the served 481-lane schema-v2 catalogue;
-13. automatically restore the previous Compose/bundled-Web path on any post-edit/post-cutover failure.
+Revised cutover bundle:
 
-Expected rollback command after the checkpoint is created:
+- `Moonfin_DiscoveryV2_Server_Cutover_fd06ec560235_v2.zip`
+- SHA-256 `6317d9517455e5e43a520846fa2e09dae220634d3e288c5ae9f48f2d9af21b35`
+- deploy script SHA-256 `06a575ab160db139484e4f1c3456ab6ac467080714728ae9ad753efdd9e0dee3`
+- exact #139 Web tar hash unchanged.
+
+Local gates passed: bundle extraction, Bash syntax, Web hash, and exact semantic source-patch simulation. The live script self-verifies the semantic transformation and still requires **481/486**, exactly **5 semantic drops**, and **0 provider drops** before changing Compose.
+
+Rollback once a live checkpoint exists:
 
 `sudo bash /srv/appdata/moonfin/rollback/latest/rollback.sh`
 
-`/srv/appdata/moonfin/android-signing` must remain untouched throughout.
+## Completed milestones — do not redo
 
-## Completed — do not redo
-
-- Discovery catalogue/compiler/shared semantics: COMPLETE (`486 authored / 481 accepted active`).
-- Web: GITHUB/CODE COMPLETE, source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`.
-- Android mobile/tablet: source `4af01af054d9b7cbe8e230b7ded482cb8fea330c`, #120 / `34326151119` GREEN.
-- Android TV / Google TV: source `15ccc28b84727543ad714ef19dd318f907d1a1d8`, #128 / `34429841034` GREEN.
-- Smart-TV/webOS accepted Discovery parity: source `a9dfa657a220a3f8f77753261bd7d8e902c0d837`, #52 / `34439022624` GREEN; `468 executable / 481 active` intentionally.
-- Cross-platform parity/recommendation semantics: source `e654668f89af49470df417d4fcc444e73c53121e`, #132 / `34439296054` GREEN.
-- Whole-product release engineering: source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`, #139 / `34571653740` GREEN.
-- Stable update detector/protocol: COMPLETE.
-- Core stable base: `2.5.1`; official Moonbase stable: `2.2.0`; Smart-TV stable/update candidate: `2.8.2`.
-
-## Physical acceptance — blocked only by server cutover gate
-
-Physical device order remains locked:
-
-1. Android mobile
-2. LG OLED65C6PSA / webOS
-3. Android TV / Google TV
-
-No Discovery-v2 candidate has yet been physically accepted.
-
-Android beta identity remains `org.moonfin.androidtv.beta` / `Moonfin Beta`; production remains `org.moonfin.androidtv`. Production Android signing certificate remains `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`; never regenerate or replace its signing material under `/srv/appdata/moonfin/android-signing`.
-
-Smart-TV accepted/live baseline remains 2.7.0 until physical acceptance. Validated 2.8.2 product merge remains `44a72276e87f611791348fbd11584e6aff56641a`, artifact `10192446254`, IPK SHA-256 `75be2fedecbd3b503a5f74d2c2fad403e9ac0bede4c842d4da87bd80cae2460a`; rollback `homelab/webos-v1-staging` / `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e` remains untouched.
+- shared Discovery semantics/catalogue: 486 authored / 481 accepted reference.
+- Web: `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`.
+- Android mobile/tablet: `4af01af054d9b7cbe8e230b7ded482cb8fea330c`, #120 / `34326151119` GREEN.
+- Android TV/Google TV: `15ccc28b84727543ad714ef19dd318f907d1a1d8`, #128 / `34429841034` GREEN.
+- Smart-TV/webOS Discovery parity: `a9dfa657a220a3f8f77753261bd7d8e902c0d837`, #52 / `34439022624` GREEN; 468/481 executable intentionally.
+- cross-platform parity/recommendation: `e654668f89af49470df417d4fcc444e73c53121e`, #132 / `34439296054` GREEN.
+- whole-product release: `fd06ec5602351e53f0eacb56b2457ad0e80f169e`, #139 / `34571653740` GREEN.
+- stable update detector/protocol complete.
+- stable bases: Core 2.5.1, Moonbase 2.2.0, Smart-TV 2.8.2.
 
 ## Exact next actions
 
-1. Transfer and run the prepared bounded server-cutover package.
-2. If its preflight/catalogue gate aborts, make **no live workaround**; diagnose only the reported failing gate.
-3. If cutover passes, record the exact live release, catalogue SHA/counts, loaded Moonbase status and rollback checkpoint here.
-4. Then install the exact #139 Android mobile beta side-by-side and begin physical acceptance.
+1. Transfer and run revised cutover bundle v2.
+2. Require pre-Compose live compile **481/486**, **5 semantic drops**, **0 provider drops**.
+3. If it fails, diagnose only the reported gate; do not weaken semantics or improvise a live workaround.
+4. If it passes, record live catalogue SHA, Web release pointer, post-restart Moonfin 2.2.0 `Active` result and rollback directory.
+5. Begin Android mobile beta physical acceptance side-by-side with production.
 
-## Non-blocking maintenance debt
+## Non-blocking debt
 
-GitHub Action runtime deprecation warnings, future Flutter Built-in Kotlin migration and Smart-TV legacy tooling remain separate maintenance work. They are not blockers to Discovery v2 acceptance.
+GitHub Action runtime deprecation warnings, future Flutter Built-in Kotlin migration and Smart-TV legacy tooling remain separate maintenance work and are not Discovery v2 acceptance blockers.
