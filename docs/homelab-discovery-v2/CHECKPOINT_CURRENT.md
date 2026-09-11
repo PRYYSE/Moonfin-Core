@@ -7,7 +7,7 @@ GitHub/current repo is authoritative. Completed implementation must not be resta
 
 ## Status
 
-**Discovery v2 server cutover PASSED.** Android mobile beta physical acceptance is in progress and all major Discovery v2 tabs now render live on-device.
+**Discovery v2 server cutover PASSED.** Android mobile functional acceptance has broadly passed, but two physical UI defects were found and a corrected mobile candidate is building. A separate `Family Favourites` lane-semantics defect remains to fix before final mobile sign-off.
 
 ## Live server cutover — complete
 
@@ -21,52 +21,63 @@ GitHub/current repo is authoritative. Completed implementation must not be resta
 - rollback `/srv/appdata/moonfin/rollback/server-migration-20260912-015401`
 - rollback command `sudo bash /srv/appdata/moonfin/rollback/latest/rollback.sh`
 
-Locked catalogue: 486 authored / 481 compiled / 5 semantic drops / 0 provider drops. Workflow #145 / `34598425336` GREEN.
-
-## Exact mobile candidate
-
-Whole-product #139 / `34571653740`, source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`.
-
-- mobile SHA-256 `117e63325942dddcf352a5756e2926a16340d86317e3d8706d540febeda7ae9c`
-- beta package `org.moonfin.androidtv.beta`; production `org.moonfin.androidtv`
-- installed side-by-side; do not uninstall production
+Locked catalogue baseline: 486 authored / 481 compiled / 5 semantic drops / 0 provider drops. Workflow #145 / `34598425336` GREEN.
 
 ## Android mobile acceptance — current evidence
 
-Initial beta connection failure was caused by **Tailscale Android app-based split tunnelling excluding the beta package**. Resolved locally; no app/server change required.
+The #139 beta candidate proved the live schema-v2 product flow. Initial connection failure was only Tailscale split tunnelling excluding `org.moonfin.androidtv.beta` and is resolved.
 
-### Discovery v2 on-device coverage — PASS so far
+User reports the requested functional slice is working. Screenshots and manual checks cover:
 
-User screenshots directly show populated **For You, Movies, Series, Anime, New & Upcoming and Lists** tabs. Custom schema-v2 presentation is active rather than stock fallback.
+- all Discovery tabs: For You, Movies, Series, Anime, New & Upcoming, Lists;
+- personalised/rotating rows;
+- session/reopen behaviour;
+- `See all` + Back;
+- owned-Jellyfin detail/playback;
+- external Seerr request path;
+- orientation/background/reopen;
+- normal artwork/status rendering.
 
-Observed working:
+## Physical UI defects — repair implemented
 
-- personalised For You rows;
-- broad rotating Movies/Series/Anime lanes;
-- New & Upcoming and Lists tabs;
-- artwork, labels, availability/request badges and portrait horizontal carousels;
-- user reports the experience appears to work and likes the rotating-lane design.
+### 1. Carousel offset inheritance
 
-Session persistence after force-close/reopen is not explicitly confirmed yet.
+Observed rows can appear/jump at a later horizontal position. Non-TV landing carousels previously had no unique PageStorage identity, so lazy row recycling/rotation could reuse another lane's offset.
 
-### Recommendation-quality issue to recheck
+Repair: horizontal state is now isolated by **tab + section + refresh generation**. The same lane may retain its position during ordinary rebuild/vertical recycling; explicit refresh gets a fresh scroll identity and starts refreshed content from the beginning.
 
-`Lists -> Family Favourites` visibly included titles such as Attack on Titan, Princess Mononoke and Dou kyu sei. The authoritative authoring row currently uses `genre: "10751|16"`, allowing animation-only matches as well as Family. Treat as a concrete lane-semantics quality issue; if confirmed, fix the authoritative catalogue definition rather than ranking around it.
+### 2. Discovery/top-toolbar spacing
 
-### Deferred UX follow-up
+The Discovery title occupied the same visual band as the fixed mobile top toolbar/back control. The page now reserves the top-toolbar height plus **8 dp** only when mobile navigation is positioned at the top; bottom/left layouts retain normal page padding.
 
-After acceptance, preserve rotating rows but add:
+Relevant commits:
 
-- **All Lists** — searchable/text-first index of every lane name grouped by tab, opening the existing `See all` view;
+- `62b5851c715e16d404aa7d59d8efbb44853bd589`
+- `bdcf16d985172dd631559a4027380d00c5a64e54`
+- `1d16eb8885ded0de9fd886a73823cdd3cee7c389`
+- tests `63925bd4e42f6546fb599a94202e4c63a9ef8112`
+- full-build trigger `d736adf2565bb3a82fdce661d72fc4296c9f89c9`
+
+### Long CI checkpoint
+
+Workflow #150 / run **`34627434968`**, source **`d736adf2565bb3a82fdce661d72fc4296c9f89c9`**, was pending when recorded. Do not continuously poll it. On continuation inspect this exact run once. If green, extract/hash the new mobile-beta APK and retest only the repaired UI behaviours.
+
+## Recommendation-quality defect still open
+
+`Lists -> Family Favourites` showed animation-only/non-family results because the authoritative generator uses `genre: "10751|16"` (Family OR Animation). Fix the authoritative row semantics and narrowly recompile/deploy after the UI candidate is validated; do not apply synthetic ranking workarounds.
+
+## Deferred UX enhancement
+
+After platform acceptance, retain rotating rows and add:
+
+- **All Lists** — searchable/text-first index of every lane grouped by tab, opening the existing `See all` route;
 - **Genres** — stable genre browser independent of lane rotation.
-
-Do not alter the current candidate for this enhancement during acceptance unless the user changes priority.
 
 ## Exact next action
 
-1. Confirm session persistence after force-close/reopen if still untested.
-2. Exercise one `See all` + Back/retention flow, orientation/background behaviour and normal touch scrolling.
-3. Verify one owned-Jellyfin detail/playback path and one external-Seerr request-state path.
-4. Recheck/fix `Family Favourites` semantics if confirmed.
-5. If mobile passes, checkpoint it and proceed to LG OLED65C6PSA/webOS, then Android TV/Google TV.
+1. Inspect workflow #150 / `34627434968` exactly once on continuation.
+2. If green, retrieve the new mobile-beta artifact and exact SHA; update/install Moonfin Beta side-by-side.
+3. Retest only carousel start/retention/refresh-reset and Discovery header spacing in portrait/landscape.
+4. Then fix/recompile/deploy `Family Favourites` semantics and sanity-check that row.
+5. If mobile passes, checkpoint and proceed to LG OLED65C6PSA/webOS, then Android TV/Google TV.
 6. Implement All Lists + Genres after platform acceptance.
