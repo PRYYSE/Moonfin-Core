@@ -38,7 +38,7 @@ GitHub/current repository state is authoritative. This checkpoint tracks only ph
 
 ### Live-service prerequisite
 
-Discovery v2 activates only when the app accepts the schema-v3 catalogue from:
+Discovery v2 activates only when the app accepts a catalogue whose `schemaVersion` is supported by the current Flutter loader (`1` or `2`) from:
 
 `<server>/Moonfin/Web/homelab/discovery.catalogue.json`
 
@@ -50,7 +50,7 @@ Dynamic Jellyfin and Seerr operations continue through the existing authenticate
 
 ### Reversible installation route
 
-1. Read-only verify that the live Moonbase endpoint serves a valid schema-v3 Discovery catalogue.
+1. Read-only verify that the live Moonbase endpoint serves a valid Discovery catalogue with supported `schemaVersion` `1` or `2`.
 2. Download the exact #139 candidate artifact and verify the mobile APK SHA-256 above.
 3. Inspect installed package state, then install only `org.moonfin.androidtv.beta` via ADB without replacing `org.moonfin.androidtv`.
 4. Verify both package identities remain distinct after installation.
@@ -66,4 +66,4 @@ Dynamic Jellyfin and Seerr operations continue through the existing authenticate
 
 ### Exact next action
 
-Read-only verify whether the live Moonbase endpoint currently serves a valid schema-v3 Discovery catalogue. If absent, establish only the minimum reversible catalogue/Web deployment prerequisite before installing the beta APK. If present, verify/install the exact #139 mobile beta side-by-side and begin Android-mobile physical acceptance.
+Read-only verify whether the live Moonbase endpoint currently serves a valid Discovery catalogue with supported `schemaVersion` `1` or `2`. If absent, establish only the minimum reversible catalogue/Web deployment prerequisite before installing the beta APK. If present, verify/install the exact #139 mobile beta side-by-side and begin Android-mobile physical acceptance.
