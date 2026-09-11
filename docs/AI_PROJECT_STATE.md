@@ -10,109 +10,73 @@ Primary repo/branch: `PRYYSE/Moonfin-Core` / `homelab/discovery-v2`
 Smart-TV accepted branch: `PRYYSE/Smart-TV` / `homelab/webos-discovery-v2`  
 Smart-TV isolated update branch: `update/webos-2.8.2`
 
-**Current phase:** stage and validate the reviewed Smart-TV `2.8.2` Home-Lab port.
+**Current phase:** validate the reviewed Smart-TV `2.8.2` upstream port.
 
 ## Completed foundations — do not redo
 
-- Discovery catalogue/compiler + shared semantics/personalisation: **COMPLETE** (`486 authored / 481 accepted active`).
-- Web: **GITHUB/CODE COMPLETE**, source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`.
-- Android mobile/tablet: **GITHUB/CODE COMPLETE**, source `4af01af054d9b7cbe8e230b7ded482cb8fea330c`, #120 / `34326151119` GREEN.
-- Android TV / Google TV: **GITHUB/CODE COMPLETE**, source `15ccc28b84727543ad714ef19dd318f907d1a1d8`, #128 / `34429841034` GREEN.
-- Smart-TV/webOS Discovery parity: **GITHUB/CODE COMPLETE**, accepted product source `a9dfa657a220a3f8f77753261bd7d8e902c0d837`, #52 / `34439022624` GREEN. webOS intentionally remains `468 executable / 481 active`; 13 structural/context strategies fail closed.
+- Discovery catalogue/compiler + shared semantics/personalisation: **COMPLETE** (`486 authored / 481 active`).
+- Web: GitHub/code complete, source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`.
+- Android mobile/tablet: complete, source `4af01af054d9b7cbe8e230b7ded482cb8fea330c`, #120 / `34326151119` GREEN.
+- Android TV / Google TV: complete, source `15ccc28b84727543ad714ef19dd318f907d1a1d8`, #128 / `34429841034` GREEN.
+- Smart-TV/webOS Discovery parity: complete at accepted source `a9dfa657a220a3f8f77753261bd7d8e902c0d837`, #52 / `34439022624` GREEN; intentionally `468 executable / 481 active`, 13 structural/context strategies fail closed.
 - Cross-platform parity/recommendation semantics: **COMPLETE for GitHub/code evidence**.
 - Whole-product Flutter release engineering: **COMPLETE**, #139 / `34571653740` GREEN, source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`.
 
-## Locked identity / rollback evidence
+Locked Flutter release artifact `10188826944`, ZIP digest `sha256:59f6678026ea665eceb74a2ed3fd3c43ae1d593c9c121b1d2ff2a81d29fc65e5`. CI signer `9590094799a3b051292ad54904df0d964815a871ef9f6238068607e7ee1202b9`; protected production Android certificate remains `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`.
 
-- Flutter candidate artifact `10188826944`, ZIP digest `sha256:59f6678026ea665eceb74a2ed3fd3c43ae1d593c9c121b1d2ff2a81d29fc65e5`.
-- protected production Android certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`; never regenerate/replace.
-- accepted Smart-TV artifact `10137277340`, digest `sha256:9d5ccfed0889a680fa6b4d3532725ce1877f950d306d9599bb6916e9d150c47f`.
-- preserve Smart-TV app ID `org.moonfin.webos`, entry `index.html`, Node 20 legacy-TV compatibility.
-- preserve rollback branch `homelab/webos-v1-staging` and candidate `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`.
-- CI candidates are not production deployment artifacts; no physical/live acceptance is implied.
+Preserve Smart-TV rollback `homelab/webos-v1-staging` / `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`, app ID `org.moonfin.webos`, entry `index.html`, and Node 20 legacy LG C6 compatibility.
 
-## Stable upstream automation — corrected and validated
+## Stable upstream automation
 
-Policy: `docs/UPSTREAM_UPDATE_PROTOCOL.md`.
+Detector correction source `f1c8b6d68e559a3ba3192f1c2df605bd51cc57a4`; impact #2 / `34578894538` GREEN, artifact `10190766738`, digest `sha256:300441223b24a440604929c0b5c35e1d4238b61aca0c7f2a6859607411e71d05`.
 
-Stable-release detector source `f1c8b6d68e559a3ba3192f1c2df605bd51cc57a4` separates accepted source ancestry from accepted release tags. Unreleased `main` drift is not treated as an available update.
+Stable evidence:
 
-Validated:
+- Core: accepted/latest `2.5.1`; **NO update**, 0 overlap.
+- Smart-TV: accepted release lineage `2.7.0`; accepted real source base `384d7cab3642f846463a4308e92d213e51507edf`; latest stable `2.8.2` at `ed327948aeb8ef19098b810145ab6a3b76ccf372`; **UPDATE AVAILABLE**, five overlaps.
+- unreleased upstream `main` drift is not an update signal.
 
-- Upstream Impact #2 / `34578894538`: **GREEN**.
-- Core Discovery #141 / `34578894678`: **GREEN**.
-- impact artifact `10190766738`, digest `sha256:300441223b24a440604929c0b5c35e1d4238b61aca0c7f2a6859607411e71d05`.
-- Core: accepted/latest stable `2.5.1`, **NO update**, **0 stable overlap**.
-- Smart-TV: accepted lineage `2.7.0`, latest stable `2.8.2`, **UPDATE AVAILABLE**, five overlap paths.
+## Smart-TV 2.8.2 port — CURRENT
 
-Smart-TV accepted source base remains `384d7cab3642f846463a4308e92d213e51507edf`; do not replace it with the older 2.7.0 tag commit. Official `2.8.2` is `ed327948aeb8ef19098b810145ab6a3b76ccf372`.
+`update/webos-2.8.2` was created directly from official `2.8.2`. Draft PR #1 is a conflict probe only — **DO NOT MERGE**.
 
-## Smart-TV 2.8.2 isolated update — CURRENT
+Read-only evidence:
 
-`update/webos-2.8.2` was created directly from official `2.8.2` `ed327948aeb8ef19098b810145ab6a3b76ccf372`. Accepted/rollback branches remain untouched.
-
-Port analysis:
-
-- Smart-TV validation #54 / `34578965395`: **GREEN**.
-- read-only Port Analysis #1 / `34578965427`: **GREEN**.
+- Smart-TV #54 / `34578965395`: GREEN.
+- Port Analysis #1 / `34578965427`: GREEN.
 - artifact `10190788565`, digest `sha256:f9bbed71dd7c08770748e749a45aaa75663e58da881c99c461dd4b340fa42f46`.
-- merge status: conflicts in exactly five reviewed paths:
-  - `packages/app/src/context/SettingsContext.js`
-  - `packages/app/src/utils/homeLayout.js`
-  - `packages/app/src/utils/homeLayout.test.js`
-  - `packages/app/src/utils/seerrTarget.js`
-  - `packages/app/src/utils/seerrTarget.test.js`
-- every other Home-Lab overlay path merged cleanly onto official 2.8.2.
+- exactly five conflicts: `SettingsContext.js`, `homeLayout.js`, `homeLayout.test.js`, `seerrTarget.js`, `seerrTarget.test.js`; all other overlay paths merged cleanly.
+- reviewed result preserves upstream 2.8.2 settings/layout and IMDb/title Seerr fallback plus Home-Lab custom destination rows and owned-Jellyfin selection routing.
 
-Reviewed merge intent and local dependency-free checks:
+Staging #2 / `34580576176` at `f932addf2d533cafe3b513d0a1960c631078f124` failed **only** because an over-broad `git diff --check` examined unrelated workflow/Markdown whitespace. Exact release/target/conflict checks and conflict resolution had passed; tests/build/push were skipped. Accepted regression #55 / `34580576157` was GREEN, and #2 did not advance the update branch.
 
-- preserve upstream 2.8.2 settings/layout changes and plugin-section passthrough.
-- add Home-Lab `customHomeRowsFromProfile`/destination-row plumbing without serialising derived `customHomeRows` as an authoritative standalone server field.
-- preserve upstream Seerr IMDb/title fallback, search matching and library helpers.
-- preserve Home-Lab `seerrSelectionMediaId` so known-owned Discovery items open the real Jellyfin detail/playback path.
-- merged utility behaviour checks: **PASS**.
-- Settings merge structural checks: **PASS**.
-- conflict-marker scan + JS parse checks: **PASS**.
+Repair source `8fb273c024c773d730bd22304fa3d12961db18a2`:
 
-Staging control commit:
+- stores a fixed reviewed conflict-marker patch at `tooling/webos-2.8.2-reviewed-conflicts.patch`, SHA-256 `23d7800c6d15812cea030a8e5329bea267a5dd17d18be9003efb9b4904f54848`.
+- patch dry-apply with `--whitespace=error` reproduces the reviewed five files byte-for-byte and preserves clean auto-merged hunks inside conflicted files.
+- fails closed if product/package files changed after reviewed source `2c2a7627db8910752d587328cdacef6c76afb537`, if stable release/target SHA changes, if conflict set changes, or if patch digest changes.
+- whitespace checking is scoped to the five resolved product files.
+- still requires Node 20 focused tests, webOS build, exact `org.moonfin.webos` / `2.8.2` / `index.html`, then pushes only `update/webos-2.8.2`.
 
-`f932addf2d533cafe3b513d0a1960c631078f124` — `ci(webos): stage reviewed 2.8.2 port`
+## Waiting — inspect ONCE next continuation
 
-Its fail-closed workflow requires:
+- Port Staging #3 / `34582511512`, source `8fb273c024c773d730bd22304fa3d12961db18a2`: captured **IN PROGRESS**.
+- accepted-branch regression #57 / `34582511474`, same source: captured **IN PROGRESS**.
 
-- latest stable tag still exactly `2.8.2` and SHA still `ed327948...`.
-- target `update/webos-2.8.2` still untouched at the official release SHA.
-- exactly the five reviewed conflict paths above.
-- upstream 2.8.2 versions used as the conflict bases; only the reviewed Home-Lab semantics are layered back.
-- conflict-surface + Discovery tests pass under Node 20.
-- `npm run build:webos` passes.
-- package identity is exactly `org.moonfin.webos` / `2.8.2` / `index.html`.
-- only then may it fast-forward the isolated update branch with a merge commit. It cannot touch the accepted or rollback branches.
-
-## Waiting runs — DO NOT POLL AGAIN THIS CYCLE
-
-Source `f932addf2d533cafe3b513d0a1960c631078f124`:
-
-- Smart-TV Port Staging #2 / `34580576176`: captured **IN PROGRESS**.
-- Smart-TV accepted-branch regression #55 / `34580576157`: captured **IN PROGRESS**.
-
-The update branch has **not** been claimed as moved yet. Do not infer a candidate SHA until staging #2 proves it.
+Do not poll either again this cycle.
 
 ## Exact next actions
 
-1. Next continuation: inspect exact staging #2 / `34580576176` once.
-2. Inspect exact regression #55 / `34580576157` once.
-3. If staging failed, inspect only its failing job/step; fix the actual reviewed-port defect and launch/record one replacement.
-4. If staging succeeded, read the resulting `update/webos-2.8.2` branch SHA and capture the automatically triggered update-branch Discovery workflow once.
-5. Validate the update candidate tests/build/app ID/version/IPK artifact; preserve accepted + rollback refs.
-6. Only after the stable 2.8.2 candidate leaves no GitHub/code blocker, update stable baselines/protocol evidence and create the explicit GitHub completion checkpoint.
-7. Stop before physical/live acceptance unless explicitly instructed to cross that boundary.
+1. Inspect #3 and #57 once.
+2. If #3 failed, inspect only its failing staging step and fix that defect.
+3. If #3 is green, fetch `update/webos-2.8.2` once and capture the merge-candidate SHA.
+4. Actions `GITHUB_TOKEN` pushes do not create the normal follow-on push workflow run. Create one external **same-tree** GitHub commit on the isolated update branch to trigger the established `.github/workflows/homelab-webos-discovery-v2.yml`, then capture that exact run once.
+5. When established validation is green, capture IPK artifact ID/name/size/digest and IPK SHA-256; mark the 2.8.2 GitHub/code update integrated.
+6. Do **not** promote the accepted branch or cross into physical/live acceptance yet.
 
 ## Non-blocking debt
 
-- GitHub Action runtime deprecation warnings and future Flutter Built-in Kotlin migration remain separate maintenance work.
-- Smart-TV application remains Node 20 unless legacy LG C6 compatibility is independently proven with a newer runtime.
-- upstream-impact cron remains dormant while its workflow is not on the default branch; do not contaminate the clean upstream mirror merely to enable scheduling.
+Action-runtime deprecation warnings and future Flutter Built-in Kotlin migration remain separate. Smart-TV application runtime stays Node 20 unless legacy LG C6 compatibility is independently proven with a newer runtime. Upstream cron remains dormant while its workflow is not on the default branch; do not contaminate the clean/default upstream mirror just to activate scheduling.
 
 ## Live boundary
 
