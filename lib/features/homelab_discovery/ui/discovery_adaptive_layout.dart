@@ -28,7 +28,7 @@ double homeLabDiscoveryHeaderTopPadding({
   if (!isMobile || !hasTopToolbar || !toolbarHeight.isFinite) {
     return homeLabDiscoveryDefaultHeaderTopPadding;
   }
-  return toolbarHeight.clamp(0.0, double.infinity) +
+  return toolbarHeight.clamp(0.0, double.infinity).toDouble() +
       homeLabDiscoveryMobileToolbarGap;
 }
 
