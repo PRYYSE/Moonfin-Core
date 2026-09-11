@@ -7,7 +7,24 @@ GitHub/current repo is authoritative. Completed code/platform stages must not be
 
 ## Status
 
-Catalogue semantics are green. Moonbase deduplication is green. External Discovery Web cutover is not active. The remaining prerequisite is a **field-level Seerr migration into the valid Moonbase 2.2 config**.
+All pre-cutover server prerequisites are green. External Discovery Web cutover is **not yet active**. The exact next action is the verified v6 cutover package.
+
+### Moonbase / Seerr prerequisite — complete
+
+Verified live after the successful field-level migration:
+
+- only `Moonbase_2.2.0.0` is live; superseded 2.1 remains archived outside the plugin root;
+- Jellyfin public API HTTP 200;
+- Moonfin Web HTTP 200 after full Moonbase readiness;
+- `SeerrEnabled=true` and `SeerrUrl` survived Moonbase 2.2 restart;
+- existing 2.2 webhook secret remained unchanged;
+- Jellyfin -> Seerr HTTP 200;
+- authenticated Moonbase -> Seerr proxy PASS;
+- recovery checkpoint `/srv/appdata/moonfin/rollback/moonbase-seerr-field-migration-20260912-014055`.
+
+Do not restore the full August 2026 Moonfin XML; it predates Moonbase 2.2. If recovery is needed, only the two Seerr fields may be migrated into the current clean 2.2 XML.
+
+Readiness rule: `/System/Info/Public` alone is insufficient. Any restart/rollback must wait for **both** `/System/Info/Public` and `/Moonfin/Web/` HTTP 200.
 
 ### Locked catalogue result — do not redo
 
@@ -17,45 +34,36 @@ Catalogue semantics are green. Moonbase deduplication is green. External Discove
 - semantic compiler/test source `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`
 - workflow #145 / `34598425336`: GREEN
 
-### Moonbase deduplication — complete
+### V6 cutover artefact
 
-Only `Moonbase_2.2.0.0` is live. Superseded 2.1 remains archived outside the plugin root. Current baseline after rollback is healthy: Jellyfin public API 200, Moonfin Web 200, Jellyfin -> `seerr:5055` 200.
+`Moonfin_DiscoveryV2_Server_Cutover_fd06ec560235_v6.zip`
 
-Do **not** restore/reinstall Moonbase 2.1.
+- bundle SHA-256 `6f20fa92520c07627b04f3e078978990c5a31e074efbf174df1205e3640f468b`
+- deploy script SHA-256 `f75dfa10d3259bac0b6d049caf115ef90741e4090895e803fee294ac7c641ef8`
+- embedded #139 Web SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`
+- ZIP integrity PASS; shell syntax PASS; embedded Web hash PASS.
 
-### Seerr recovery diagnosis
-
-The exact source backup `/srv/appdata/moonfin/rollback/server-migration-20260911-215908/Moonfin.Server.xml.before` is 15,754 bytes, dated 2026-08-13, and contains `SeerrEnabled=true` plus a non-empty `SeerrUrl`.
-
-The current clean Moonbase 2.2 XML is 1,183 bytes and contains `SeerrEnabled=false`, no `SeerrUrl`, and its own webhook secret. Its saved recovery copy is:
-
-`/srv/appdata/moonfin/rollback/moonbase-config-direct-recovery-20260912-005932/Moonfin.Server.xml.current-before-direct-recovery`
-
-The 00:59 whole-file restore of the August XML failed validation and automatically rolled back. Both Jellyfin restarts loaded Moonbase 2.2 cleanly; current Web and Seerr network endpoints are healthy.
-
-Important correction: the August XML predates Moonbase 2.2.0 (released 2026-08-28). The earlier v3 compile through Seerr occurred before the plugin restart while the old Moonbase instance was still serving requests, so it did not prove whole-file compatibility with 2.2.
-
-**Do not restore the whole August XML again.**
+V6 skips the unnecessary prerequisite restart when 2.1 is already absent, uses full Moonbase readiness after restarts/rollbacks, retains surgical Seerr recovery only as a fallback, and adds a final authenticated Seerr proxy gate.
 
 ## Exact release inputs
 
 Whole-product #139 / `34571653740`, source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`, artifact `10188826944`.
 
-- Web SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`; Moonfin 2.5.1 build 30000149.
+- Web: Moonfin 2.5.1 build 30000149, SHA above.
 - Android mobile SHA-256 `117e63325942dddcf352a5756e2926a16340d86317e3d8706d540febeda7ae9c`.
 - Android TV SHA-256 `71c2b017cb827e216ef4e5eb23bb4bc40e595b1eb1255aff24cd51298be3e1e8`.
 - signing material remains untouched.
 
 ## Exact next action
 
-Back up the current 2.2 XML, stop only Jellyfin, parse both XML files, and copy **only** `SeerrEnabled=true` and `SeerrUrl` from the August source into the current valid 2.2 XML. Preserve the current webhook secret and every other 2.2 setting. Restart Jellyfin and require:
+Run v6 and require:
 
-- Jellyfin ready;
-- Moonfin Web HTTP 200;
-- Jellyfin -> Seerr HTTP 200;
-- only Moonbase 2.2 live;
-- authenticated `/Moonfin/Seerr/Config` says enabled and URL present.
+- current Moonbase 2.2/Seerr baseline accepted without an unnecessary prerequisite recreate;
+- catalogue `481/486`, semantic drops `5`, provider drops `0`;
+- exact Web release staged and authoritative Compose patch validated;
+- controlled Jellyfin recreate reaches full Moonbase readiness;
+- Web/version/catalogue endpoints HTTP 200 and served catalogue bytes equal canonical;
+- Moonbase 2.2 Active, Seerr config enabled, authenticated Moonbase -> Seerr proxy PASS;
+- final `=== CUTOVER PASSED ===`.
 
-If any gate fails, restore the saved 2.2 XML automatically.
-
-After this passes, v6 must implement the same field-level migration rather than v5's full-config recovery. Then finish the already-proven 481/486 / 5 / 0 server cutover and proceed to Android mobile physical acceptance.
+If green, immediately checkpoint the live catalogue SHA/release pointer/rollback record and proceed to Android mobile physical acceptance. Do not revisit completed platform implementation.
