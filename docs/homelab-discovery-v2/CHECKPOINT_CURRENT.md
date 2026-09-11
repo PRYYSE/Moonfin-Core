@@ -13,7 +13,7 @@ Read with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PARITY_M
 - Android TV / Google TV: **GITHUB/CODE COMPLETE**
 - Smart-TV/webOS: **GITHUB/CODE COMPLETE + PARITY VALIDATED**
 - Cross-platform parity + recommendation quality: **COMPLETE for current GitHub/code evidence**
-- Whole-product CI / release engineering: **CURRENT — REPLACEMENT FULL BUILD #138 QUEUED**
+- Whole-product CI / release engineering: **CURRENT — REPLACEMENT FULL BUILD #139 RUNNING**
 
 ## Locked platform evidence
 
@@ -29,20 +29,21 @@ Release gate covers Web + Android mobile/tablet + Android TV/Google TV; Smart-TV
 Recent recovery:
 
 - #135 / `34448096121`: all three candidates built; verifier exposed missing TV-manifest inheritance in `androidTv-beta`.
-- `e655545cbbc9902e24bf30c5aa8a43a86b39ce9d`: explicitly maps beta flavours to the corresponding mobile/TV manifests.
-- #136 / `34466334114`: failed only because the custom-scope allowlist rejected that intentional Gradle packaging change.
+- `e655545cbbc9902e24bf30c5aa8a43a86b39ce9d`: explicitly maps beta flavours to corresponding mobile/TV manifests.
+- #136 / `34466334114`: failed only because custom-scope allowlist rejected the intentional Gradle packaging change.
 - `90f3c7f2176751841729700acbda8ca21f75e4d3`: adds exactly `android/app/build.gradle.kts` to the narrow scope allowlist.
-- #137 / `34557174599`: focused validation, scope gate, Web release build, mobile-beta APK and androidTv-beta APK all **PASSED**. It failed only in `Verify Android candidate identity and signing`; no Leanback error was emitted, so the beta manifest wiring advanced past that contract check. Packaging/upload were skipped.
-- The #137 failure occurred during the old signer extraction/check pipeline and produced no diagnostic under `set -e`, making the precise signer parse/check failure opaque.
-- `3169a39c834c5b5e3bead0578449dd0453f55b99`: hardens only signer verification/diagnostics. It captures `apksigner` output explicitly, accepts leading whitespace on the SHA-256 line, requires a valid 64-hex digest, and reports verification, parse or signer-mismatch failures while retaining the production-certificate inequality guard.
+- #137 / `34557174599`: focused validation, scope gate, Web, mobile-beta and androidTv-beta builds all passed; signing verifier failed before packaging/upload.
+- `3169a39c834c5b5e3bead0578449dd0453f55b99`: added explicit signer diagnostics.
+- #138 / `34559041907`: focused validation and all three builds again passed; only signer parsing failed. Current `apksigner` emitted: `V2 Signer: certificate SHA-256 digest: e2f6179d4bf86c09eaa512a6533e256a464086a60239a097695263585c2113cd`. This signer differs from protected production signing.
+- `fd06ec5602351e53f0eacb56b2457ad0e80f169e`: parser now accepts the current signer prefix while preserving 64-hex validation, same-CI-signer equality and production-certificate inequality.
 
 ### Authoritative replacement gate
 
-- workflow **#138 / `34559041907`**
-- source `3169a39c834c5b5e3bead0578449dd0453f55b99`
-- captured status: **QUEUED**
+- workflow **#139 / `34571653740`**
+- source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`
+- captured status: **IN PROGRESS**
 
-Do not poll #138 again in this waiting cycle.
+Do not poll #139 again in this waiting cycle.
 
 Acceptance still requires:
 
@@ -51,7 +52,7 @@ Acceptance still requires:
 - `mobile-beta` and `androidTv-beta` APKs build
 - beta package ID is `org.moonfin.androidtv.beta`
 - mobile Leanback optional; Android-TV Leanback required
-- both APKs share a CI signer that differs from production certificate
+- both APKs share a CI signer different from protected production certificate
 - candidate packaging succeeds
 - artifact upload succeeds
 - `BUILD_INFO.txt`, candidate SHA-256 values and artifact metadata are captured
@@ -64,8 +65,8 @@ GitHub runner warnings remain for older Node-targeted action versions and setup-
 
 ## Exact next actions
 
-1. Next continuation: inspect **#138 / `34559041907` once**.
-2. If failed, inspect only its failing job/step and use the explicit signer diagnostic to fix the genuine failure.
+1. Next continuation: inspect **#139 / `34571653740` once**.
+2. If failed, inspect only its failing job/step and fix the genuine failure.
 3. If green, capture release artifact/signing/hash evidence and mark release engineering COMPLETE.
 4. Move directly to **upstream-update automation/protocol integration**.
 
