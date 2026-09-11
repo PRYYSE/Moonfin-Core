@@ -121,6 +121,41 @@ def resolve_many(
     return ids, unresolved
 
 
+def apply_reviewed_semantic_overrides(catalogue: dict[str, Any]) -> None:
+    """Translate reviewed compound semantics that upstream no longer names directly."""
+
+    target_id = "anime-theme-romantic-comedy"
+    for tab in catalogue.get("tabs") or []:
+        for section in tab.get("sections") or []:
+            if section.get("id") != target_id:
+                continue
+
+            query = section.get("query") or {}
+            filters = dict(query.get("filters") or {})
+            if (
+                query.get("source") != "discoverTv"
+                or query.get("mediaType") != "tv"
+                or list(query.get("keywordNames") or []) != ["romantic comedy"]
+                or filters.get("genre") != "16"
+                or filters.get("language") != "ja"
+            ):
+                raise ValueError(
+                    "Reviewed Romantic Comedy source semantics changed; "
+                    "refusing to apply a stale override"
+                )
+
+            # TMDb removed the historical exact `romantic comedy` keyword.
+            # `lighthearted romantic comedy` is narrower, so do not alias to it.
+            # Preserve the broad authored meaning as Japanese Animation + Comedy
+            # constrained by the still-exact broad `romance` keyword.
+            filters["genre"] = "16,35"
+            query["filters"] = filters
+            query["keywordNames"] = ["romance"]
+            return
+
+    raise ValueError(f"Reviewed semantic target is missing: {target_id}")
+
+
 def _resolve_external_section(section: dict[str, Any]) -> str | None:
     query = section["query"]
     if query.get("source") != "externalList":
@@ -143,6 +178,7 @@ def compile_catalogue(
     provider_lookup: dict[str, int],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     catalogue = copy.deepcopy(authoring.build())
+    apply_reviewed_semantic_overrides(catalogue)
     diagnostics: dict[str, Any] = {
         "droppedSections": [],
         "resolvedKeywordSections": 0,
