@@ -39,25 +39,28 @@ Recovery sequence:
 
 - #133 / `34440033993`: verifier contract bug after all three candidate builds passed.
 - #134 / `34442473966`: verifier whitespace bug after all three candidate builds passed.
-- #135 / `34448096121`: genuine beta packaging defect; built `androidTv-beta` APK reported Leanback optional because sibling flavour `androidTv-beta` did not inherit `src/androidTv/AndroidManifest.xml`.
-- `e655545cbbc9902e24bf30c5aa8a43a86b39ce9d`: fixed Gradle source-set wiring so `mobile-beta` reuses the mobile manifest and `androidTv-beta` reuses the Android-TV manifest.
-- #136 / `34466334114`: **FAILED only in `Verify custom scope stays narrow`**. Route/catalogue/format/analyse/focused tests/Web tests all passed; build job was skipped. Exact rejected path was the intentional `android/app/build.gradle.kts` packaging fix.
-- `90f3c7f2176751841729700acbda8ca21f75e4d3`: scope-gate-only correction adding exactly `android/app/build.gradle.kts` to the Discovery v2 allowlist. No additional product code changed.
+- #135 / `34448096121`: genuine beta packaging defect; `androidTv-beta` did not inherit the TV manifest and reported Leanback optional.
+- `e655545cbbc9902e24bf30c5aa8a43a86b39ce9d`: fixed Gradle source-set wiring so beta flavours explicitly reuse their mobile/TV manifests.
+- #136 / `34466334114`: failed only because the narrow scope gate rejected the intentional `android/app/build.gradle.kts` packaging fix; all focused validation before it passed.
+- `90f3c7f2176751841729700acbda8ca21f75e4d3`: allowed exactly `android/app/build.gradle.kts` in the Discovery v2 scope gate.
+- #137 / `34557174599`: **FAILED only in `Verify Android candidate identity and signing`**. Focused validation and scope gate passed; Web, mobile-beta and androidTv-beta all built successfully. No Leanback diagnostic fired, so the manifest/source-set correction is past that verifier stage. Packaging/upload were skipped.
+- #137 then exited silently during signer extraction/checks because the old `apksigner` pipeline had no explicit parse/verification diagnostics under `set -e`.
+- `3169a39c834c5b5e3bead0578449dd0453f55b99`: hardened signer verification only. It captures `apksigner verify --print-certs` output explicitly, tolerates leading whitespace in the certificate line, validates a 64-hex SHA-256, reports verification/parse/signer-mismatch failures, and preserves the protected production-certificate inequality check.
 
 Authoritative replacement full-build:
 
-- workflow **#137 / `34557174599`**
-- source `90f3c7f2176751841729700acbda8ca21f75e4d3`
-- captured status: **IN PROGRESS**
+- workflow **#138 / `34559041907`**
+- source `3169a39c834c5b5e3bead0578449dd0453f55b99`
+- captured status: **QUEUED**
 
-Do not poll #137 again in this waiting cycle.
+Do not poll #138 again in this waiting cycle.
 
 Current release checks still require:
 
 - both beta APKs identify as `org.moonfin.androidtv.beta`
 - mobile Leanback optional
 - Android-TV Leanback required
-- same CI signer on both APKs
+- both APKs use the same CI signing certificate
 - CI signer differs from production SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
 - `BUILD_INFO.txt` records source/build/flavour/signing/Leanback metadata
 - SHA-256 values generated for Web/mobile/Android-TV candidates
@@ -67,19 +70,19 @@ CI APKs are debug-fallback candidates and are **not deployment APKs**.
 
 ## Known non-blocking CI debt
 
-Runner warnings remain for Node-20-targeted GitHub Action runtimes (`actions/checkout@v4`, `actions/setup-java@v4`) and setup-java v4 deprecation. They have not caused the release-gate failures. Keep this maintenance separate until the release gate is green.
+Runner warnings remain for Node-20-targeted GitHub Action runtimes (`actions/checkout@v4`, `actions/setup-java@v4`) and setup-java v4 deprecation. Android also warns that future Flutter versions will require Built-in Kotlin migration. None caused #133–#137. Keep this maintenance separate until the release gate is green.
 
 ## Exact next actions
 
-1. Next continuation: inspect **#137 / `34557174599` once**.
-2. If failed, inspect only the failing job/step and fix the genuine failure.
+1. Next continuation: inspect **#138 / `34559041907` once**.
+2. If failed, inspect only the failing job/step and use its now-explicit signer diagnostic to fix the genuine release-gate issue.
 3. If green, capture artifact ID/digest, `BUILD_INFO.txt`, actual CI signer SHA-256 and Web/mobile/Android-TV candidate SHA-256 values; mark whole-product CI/release engineering COMPLETE.
 4. Then move directly to **upstream-update automation/protocol integration**.
 
 ## Later stages
 
 1. cross-platform parity + recommendation quality — **COMPLETE for GitHub/code evidence**
-2. whole-product CI/release engineering — **CURRENT; replacement full build #137 running**
+2. whole-product CI/release engineering — **CURRENT; replacement full build #138 queued**
 3. upstream-update automation/protocol integration
 4. explicit GitHub completion checkpoint
 5. physical/live acceptance
