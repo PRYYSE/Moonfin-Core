@@ -17,11 +17,11 @@ V6 completed successfully on `docker01`.
 Verified live:
 
 - Jellyfin `10.11.11`.
-- authoritative Compose remains `/opt/stacks/media/compose.yaml` + `compose.jellyfin-opencl.yml`.
-- external Moonfin Web active through `/moonfin-web/current -> releases/fd06ec560235`.
+- authoritative Compose `/opt/stacks/media/compose.yaml` + `compose.jellyfin-opencl.yml`.
+- external Moonfin Web `/moonfin-web/current -> releases/fd06ec560235`.
 - product source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`.
 - semantic compiler source `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`.
-- exact Web tar SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`.
+- Web tar SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`.
 - served Discovery catalogue schema v2 / **481 lanes**, SHA-256 `2331f6f24428de5203ec8fd4d5d867a4734ebd3449df1538ce60eb4448904b50`.
 - required Jellyfin/Moonfin Web/config/version/catalogue endpoints HTTP 200.
 - only Moonbase `2.2.0.0` live and `Active`; Moonbase -> Seerr proxy PASS after final recreate.
@@ -31,13 +31,13 @@ Rollback record: `/srv/appdata/moonfin/rollback/server-migration-20260912-015401
 
 Rollback command: `sudo bash /srv/appdata/moonfin/rollback/latest/rollback.sh`
 
-Readiness rule retained: future Jellyfin restart/rollback acceptance must require both `/System/Info/Public` 200 and `/Moonfin/Web/` 200.
+Readiness rule: future restart/rollback acceptance requires both `/System/Info/Public` 200 and `/Moonfin/Web/` 200.
 
 ## Catalogue / semantic repair — complete
 
 Locked result: 486 authored / 481 compiled / 5 semantic drops / 0 provider drops. Tab counts: For You 16, Movies 129, Series 138, Anime 158, New/Upcoming 20, Lists 20.
 
-Compiler/test source `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`; workflow #145 / `34598425336` GREEN. Do not revisit.
+Compiler/test source `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`; workflow #145 / `34598425336` GREEN. Do not revisit completed semantic repair unless current on-device quality evidence identifies a specific lane defect.
 
 ## Exact release candidate
 
@@ -54,23 +54,36 @@ Exact beta candidate installed side-by-side.
 
 Initial connection failure was resolved as a **Tailscale Android app-based split-tunnelling exclusion of `org.moonfin.androidtv.beta`**. This was local routing configuration, not a Moonfin/server defect. No rebuild required.
 
-### First on-device Discovery gate — PASS
+### On-device Discovery coverage — PASS so far
 
-User-provided screenshots confirm the beta now reaches the live server and renders the custom Discovery v2 experience rather than stock fallback.
+User screenshots now directly confirm all major v2 surfaces are live and populated: For You, Movies, Series, Anime, New & Upcoming and Lists. Custom schema-v2 behaviour is clearly active rather than stock fallback.
 
-Observed on-device:
+Observed:
 
-- expected v2 tab strip is active: For You / Movies / Series / Anime / New & Upcoming (Lists is beyond the visible phone-width portion of the strip and is not yet independently checked);
-- personalised `Because You Watched` and `Something Different` rows render under For You;
-- Movies renders many server-driven lanes including Trending Movies, Popular Movies, Critically Acclaimed, Fresh This Month, Animation, DreamWorks, Danish Cinema, Paramount Plus Movies and Space & Deep Space;
-- artwork, labels, availability/request badges and horizontal rows are rendering normally in the supplied portrait screenshots;
-- no stock-fallback presentation is evident.
+- personalised `Because You Watched` and `Something Different` rows render;
+- broad Movies, Series and Anime lane rotation works;
+- New & Upcoming and Lists tabs load and populate;
+- artwork, media-type badges, availability/request state and horizontal carousels render normally in portrait;
+- user reports the experience appears to be working and likes the rotating-list concept.
 
-Session persistence after a force-close/reopen has not yet been explicitly confirmed in chat.
+Session persistence after force-close/reopen has not yet been explicitly confirmed in chat.
+
+### Current recommendation-quality note
+
+One specific lane needs follow-up before declaring quality fully accepted: **Lists -> Family Favourites** showed titles including `Attack on Titan: The Roar of Awakening`, `Princess Mononoke` and `Dou kyu sei - Classmates`. The authoritative generator currently defines `Family Favourites` with `genre: "10751|16"`, which is broad enough to admit animation-only titles rather than family-only content. Treat this as a concrete lane-semantics issue to fix in the authoritative catalogue generator if retained after final sanity check; do not apply synthetic ranking tweaks.
+
+### Deferred UX enhancement requested on-device
+
+After acceptance, add stable deliberate-browsing entry points without replacing rotating Discovery rows:
+
+- **All Lists**: dense text-first/searchable index of all lane names, grouped by tab; tapping a lane opens its existing `See all` view.
+- **Genres**: permanent genre browser independent of whichever genre lanes rotate into the current session.
+
+Do not change the current candidate mid-acceptance solely for this enhancement unless the user changes priority.
 
 ## Completed — do not redo
 
-- shared Discovery catalogue/compiler semantics: complete.
+- shared Discovery catalogue/compiler semantics: complete except any newly proven lane-specific quality defect.
 - Web source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`.
 - Android mobile/tablet #120 / `34326151119` GREEN.
 - Android TV/Google TV #128 / `34429841034` GREEN.
@@ -82,12 +95,13 @@ Session persistence after a force-close/reopen has not yet been explicitly confi
 - Moonbase 2.2 Seerr migration: COMPLETE.
 - Discovery v2 live server cutover: **COMPLETE / PASSED**.
 - Android beta initial connection blocker: **RESOLVED — Tailscale split tunnelling**.
-- Android beta custom Discovery v2 first-load gate: **PASSED**.
+- Android beta custom Discovery v2 first-load/tab coverage: **PASSED so far**.
 
 ## Exact next actions
 
-1. Confirm beta session survives a complete force-close/reopen if not already done.
-2. Continue Android mobile recommendation/interaction acceptance: Series, Anime, New/Upcoming and Lists; For You quality; See All; refresh/retention; touch/scroll; portrait/landscape; back/background; artwork/performance.
-3. Verify one owned Jellyfin item detail/playback path and one external Seerr request-state path.
-4. Diagnose only defects actually observed on-device; recommendation issues should be traced to source/ranking rather than synthetic retuning.
-5. If mobile passes, checkpoint it and proceed to LG OLED65C6PSA/webOS, then Android TV/Google TV.
+1. Confirm session persistence after force-close/reopen if not already tested.
+2. Finish mobile interaction acceptance: one `See all` + Back/retention check, touch/horizontal scroll, portrait/landscape and background/return behaviour.
+3. Verify one owned-Jellyfin detail/playback flow and one external-Seerr request-state flow.
+4. Recheck the observed `Family Favourites` semantic issue and correct the authoritative generator if confirmed; regenerate/recompile only what that fix requires.
+5. If mobile then passes, checkpoint it and proceed to LG OLED65C6PSA/webOS, then Android TV/Google TV.
+6. After platform acceptance, implement the deferred **All Lists** text index and **Genres** browser enhancement.
