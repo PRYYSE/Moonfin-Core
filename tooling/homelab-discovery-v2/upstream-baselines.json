@@ -1,9 +1,10 @@
 {
-  "schema": 1,
+  "schema": 2,
   "core": {
     "label": "Moonfin Core",
     "upstream_repository": "Moonfin-Client/Moonfin-Core",
     "upstream_branch": "main",
+    "accepted_release_tag": "2.5.1",
     "accepted_base_sha": "f18c45b1fbf9b63871b4f93237179f9706154763",
     "overlay_repository": "PRYYSE/Moonfin-Core",
     "overlay_branch": "homelab/discovery-v2",
@@ -14,6 +15,7 @@
     "label": "Moonfin Smart-TV/webOS",
     "upstream_repository": "Moonfin-Client/Smart-TV",
     "upstream_branch": "main",
+    "accepted_release_tag": "2.7.0",
     "accepted_base_sha": "384d7cab3642f846463a4308e92d213e51507edf",
     "overlay_repository": "PRYYSE/Smart-TV",
     "overlay_branch": "homelab/webos-discovery-v2",

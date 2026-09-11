@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a fail-closed upstream/Home-Lab impact report from local Git refs."""
+"""Generate a fail-closed stable-release/Home-Lab impact report from local Git refs."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
-
 
 AREAS = (
     "dependencies/build tooling",
@@ -38,9 +37,7 @@ def git(repo: Path, *args: str, check: bool = True) -> str:
         stderr=subprocess.PIPE,
     )
     if check and proc.returncode != 0:
-        raise RuntimeError(
-            f"git {' '.join(args)} failed in {repo}: {proc.stderr.strip()}"
-        )
+        raise RuntimeError(f"git {' '.join(args)} failed in {repo}: {proc.stderr.strip()}")
     return proc.stdout.strip()
 
 
@@ -58,7 +55,7 @@ def require_ancestor(repo: Path, base: str, ref: str, label: str) -> None:
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            f"Accepted base {base} is not an ancestor of {label} {ref}. "
+            f"Accepted source base {base} is not an ancestor of {label} {ref}. "
             "Stop and reconcile the baseline rather than generating a misleading report."
         )
 
@@ -91,7 +88,6 @@ def entry_paths(entry: tuple[str, str, str | None]) -> set[str]:
 def classify(path: str) -> str:
     p = path.lower()
     name = Path(path).name.lower()
-
     if (
         "homelab_discovery" in p
         or "homelab-discovery-v2" in p
@@ -124,14 +120,8 @@ def classify(path: str) -> str:
     ):
         return "Smart-TV/webOS"
     if name in {
-        "pubspec.yaml",
-        "package.json",
-        "package-lock.json",
-        "build.gradle",
-        "build.gradle.kts",
-        "settings.gradle",
-        "settings.gradle.kts",
-        "gradle.properties",
+        "pubspec.yaml", "package.json", "package-lock.json", "build.gradle",
+        "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradle.properties",
     } or p.startswith((".github/", "gradle/", "tool/", "scripts/")):
         return "dependencies/build tooling"
     if any(token in p for token in ("appinfo.json", "manifest", "version", "signing")):
@@ -159,6 +149,7 @@ def main() -> int:
     parser.add_argument("--component", choices=("core", "smart_tv"), required=True)
     parser.add_argument("--repo", default=".")
     parser.add_argument("--upstream-ref", required=True)
+    parser.add_argument("--upstream-release-tag", required=True)
     parser.add_argument("--overlay-ref", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--github-output")
@@ -171,11 +162,13 @@ def main() -> int:
         raise RuntimeError(f"Not a Git repository: {repo}")
 
     base = component["accepted_base_sha"]
+    accepted_release_tag = component["accepted_release_tag"]
+    upstream_release_tag = args.upstream_release_tag
     upstream = resolve(repo, args.upstream_ref)
     overlay = resolve(repo, args.overlay_ref)
     resolve(repo, base)
-    require_ancestor(repo, base, upstream, "upstream")
-    require_ancestor(repo, base, overlay, "overlay")
+    require_ancestor(repo, base, upstream, "stable upstream release")
+    require_ancestor(repo, base, overlay, "Home Lab overlay")
 
     upstream_entries = changed_entries(repo, base, upstream)
     overlay_entries = changed_entries(repo, base, overlay)
@@ -188,65 +181,60 @@ def main() -> int:
     overlay_counts = count_areas(overlay_entries)
     overlap_counts = Counter(classify(path) for path in overlap_paths)
     upstream_commits = int(git(repo, "rev-list", "--count", f"{base}..{upstream}") or "0")
-    update_available = upstream != base
+    update_available = upstream_release_tag != accepted_release_tag
 
     lines = [
-        f"# Home Lab Upstream Impact - {component['label']}",
+        f"# Home Lab Stable Upstream Impact - {component['label']}",
         "",
         f"Generated: `{datetime.now(timezone.utc).isoformat()}`",
         "",
         f"- upstream repository: `{component['upstream_repository']}`",
-        f"- upstream branch: `{component['upstream_branch']}`",
-        f"- accepted upstream base: `{base}`",
-        f"- observed upstream head: `{upstream}`",
+        f"- accepted stable release tag: `{accepted_release_tag}`",
+        f"- latest stable release tag: `{upstream_release_tag}`",
+        f"- accepted source base: `{base}`",
+        f"- latest stable release commit: `{upstream}`",
         f"- Home Lab overlay repository: `{component['overlay_repository']}`",
         f"- observed overlay head: `{overlay}`",
-        f"- upstream commits since accepted base: **{upstream_commits}**",
-        f"- update available: **{'YES' if update_available else 'NO'}**",
+        f"- commits from accepted source base to latest stable release: **{upstream_commits}**",
+        f"- stable update available: **{'YES' if update_available else 'NO'}**",
         f"- overlapping upstream/Home Lab paths requiring explicit review: **{len(overlap_paths)}**",
         "",
         "## Impact classification",
         "",
-        "| Area | Upstream changed paths | Home Lab changed paths | Overlap |",
+        "| Area | Stable release changed paths | Home Lab changed paths | Overlap |",
         "| --- | ---: | ---: | ---: |",
     ]
     for area in AREAS:
-        lines.append(
-            f"| {area} | {upstream_counts[area]} | {overlay_counts[area]} | {overlap_counts[area]} |"
-        )
+        lines.append(f"| {area} | {upstream_counts[area]} | {overlay_counts[area]} | {overlap_counts[area]} |")
 
-    lines.extend(["", "## Files changed by both upstream and Home Lab", ""])
+    lines.extend(["", "## Files changed by both stable upstream and Home Lab", ""])
     if overlap_entries:
         for entry in sorted(overlap_entries, key=lambda item: item[1]):
             lines.append(f"- {format_entry(entry)}")
     else:
         lines.append("- None detected by path intersection.")
 
-    lines.extend(["", "## Upstream changes", ""])
+    lines.extend(["", "## Stable release changes", ""])
     if upstream_entries:
         for entry in sorted(upstream_entries, key=lambda item: item[1]):
             lines.append(f"- {format_entry(entry)}")
     else:
-        lines.append("- No upstream path changes since the accepted base.")
+        lines.append("- No path changes from the accepted source base to the latest stable release.")
 
-    lines.extend(
-        [
-            "",
-            "## Update handling contract",
-            "",
-            "- This report is detection/impact evidence only; it does not merge, deploy, promote or alter signing identity.",
-            f"- Create the isolated update branch with prefix `{component['update_branch_prefix']}` from the chosen new official base.",
-            "- Explicitly review every overlapping path above even if Git reports no textual conflict.",
-            f"- Reapply only the narrow Home Lab overlay and run `{component['release_workflow']}` before physical/live acceptance.",
-        ]
-    )
+    lines.extend([
+        "", "## Update handling contract", "",
+        "- Stable release tags decide whether an update is available; unreleased upstream-main drift is not promoted as an update.",
+        "- The accepted source base remains the ancestry/diff anchor even when it is a later commit on the same accepted release lineage.",
+        "- This report is detection/impact evidence only; it does not merge, deploy, promote or alter signing identity.",
+        f"- Create the isolated update branch with prefix `{component['update_branch_prefix']}` from the chosen new official release.",
+        "- Explicitly review every overlapping path above even if Git reports no textual conflict.",
+        f"- Reapply only the narrow Home Lab overlay and run `{component['release_workflow']}` before physical/live acceptance.",
+    ])
     if args.component == "smart_tv":
-        lines.extend(
-            [
-                f"- Preserve rollback branch `{component['rollback_branch']}` and candidate `{component['rollback_candidate_sha']}`.",
-                f"- Preserve webOS app ID `{config['protected_identity']['webos_application_id']}`.",
-            ]
-        )
+        lines.extend([
+            f"- Preserve rollback branch `{component['rollback_branch']}` and candidate `{component['rollback_candidate_sha']}`.",
+            f"- Preserve webOS app ID `{config['protected_identity']['webos_application_id']}`.",
+        ])
     else:
         lines.append(
             f"- Preserve production Android signing certificate SHA-256 `{config['protected_identity']['android_production_certificate_sha256']}`."
@@ -259,6 +247,8 @@ def main() -> int:
     if args.github_output:
         with Path(args.github_output).open("a", encoding="utf-8") as fh:
             fh.write(f"update_available={'true' if update_available else 'false'}\n")
+            fh.write(f"accepted_release_tag={accepted_release_tag}\n")
+            fh.write(f"upstream_release_tag={upstream_release_tag}\n")
             fh.write(f"upstream_head={upstream}\n")
             fh.write(f"overlay_head={overlay}\n")
             fh.write(f"upstream_commits={upstream_commits}\n")
@@ -267,7 +257,8 @@ def main() -> int:
             fh.write(f"overlap_paths={len(overlap_paths)}\n")
 
     print(
-        f"{component['label']}: update_available={str(update_available).lower()} "
+        f"{component['label']}: stable_update_available={str(update_available).lower()} "
+        f"accepted_tag={accepted_release_tag} latest_tag={upstream_release_tag} "
         f"upstream_commits={upstream_commits} overlap_paths={len(overlap_paths)}"
     )
     return 0
