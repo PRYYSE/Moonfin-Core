@@ -4,7 +4,7 @@
 
 ## Current objective
 
-Discovery v2 **server cutover is complete**. Begin physical acceptance in the locked order: **Android mobile -> LG webOS -> Android TV/Google TV**.
+Discovery v2 **server cutover is complete**. Continue physical acceptance in the locked order: **Android mobile -> LG webOS -> Android TV/Google TV**.
 
 Primary repo/branch: `PRYYSE/Moonfin-Core` / `homelab/discovery-v2`.
 
@@ -77,6 +77,16 @@ Whole-product #139 / `34571653740`, source `fd06ec5602351e53f0eacb56b2457ad0e80f
 - beta Android package `org.moonfin.androidtv.beta`; production package `org.moonfin.androidtv`.
 - beta signer intentionally differs from production; beta physical acceptance does not prove production signing/update compatibility.
 
+## Android mobile physical acceptance — in progress
+
+Exact beta candidate is installed side-by-side and first connection testing has begun.
+
+Observed initial failure: Moonfin Beta could not connect to the same server address while regular Moonfin worked from the same phone.
+
+Root cause confirmed on-device: **Tailscale Android app-based split tunnelling was excluding the separate beta package `org.moonfin.androidtv.beta`**. The production package is `org.moonfin.androidtv`, so production Moonfin remained routed through Tailscale while the beta was bypassed.
+
+This was a local routing configuration issue, not a Moonfin networking/code defect and not a server regression. No APK rebuild is required. Remove Moonfin Beta from Tailscale's excluded apps before continuing acceptance.
+
 ## Completed — do not redo
 
 - shared Discovery catalogue/compiler semantics: complete.
@@ -90,11 +100,12 @@ Whole-product #139 / `34571653740`, source `fd06ec5602351e53f0eacb56b2457ad0e80f
 - Moonbase duplicate-load repair: COMPLETE.
 - Moonbase 2.2 Seerr migration: COMPLETE.
 - Discovery v2 live server cutover: **COMPLETE / PASSED**.
+- Android beta initial connection blocker: **RESOLVED — Tailscale app-based split tunnelling exclusion**.
 
 ## Exact next actions
 
-1. Install the exact **Android mobile beta** candidate side-by-side; do not uninstall production Moonfin.
-2. On a fresh beta app-data first launch, connect/authenticate to the live Jellyfin server and prove Discovery is using the served schema-v2 catalogue rather than stock fallback.
+1. With Moonfin Beta no longer excluded by Tailscale, connect/authenticate to the live Jellyfin server and verify the session survives a complete app close/reopen.
+2. Prove Discovery is using the served schema-v2 catalogue rather than stock fallback.
 3. Physical acceptance: For You / Movies / Series / Anime recommendation quality; personalised Jellyfin/Seerr rows; See All; refresh/retention; touch/scroll; portrait/landscape; back/background behaviour; artwork/performance; owned-Jellyfin detail/playback; external-Seerr request state.
 4. Diagnose only genuine mobile defects. Poor recommendations should be traced to source/ranking rather than synthetic retuning.
 5. If mobile passes, checkpoint it and proceed to LG OLED65C6PSA/webOS, then Android TV/Google TV.
