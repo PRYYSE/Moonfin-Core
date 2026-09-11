@@ -1,6 +1,6 @@
 # AI Project State
 
-**Updated:** 2026-09-11 Australia/Adelaide
+**Updated:** 2026-09-12 Australia/Adelaide
 
 ## Current objective
 
@@ -12,38 +12,49 @@ GitHub/client implementation remains complete. Do not reopen completed platform 
 
 ## Current live state
 
-The semantic/catalogue issue is resolved and the duplicate-Moonbase issue is also resolved.
+The catalogue/semantic issue and duplicate-Moonbase issue are resolved.
 
-Cutover v3 proved the live catalogue gate at **481/486**, **5 semantic drops**, **0 provider drops**. Its later Jellyfin recreate exposed simultaneous Moonbase 2.1/2.2 loading; v4 fixed that by archiving only the superseded 2.1 plugin directory outside the live plugin root.
+Verified live server state after v4/v5 prerequisite repair:
 
-V4 verified:
+- Jellyfin `10.11.11` on `docker01` / `192.168.50.12`.
+- authoritative Compose remains `/opt/stacks/media/compose.yaml` + `compose.jellyfin-opencl.yml`.
+- superseded `Moonbase_2.1.0.0` is no longer in the live plugin root; archived at `/srv/appdata/moonfin/rollback/moonbase-dedup-20260911-221439/Moonbase_2.1.0.0`.
+- Jellyfin reports only `Moonbase 2.2.0.0 / Active`.
+- `/Moonfin/Web/` returns HTTP 200 after deduplication.
+- official-matching 2.2 DLL remains SHA-256 `f4863466ea6fe7763f9e8ad128cc050142246f0a48bde5069408f4b2487fc01c`.
+- do **not** restore Moonbase 2.1 and do **not** reinstall Moonbase.
+- external Discovery Web cutover is not active; v5 stopped before any new Compose/Web activation.
+- `/srv/appdata/moonfin/android-signing` remains protected/untouched.
 
-- repository semantic test suite: 9 tests PASS;
-- archived Moonbase 2.1 at `/srv/appdata/moonfin/rollback/moonbase-dedup-20260911-221439/Moonbase_2.1.0.0`;
-- Jellyfin restarted cleanly;
-- Jellyfin `/Plugins`: only `Moonbase 2.2.0.0 / Active`;
-- no duplicate `Moonfin.Server.PluginConfiguration` collision;
-- `/Moonfin/Web/`: HTTP 200.
+### Current blocker — locate/restore Moonbase Seerr configuration
 
-V4 then stopped before Compose/Web cutover because live catalogue compilation could no longer obtain the Seerr URL from `/Moonfin/Seerr/Config`; Moonbase reports Seerr disabled/unconfigured.
+V4 reached the live compiler only after Moonbase 2.2 was cleanly active, but compilation failed because Moonbase reports Seerr disabled/unconfigured.
 
-### Current blocker — Moonbase Seerr configuration
+V5 attempted automatic recovery from prior `server-migration-*/Moonfin.Server.xml.before` records and stopped safely with:
 
-The previous v3 script created `/srv/appdata/moonfin/rollback/server-migration-20260911-215908/Moonfin.Server.xml.before` before the bad dual-load restart, but its rollback script restored Compose/Web only and did **not** restore `Moonfin.Server.xml`. The dual-load failure can therefore leave the current Moonfin plugin config reset/defaulted even after the plugin binaries are repaired.
+`ERROR: No known-good pre-cutover Moonfin config with enabled Seerr was found in server-migration rollback records`
 
-Official Moonbase 2.2.0 configuration uses `SeerrEnabled` (default false) plus `SeerrUrl`, while retaining legacy `Jellyseerr*` keys for migration. Do not create new credentials or reconfigure Seerr manually unless recovery from the known-good pre-cutover config fails.
+This does **not** establish that the old Seerr settings are gone. V3 successfully compiled through Seerr before its bad dual-plugin restart, so working Seerr configuration/connectivity existed immediately before that restart.
 
-Do **not** restore Moonbase 2.1. The dedup repair is correct and should remain.
+Official Moonbase 2.2 configuration supports both modern `SeerrEnabled` / `SeerrUrl` and legacy `JellyseerrEnabled` / `JellyseerrUrl`; `MigrateLegacyKeys()` migrates legacy values on load. The next action is therefore a secret-safe read-only scan of current/rollback XML plus Jellyfin/Seerr Docker networking before constructing any v6 repair.
 
-## Root semantic repair — complete
+Do not ask for Seerr credentials or manually reconfigure the UI unless that scan proves no recoverable configuration exists.
+
+## Catalogue / semantic repair — complete
+
+The live catalogue gate is locked and proven:
+
+- authored `486`
+- compiled `481`
+- semantic drops `5`
+- provider drops `0`
+- tab counts: For You 16, Movies 129, Series 138, Anime 158, New/Upcoming 20, Lists 20.
 
 Compiler/test source: `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`.
 
-Historical TMDb keyword `romantic comedy=380334` disappeared; current search only returns narrower `lighthearted romantic comedy=380026`, which is deliberately not substituted.
+The removed historical `romantic comedy=380334` keyword is not replaced with narrower `lighthearted romantic comedy=380026`. `anime-theme-romantic-comedy` instead compiles from Japanese Animation + Comedy plus exact broad `romance`; fail-closed behaviour remains.
 
-`anime-theme-romantic-comedy` compiles from broad stable semantics: `discoverTv`, genre `16,35` (Animation + Comedy), language `ja`, `voteCountGte=5`, exact `romance` keyword. It still fails closed if `romance` disappears.
-
-Full Discovery workflow **#145 / `34598425336` is GREEN** at `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`. Do not re-run this semantic work.
+Full Discovery workflow **#145 / `34598425336` is GREEN** at `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`. Do not revisit this work.
 
 ## Exact release candidate
 
@@ -52,31 +63,6 @@ Whole-product #139 / `34571653740`, source `fd06ec5602351e53f0eacb56b2457ad0e80f
 - Web SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`; Moonfin `2.5.1`, build `30000149`.
 - Android mobile SHA-256 `117e63325942dddcf352a5756e2926a16340d86317e3d8706d540febeda7ae9c`.
 - Android TV SHA-256 `71c2b017cb827e216ef4e5eb23bb4bc40e595b1eb1255aff24cd51298be3e1e8`.
-- `/srv/appdata/moonfin/android-signing` remains protected/untouched.
-
-## Prepared recovery + cutover bundle v5
-
-Use only `Moonfin_DiscoveryV2_Server_Cutover_fd06ec560235_v5.zip`.
-
-- bundle SHA-256 `c67d6529b70f0cacb39116c1acfc129250de17a7e7697810179677d17023cc30`
-- deploy script SHA-256 `aaa7198bceb5a67aba5da0dcb3d541f2f50213acf72510de13569dc250de5d3c`
-- embedded exact #139 Web tar SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`.
-- ZIP integrity: PASS.
-- `bash -n`: PASS.
-- synthetic known-good config selection test: PASS.
-
-V5 preserves the successful v4 Moonbase dedup. Before live catalogue compilation it checks `/Moonfin/Seerr/Config`. If already configured it continues unchanged. If not, it:
-
-1. backs up the current `Moonfin.Server.xml` under `rollback/moonbase-config-repair-<timestamp>/`;
-2. scans only prior `server-migration-*/Moonfin.Server.xml.before` rollback records;
-3. selects the newest XML that actually contains enabled Seerr/Jellyseerr plus a non-empty URL, without printing URL contents, API keys, webhook secrets or credentials;
-4. stops only Jellyfin, restores that known-good plugin config, and starts Jellyfin;
-5. requires Moonbase 2.2 `Active`, Moonbase 2.1 absent, `/Moonfin/Web/` HTTP 200, and `/Moonfin/Seerr/Config` enabled/configured;
-6. automatically restores the pre-repair current config if this repair fails.
-
-After that it runs the unchanged live catalogue gate **481/486 / 5 semantic drops / 0 provider drops**, safely replaces only the verified inactive `fd06ec560235` staging copy left by v3, performs the external-Web Compose cutover, and verifies live routes/catalogue/Seerr/Moonbase.
-
-The cutover rollback path now restores the saved plugin configuration as well as Compose and the Web pointer.
 
 ## Completed — do not redo
 
@@ -87,9 +73,14 @@ The cutover rollback path now restores the saved plugin configuration as well as
 - Smart-TV/webOS Discovery parity #52 / `34439022624` GREEN.
 - cross-platform parity/recommendation #132 / `34439296054` GREEN.
 - whole-product release #139 / `34571653740` GREEN.
-- semantic repair workflow #145 / `34598425336` GREEN.
-- stable bases: Core 2.5.1, Moonbase 2.2.0, Smart-TV 2.8.2.
+- semantic repair #145 / `34598425336` GREEN.
+- Moonbase duplicate-load repair: COMPLETE; 2.2 only / Active / Web 200.
 
-## Exact next action
+## Exact next actions
 
-Run v5 once. Required progression: Moonbase 2.2 remains clean/Active -> Seerr config recovery PASS -> catalogue **481/486 / 5 / 0** -> external-Web cutover PASS. If it passes, record the live catalogue SHA, Web release pointer, Moonbase 2.2 state and rollback paths, then begin Android mobile physical acceptance.
+1. Run one secret-safe read-only scan across current Moonfin config and rollback XML for both `Seerr*` and legacy `Jellyseerr*` fields; do not print URL contents or secrets.
+2. Confirm Jellyfin and Seerr share a Docker network and `seerr` resolves/reaches port 5055 from Jellyfin.
+3. If a historical enabled config is found, restore only the required configuration after backing up the current XML, restart only Jellyfin, and verify Moonbase 2.2 Active + Web 200 + Seerr enabled.
+4. If no recoverable config exists but Docker networking confirms the service endpoint, reconstruct only the non-secret enable/URL fields while preserving every other current setting/secret; verify before continuing.
+5. Then rerun the already-proven catalogue gate **481/486 / 5 / 0** and finish external-Web cutover.
+6. After server cutover passes, record live catalogue SHA/release pointer/rollback paths and begin Android mobile physical acceptance.
