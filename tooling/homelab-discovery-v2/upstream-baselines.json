@@ -22,7 +22,19 @@
     "update_branch_prefix": "update/webos-",
     "release_workflow": ".github/workflows/homelab-webos-discovery-v2.yml",
     "rollback_branch": "homelab/webos-v1-staging",
-    "rollback_candidate_sha": "f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e"
+    "rollback_candidate_sha": "f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e",
+    "validated_candidate": {
+      "status": "github_code_validated_pending_physical_acceptance",
+      "release_tag": "2.8.2",
+      "official_release_sha": "ed327948aeb8ef19098b810145ab6a3b76ccf372",
+      "branch": "update/webos-2.8.2",
+      "product_merge_sha": "44a72276e87f611791348fbd11584e6aff56641a",
+      "validation_trigger_sha": "3dc9d2d3ba4e2e94793d70c14d18c3fb5c1b2568",
+      "validation_run_id": 34582969197,
+      "artifact_id": 10192446254,
+      "artifact_zip_sha256": "7cb6387cde7681fb598edb431d31bb7f596a9e86dd1be27b0fc5c6d3c7fb4717",
+      "ipk_sha256": "75be2fedecbd3b503a5f74d2c2fad403e9ac0bede4c842d4da87bd80cae2460a"
+    }
   },
   "protected_identity": {
     "android_production_certificate_sha256": "3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604",

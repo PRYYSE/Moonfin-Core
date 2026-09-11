@@ -1,7 +1,7 @@
 # Official Moonfin Update Protocol
 
 **Applies to:** Web, Android mobile/tablet, Android TV / Google TV, LG webOS and shared Home Lab Discovery tooling  
-**Updated:** 2026-09-08 Australia/Adelaide
+**Updated:** 2026-09-11 Australia/Adelaide
 
 ## Purpose
 
@@ -10,6 +10,8 @@ Keep Home Lab Moonfin maintainable as:
 > official Moonfin + a narrow isolated Home Lab overlay
 
 An upstream release is never merged directly into production and never treated as safe merely because it builds. Every official update follows the controlled process below across all supported platforms.
+
+Implementation companion for the current detector/reporting and isolated-update tooling: `docs/homelab-discovery-v2/UPSTREAM_UPDATE_AUTOMATION.md`. This protocol remains authoritative if companion tooling and policy ever differ.
 
 ## Permanent identities and rollback rules
 

@@ -1,50 +1,51 @@
 # Home Lab Discovery v2 — Current Checkpoint
 
-**Updated:** 2026-09-11 Australia/Adelaide
+**Updated:** 2026-09-11 Australia/Adelaide  
 **Primary branch:** `homelab/discovery-v2`
 
-GitHub/current repo is authoritative. Do not restart completed Discovery platform work or touch live services during GitHub-only work.
+GitHub/current repo is authoritative. Completed GitHub/code stages must not be restarted without current fault evidence.
 
-## Current boundary
+## Status — GitHub/code COMPLETE
 
-- Shared Discovery semantics/catalogue: COMPLETE (`486 authored / 481 active`).
-- Web, Android mobile/tablet, Android TV/Google TV and Smart-TV accepted Discovery parity: GITHUB/CODE COMPLETE.
-- Cross-platform parity/recommendation semantics: COMPLETE for GitHub/code evidence.
-- Whole-product Flutter release engineering: COMPLETE — #139 GREEN.
-- Stable-update automation: corrected to release tags and validated GREEN.
-- Current work: final validation of isolated Smart-TV 2.8.2 Home-Lab candidate.
+> No known GitHub/code-side work remains. Remaining work requires real devices, real services, deployment infrastructure, or subjective visual/recommendation acceptance.
 
-## Smart-TV 2.8.2 evidence
+The next boundary is physical/live acceptance. Do not promote accepted/rollback refs or touch live services until explicitly entering that phase.
 
-- official release `2.8.2` commit `ed327948aeb8ef19098b810145ab6a3b76ccf372`.
-- accepted ancestry anchor remains `384d7cab3642f846463a4308e92d213e51507edf`.
-- Port Analysis #1 / `34578965427` GREEN; exactly five overlap paths explicitly reviewed.
-- reviewed conflict patch SHA-256 `23d7800c6d15812cea030a8e5329bea267a5dd17d18be9003efb9b4904f54848`.
-- repair/control source `8fb273c024c773d730bd22304fa3d12961db18a2`.
-- Port Staging #3 / `34582511512`: GREEN; release/ref guard, exact conflict gate, patch, focused tests, Node 20 build, app identity/version/entry and isolated push all passed.
+## Locked completion evidence
+
+- shared catalogue/compiler/semantics: COMPLETE, `486 authored / 481 active`.
+- Web: COMPLETE, source `1ac1499a0d43d404fa46d1e1abf49a433f972ea9`.
+- Android mobile/tablet: #120 / `34326151119` GREEN, source `4af01af054d9b7cbe8e230b7ded482cb8fea330c`.
+- Android TV/Google TV: #128 / `34429841034` GREEN, source `15ccc28b84727543ad714ef19dd318f907d1a1d8`.
+- cross-platform parity/recommendation: #132 / `34439296054` GREEN, source `e654668f89af49470df417d4fcc444e73c53121e`.
+- whole-product Flutter release gate: #139 / `34571653740` GREEN, source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`.
+- upstream-update detector/protocol automation: COMPLETE; official stable releases rechecked as Core `2.5.1`, Smart-TV `2.8.2`.
+
+## Smart-TV 2.8.2 validated candidate
+
+- accepted/live webOS baseline remains `2.7.0`; ancestry anchor `384d7cab3642f846463a4308e92d213e51507edf`.
+- official 2.8.2 source `ed327948aeb8ef19098b810145ab6a3b76ccf372`.
+- product merge `44a72276e87f611791348fbd11584e6aff56641a`; tree `f3422be8bc22c312fbb94807b71a90e815c0213e`.
+- Port Analysis #1 / `34578965427`: GREEN; five overlaps explicitly reviewed.
+- Port Staging #3 / `34582511512`: GREEN.
 - accepted-branch regression #57 / `34582511474`: GREEN.
-- #57 artifact `10192272864`; digest `sha256:a37554228197b4b8640a722f96b274eebe0a0daf6f3003a3d9fc31fa3796370c`.
-- isolated product merge commit `44a72276e87f611791348fbd11584e6aff56641a`; tree `f3422be8bc22c312fbb94807b71a90e815c0213e`.
-- same-tree checkpoint `26883e4dc3d1d2d25ce820756cf09a845227e3c1`.
-- validation trigger `3dc9d2d3ba4e2e94793d70c14d18c3fb5c1b2568` adds only `.github/homelab-webos-2.8.2-validation.txt`, not product/package content.
+- update-branch validation #58 / `34582969197`: GREEN; tests, build, app identity/package verification and artifact upload passed.
+- artifact `10192446254`; ZIP digest `sha256:7cb6387cde7681fb598edb431d31bb7f596a9e86dd1be27b0fc5c6d3c7fb4717`.
+- IPK SHA-256 `75be2fedecbd3b503a5f74d2c2fad403e9ac0bede4c842d4da87bd80cae2460a`, independently verified against the packaged checksum.
+- conflict-probe PR #1: CLOSED, unmerged, retired.
+- accepted branch and rollback ref remain unchanged pending physical LG acceptance.
 
-## Waiting — inspect ONCE next continuation
+## Completion record
 
-Home Lab webOS Discovery v2 #58 / `34582969197`, source `3dc9d2d3ba4e2e94793d70c14d18c3fb5c1b2568`, captured IN PROGRESS at dependency install.
-
-**DO NOT POLL #58 AGAIN THIS CYCLE.**
-
-## Exact next actions
-
-1. Inspect #58 once next continuation.
-2. If green, capture IPK artifact metadata/digest and verify established tests/build/app-ID/version/package checks.
-3. Mark Smart-TV 2.8.2 GitHub/code integration complete and retire conflict-probe PR #1.
-4. Update stable baselines/checkpoints and create the explicit whole-project GitHub completion checkpoint if no other code blocker remains.
-5. Keep accepted product/rollback refs and all live/physical systems unchanged until deliberate later acceptance/promotion.
+See `docs/homelab-discovery-v2/GITHUB_COMPLETION_CHECKPOINT.md` for the whole-product Phase-10 closure evidence.
 
 ## Locked invariants
 
 - Android production signing cert `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`.
 - webOS app ID `org.moonfin.webos`, entry `index.html`, Node 20 for legacy LG C6 compatibility.
 - rollback `homelab/webos-v1-staging` / `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e`.
-- no CI result equals physical/live acceptance.
+- live systems remain untouched.
+
+## Exact next action
+
+When explicitly entering the next phase, begin controlled physical/live acceptance using the completion checkpoint as the source of truth. Do not redo completed GitHub/code work unless acceptance exposes a genuine defect.
