@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - homelab/discovery-v2
+      - 'update/moonfin-*'
     paths-ignore:
       - 'docs/**'
   pull_request:
@@ -76,13 +77,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base='f18c45b1fbf9b63871b4f93237179f9706154763'
+          if [[ "${GITHUB_REF_NAME}" == update/moonfin-* ]]; then
+            git remote remove official >/dev/null 2>&1 || true
+            git remote add official https://github.com/Moonfin-Client/Moonfin-Core.git
+            git fetch --no-tags official main:refs/remotes/official/main
+            base="$(git merge-base HEAD refs/remotes/official/main)"
+            if [ -z "$base" ]; then
+              echo 'Could not resolve the official-upstream merge base for this update branch.' >&2
+              exit 1
+            fi
+            echo "Update-branch scope base: $base"
+          else
+            base='f18c45b1fbf9b63871b4f93237179f9706154763'
+          fi
           git cat-file -e "$base^{commit}"
           mapfile -t changed < <(git diff --name-only "$base"...HEAD)
           printf '%s\n' "${changed[@]}"
           for path in "${changed[@]}"; do
             case "$path" in
-              lib/features/homelab_discovery/*|test/homelab_discovery/*|docs/AI_PROJECT_STATE.md|docs/UPSTREAM_UPDATE_PROTOCOL.md|docs/homelab-discovery-v2/*|.github/workflows/homelab-discovery-v2.yml|tooling/homelab-discovery-v2/*|lib/ui/navigation/app_router.dart|android/app/build.gradle.kts)
+              lib/features/homelab_discovery/*|test/homelab_discovery/*|docs/AI_PROJECT_STATE.md|docs/UPSTREAM_UPDATE_PROTOCOL.md|docs/homelab-discovery-v2/*|.github/workflows/homelab-discovery-v2.yml|.github/workflows/homelab-upstream-impact.yml|tooling/homelab-discovery-v2/*|lib/ui/navigation/app_router.dart|android/app/build.gradle.kts)
                 ;;
               *)
                 echo "Unexpected v2 scope change: $path" >&2

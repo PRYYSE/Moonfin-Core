@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "core": {
+    "label": "Moonfin Core",
+    "upstream_repository": "Moonfin-Client/Moonfin-Core",
+    "upstream_branch": "main",
+    "accepted_base_sha": "f18c45b1fbf9b63871b4f93237179f9706154763",
+    "overlay_repository": "PRYYSE/Moonfin-Core",
+    "overlay_branch": "homelab/discovery-v2",
+    "update_branch_prefix": "update/moonfin-",
+    "release_workflow": ".github/workflows/homelab-discovery-v2.yml"
+  },
+  "smart_tv": {
+    "label": "Moonfin Smart-TV/webOS",
+    "upstream_repository": "Moonfin-Client/Smart-TV",
+    "upstream_branch": "main",
+    "accepted_base_sha": "384d7cab3642f846463a4308e92d213e51507edf",
+    "overlay_repository": "PRYYSE/Smart-TV",
+    "overlay_branch": "homelab/webos-discovery-v2",
+    "update_branch_prefix": "update/webos-",
+    "release_workflow": ".github/workflows/homelab-webos-discovery-v2.yml",
+    "rollback_branch": "homelab/webos-v1-staging",
+    "rollback_candidate_sha": "f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e"
+  },
+  "protected_identity": {
+    "android_production_certificate_sha256": "3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604",
+    "webos_application_id": "org.moonfin.webos"
+  }
+}

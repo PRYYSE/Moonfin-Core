@@ -1,0 +1,106 @@
+name: Home Lab Upstream Impact
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - homelab/discovery-v2
+    paths:
+      - '.github/workflows/homelab-upstream-impact.yml'
+      - 'tooling/homelab-discovery-v2/upstream_impact_report.py'
+      - 'tooling/homelab-discovery-v2/upstream-baselines.json'
+      - 'docs/UPSTREAM_UPDATE_PROTOCOL.md'
+  # GitHub evaluates scheduled workflows only from the repository default branch.
+  # This cron becomes active only if this control workflow is deliberately promoted there.
+  schedule:
+    - cron: '30 21 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homelab-upstream-impact-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  impact-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch official Core upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          git remote remove official >/dev/null 2>&1 || true
+          git remote add official https://github.com/Moonfin-Client/Moonfin-Core.git
+          git fetch --no-tags official main:refs/remotes/official/main
+
+      - name: Generate Core impact report
+        id: core
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tooling/homelab-discovery-v2/upstream_impact_report.py \
+            --config tooling/homelab-discovery-v2/upstream-baselines.json \
+            --component core \
+            --repo . \
+            --upstream-ref refs/remotes/official/main \
+            --overlay-ref HEAD \
+            --output artifacts/core-upstream-impact.md \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Fetch Smart-TV overlay and official upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf smart-tv
+          git clone --filter=blob:none --no-checkout https://github.com/PRYYSE/Smart-TV.git smart-tv
+          git -C smart-tv fetch --no-tags origin \
+            homelab/webos-discovery-v2:refs/remotes/origin/homelab/webos-discovery-v2
+          git -C smart-tv remote add official https://github.com/Moonfin-Client/Smart-TV.git
+          git -C smart-tv fetch --no-tags official main:refs/remotes/official/main
+
+      - name: Generate Smart-TV impact report
+        id: smart_tv
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tooling/homelab-discovery-v2/upstream_impact_report.py \
+            --config tooling/homelab-discovery-v2/upstream-baselines.json \
+            --component smart_tv \
+            --repo smart-tv \
+            --upstream-ref refs/remotes/official/main \
+            --overlay-ref refs/remotes/origin/homelab/webos-discovery-v2 \
+            --output artifacts/smart-tv-upstream-impact.md \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Publish concise workflow summary
+        shell: bash
+        env:
+          CORE_UPDATE: ${{ steps.core.outputs.update_available }}
+          CORE_HEAD: ${{ steps.core.outputs.upstream_head }}
+          CORE_OVERLAP: ${{ steps.core.outputs.overlap_paths }}
+          TV_UPDATE: ${{ steps.smart_tv.outputs.update_available }}
+          TV_HEAD: ${{ steps.smart_tv.outputs.upstream_head }}
+          TV_OVERLAP: ${{ steps.smart_tv.outputs.overlap_paths }}
+        run: |
+          set -euo pipefail
+          {
+            echo '# Home Lab upstream status'
+            echo
+            echo "- Core update available: **${CORE_UPDATE}** - upstream \`${CORE_HEAD}\` - overlap paths: **${CORE_OVERLAP}**"
+            echo "- Smart-TV update available: **${TV_UPDATE}** - upstream \`${TV_HEAD}\` - overlap paths: **${TV_OVERLAP}**"
+            echo
+            echo 'Detailed impact reports are attached as the workflow artifact.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload impact reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: homelab-upstream-impact-${{ github.sha }}
+          path: artifacts/*-upstream-impact.md
+          if-no-files-found: error
+          retention-days: 30
