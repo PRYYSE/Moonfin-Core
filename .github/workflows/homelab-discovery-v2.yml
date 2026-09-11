@@ -82,7 +82,7 @@ jobs:
           printf '%s\n' "${changed[@]}"
           for path in "${changed[@]}"; do
             case "$path" in
-              lib/features/homelab_discovery/*|test/homelab_discovery/*|docs/AI_PROJECT_STATE.md|docs/UPSTREAM_UPDATE_PROTOCOL.md|docs/homelab-discovery-v2/*|.github/workflows/homelab-discovery-v2.yml|tooling/homelab-discovery-v2/*|lib/ui/navigation/app_router.dart)
+              lib/features/homelab_discovery/*|test/homelab_discovery/*|docs/AI_PROJECT_STATE.md|docs/UPSTREAM_UPDATE_PROTOCOL.md|docs/homelab-discovery-v2/*|.github/workflows/homelab-discovery-v2.yml|tooling/homelab-discovery-v2/*|lib/ui/navigation/app_router.dart|android/app/build.gradle.kts)
                 ;;
               *)
                 echo "Unexpected v2 scope change: $path" >&2
