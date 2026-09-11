@@ -180,19 +180,33 @@ jobs:
           fi
 
           cert_digest() {
-            "$apksigner_bin" verify --print-certs "$1" \
-              | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' \
-              | head -n1 \
-              | tr -d ':' \
-              | tr '[:upper:]' '[:lower:]'
+            local apk="$1"
+            local signer_output
+            local digest
+            if ! signer_output="$("$apksigner_bin" verify --print-certs "$apk" 2>&1)"; then
+              printf 'apksigner verification failed for %s:\n%s\n' "$(basename "$apk")" "$signer_output" >&2
+              return 1
+            fi
+            digest="$(sed -n -E 's/^[[:space:]]*Signer #1 certificate SHA-256 digest:[[:space:]]*//p' <<<"$signer_output" | head -n1 | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
+            if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
+              printf 'Could not parse signer SHA-256 for %s. Certificate lines were:\n' "$(basename "$apk")" >&2
+              grep -i 'certificate.*sha-256' <<<"$signer_output" >&2 || true
+              return 1
+            fi
+            printf '%s\n' "$digest"
           }
 
           mobile_cert="$(cert_digest "$mobile_apk")"
           tv_cert="$(cert_digest "$tv_apk")"
           production_cert='3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604'
-          test -n "$mobile_cert"
-          test "$mobile_cert" = "$tv_cert"
-          test "$mobile_cert" != "$production_cert"
+          if [[ "$mobile_cert" != "$tv_cert" ]]; then
+            printf 'Android beta candidates use different CI signers: mobile=%s tv=%s\n' "$mobile_cert" "$tv_cert" >&2
+            exit 1
+          fi
+          if [[ "$mobile_cert" == "$production_cert" ]]; then
+            echo 'CI candidate signer unexpectedly matches the protected production certificate.' >&2
+            exit 1
+          fi
           printf '%s\n' "$mobile_cert" > /tmp/android-ci-cert-sha256
           printf 'Verified beta application ID: %s\n' "$expected_beta_id"
           printf 'Verified CI signing certificate SHA-256: %s\n' "$mobile_cert"
