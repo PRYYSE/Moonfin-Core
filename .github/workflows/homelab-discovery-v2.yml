@@ -187,7 +187,7 @@ jobs:
               printf 'apksigner verification failed for %s:\n%s\n' "$(basename "$apk")" "$signer_output" >&2
               return 1
             fi
-            digest="$(sed -n -E 's/^[[:space:]]*Signer #1 certificate SHA-256 digest:[[:space:]]*//p' <<<"$signer_output" | head -n1 | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
+            digest="$(sed -n -E 's/^.*certificate SHA-256 digest:[[:space:]]*//p' <<<"$signer_output" | head -n1 | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
             if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
               printf 'Could not parse signer SHA-256 for %s. Certificate lines were:\n' "$(basename "$apk")" >&2
               grep -i 'certificate.*sha-256' <<<"$signer_output" >&2 || true
