@@ -83,6 +83,60 @@ void main() {
     expect(homeLabDiscoveryGridColumns(792), 5);
   });
 
+  test('mobile Discovery header clears a top toolbar without affecting others', () {
+    expect(
+      homeLabDiscoveryHeaderTopPadding(
+        isMobile: true,
+        hasTopToolbar: true,
+        toolbarHeight: 60,
+      ),
+      68,
+    );
+    expect(
+      homeLabDiscoveryHeaderTopPadding(
+        isMobile: true,
+        hasTopToolbar: false,
+        toolbarHeight: 60,
+      ),
+      homeLabDiscoveryDefaultHeaderTopPadding,
+    );
+    expect(
+      homeLabDiscoveryHeaderTopPadding(
+        isMobile: false,
+        hasTopToolbar: true,
+        toolbarHeight: 80,
+      ),
+      homeLabDiscoveryDefaultHeaderTopPadding,
+    );
+  });
+
+  test('carousel storage is isolated by lane and explicit refresh', () {
+    final initial = homeLabDiscoveryLaneScrollStorageKey(
+      tabId: 'movies',
+      sectionId: 'movies-popular',
+      refreshNonce: 0,
+    );
+    final sameLane = homeLabDiscoveryLaneScrollStorageKey(
+      tabId: 'movies',
+      sectionId: 'movies-popular',
+      refreshNonce: 0,
+    );
+    final otherLane = homeLabDiscoveryLaneScrollStorageKey(
+      tabId: 'movies',
+      sectionId: 'movies-trending',
+      refreshNonce: 0,
+    );
+    final refreshed = homeLabDiscoveryLaneScrollStorageKey(
+      tabId: 'movies',
+      sectionId: 'movies-popular',
+      refreshNonce: 1,
+    );
+
+    expect(initial, sameLane);
+    expect(otherLane, isNot(initial));
+    expect(refreshed, isNot(initial));
+  });
+
   testWidgets('mobile tabs keep a full touch target and switch by tap', (
     tester,
   ) async {
