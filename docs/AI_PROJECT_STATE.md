@@ -23,7 +23,7 @@ Host: `docker01` / `192.168.50.12`.
 - `MOONFIN_WEB_ROOT` remains unset.
 - existing `/Moonfin/Web/` and `/Moonfin/Web/config.json` return 200; Discovery v2 catalogue route remains unserved.
 - `/srv/appdata/moonfin/web` remains absent.
-- `/srv/appdata/moonfin/discovery` now contains only unserved output from the aborted first cutover compile.
+- `/srv/appdata/moonfin/discovery` contains only unserved output from the safely aborted first compile.
 - `/srv/appdata/moonfin/android-signing` remains protected/untouched.
 - Seerr container `seerr` / `ghcr.io/seerr-team/seerr:latest`.
 
@@ -36,53 +36,55 @@ Do **not** reinstall Moonbase.
 - official-vs-installed comparison: 172 exact package files, 0 missing, only `meta.json` differs.
 - installed `Moonfin.Server.dll` exactly matches official payload SHA-256 `f4863466ea6fe7763f9e8ad128cc050142246f0a48bde5069408f4b2487fc01c`.
 - Jellyfin `/Plugins` pre-cutover reports `Moonbase 2.1.0.0 / Superseded` and `Moonfin 2.2.0.0 / Restart`.
-- revised cutover accepts 2.2.0 `Restart` before the planned recreate and requires 2.2.0 `Active` afterwards.
+- final cutover accepts 2.2.0 `Restart` only before the planned recreate and requires 2.2.0 `Active` afterwards.
 
 ## Exact release candidate
 
 Whole-product #139 / run `34571653740`, source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`, artifact `10188826944`.
 
-- Web `Moonfin_HomeLab_Web_fd06ec560235.tar.gz`: SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`; Moonfin `2.5.1`, build `30000149`.
+- Web: SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`; Moonfin `2.5.1`, build `30000149`.
 - Android mobile: SHA-256 `117e63325942dddcf352a5756e2926a16340d86317e3d8706d540febeda7ae9c`.
 - Android TV: SHA-256 `71c2b017cb827e216ef4e5eb23bb4bc40e595b1eb1255aff24cd51298be3e1e8`.
 - live compilation tooling restored in `14706f9e5534392be3f1035d41a0253bcc7241d2`.
 
-## First cutover attempt — safely aborted
+## Safely aborted first cutover
 
-The first cutover package passed Web/Moonbase preflight and then force-compiled current live Seerr/TMDb semantics to **480/486** with **6 semantic drops** and **0 provider drops**. The regression gate aborted before any Compose edit, Web-root switch or Jellyfin recreate.
+The first cutover force-compiled current live Seerr/TMDb semantics to **480/486**, with **6 semantic drops** and **0 provider drops**. It aborted before any Compose edit, Web-root switch or Jellyfin recreate.
 
-Current drops:
+Drops were `heist movies`, `high school & teen drama`, `supernatural mysteries`, `giant robots`, `parallel worlds`, and `romantic comedy`.
 
-- movie: `heist movies`
-- series: `high school & teen drama`, `supernatural mysteries`
-- anime: `giant robots`, `parallel worlds`, `romantic comedy`
+Historical cache had `romantic comedy=380334`; current lookup for 380334 returns null and current `romantic comedy` search returns only `380026 / lighthearted romantic comedy`. That narrower keyword is deliberately not used for the broad lane.
 
-Historical accepted cache contained `romantic comedy=380334`. Current Seerr lookup now returns null for keyword `380334`; searching `romantic comedy` returns only `380026 / lighthearted romantic comedy`.
+## Root semantic repair
 
-Decision: do **not** map the broad lane to the narrower current keyword.
+Compiler/test source: `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`.
 
-## Reviewed Romantic Comedy semantic repair
-
-Keep lane ID/title `anime-theme-romantic-comedy`, but represent it as:
+`anime-theme-romantic-comedy` now compiles from stable broad components:
 
 - `discoverTv`
-- Animation + Comedy genres: `16,35`
-- Japanese: `ja`
+- genres `16,35` (Animation + Comedy)
+- language `ja`
 - `voteCountGte=5`
-- exact broad keyword `romance`
+- exact keyword `romance`
 
-`romance` already resolves in the current live semantic pass. This should restore exactly one lane while leaving the five genuinely unresolved semantics fail-closed.
+The compiler refuses the transformation if the authored source shape changes. Regression coverage proves the lane survives loss of the removed `romantic comedy` keyword when exact `romance` exists, and still fails closed if `romance` also disappears.
 
-Revised cutover bundle:
+## Final server cutover bundle
 
-- `Moonfin_DiscoveryV2_Server_Cutover_fd06ec560235_v2.zip`
-- SHA-256 `6317d9517455e5e43a520846fa2e09dae220634d3e288c5ae9f48f2d9af21b35`
-- deploy script SHA-256 `06a575ab160db139484e4f1c3456ab6ac467080714728ae9ad753efdd9e0dee3`
-- exact #139 Web tar hash unchanged.
+Use only:
 
-Local gates passed: bundle extraction, Bash syntax, Web hash, and exact semantic source-patch simulation. The live script self-verifies the semantic transformation and still requires **481/486**, exactly **5 semantic drops**, and **0 provider drops** before changing Compose.
+- `Moonfin_DiscoveryV2_Server_Cutover_fd06ec560235_v3.zip`
+- SHA-256 `73f1337b175ab793d83510baa87b49f3b355fd42aac44ae8c9e9b1f9517bc707`
+- deploy script SHA-256 `0195acdeee144ceb08f65a1f5d6c2e652bfb13a63b681878298a8736afe9af67`
+- embedded #139 Web tar SHA-256 remains `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`.
 
-Rollback once a live checkpoint exists:
+Local bundle extraction, Bash syntax and Web hash verification: PASS.
+
+Before any authoritative live change, the script retrieves the pinned #139 catalogue source plus compiler/test source `ee00cb...`, runs `py_compile` and the repository catalogue regression suite, confirms a safe Moonfin pre-restart state, force-compiles live semantics, then requires **481/486**, exactly **5 semantic drops**, and **0 provider drops**.
+
+Only after those gates pass does it stage the Web release/catalogue, create rollback data, edit authoritative Compose, set `MOONFIN_WEB_ROOT`, recreate only Jellyfin, and verify Moonfin 2.2.0 `Active`, Seerr config, Web routes and the served 481-lane catalogue. Post-edit failures automatically restore the previous Compose/bundled-Web state.
+
+Rollback after a checkpoint exists:
 
 `sudo bash /srv/appdata/moonfin/rollback/latest/rollback.sh`
 
@@ -100,10 +102,10 @@ Rollback once a live checkpoint exists:
 
 ## Exact next actions
 
-1. Transfer and run revised cutover bundle v2.
+1. Transfer and run final cutover bundle v3.
 2. Require pre-Compose live compile **481/486**, **5 semantic drops**, **0 provider drops**.
-3. If it fails, diagnose only the reported gate; do not weaken semantics or improvise a live workaround.
-4. If it passes, record live catalogue SHA, Web release pointer, post-restart Moonfin 2.2.0 `Active` result and rollback directory.
+3. If it fails, diagnose only that gate; do not weaken semantics.
+4. If it passes, record live catalogue SHA, Web release pointer, Moonfin 2.2.0 `Active` result and rollback directory.
 5. Begin Android mobile beta physical acceptance side-by-side with production.
 
 ## Non-blocking debt
