@@ -18,74 +18,55 @@ Verified live:
 
 - Jellyfin `10.11.11`.
 - authoritative Compose remains `/opt/stacks/media/compose.yaml` + `compose.jellyfin-opencl.yml`.
-- external Moonfin Web is active through container path `/moonfin-web/current`, backed by host release `releases/fd06ec560235`.
+- external Moonfin Web active through `/moonfin-web/current -> releases/fd06ec560235`.
 - product source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`.
 - semantic compiler source `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`.
 - exact Web tar SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`.
-- `/System/Info/Public` HTTP 200.
-- `/Moonfin/Web/` HTTP 200.
-- `/Moonfin/Web/config.json` HTTP 200.
-- `/Moonfin/Web/version.json` HTTP 200.
-- `/Moonfin/Web/homelab/discovery.catalogue.json` HTTP 200.
-- served Web metadata matches Moonfin `2.5.1`, build `30000149`.
-- served Discovery catalogue is schema v2 / live-compiled / **481 lanes**.
-- served canonical catalogue SHA-256 `2331f6f24428de5203ec8fd4d5d867a4734ebd3449df1538ce60eb4448904b50`.
-- only Moonbase `2.2.0.0` is live and Jellyfin reports it `Active`; superseded 2.1 remains archived outside the plugin root and must not be restored.
-- Moonbase Seerr configuration survived the final Jellyfin recreate and is enabled/configured.
-- authenticated Moonbase -> Seerr proxy passed after cutover.
-- `/srv/appdata/moonfin/android-signing` remains untouched.
+- served Discovery catalogue schema v2 / **481 lanes**, SHA-256 `2331f6f24428de5203ec8fd4d5d867a4734ebd3449df1538ce60eb4448904b50`.
+- required Jellyfin/Moonfin Web/config/version/catalogue endpoints HTTP 200.
+- only Moonbase `2.2.0.0` live and `Active`; Moonbase -> Seerr proxy PASS after final recreate.
+- `/srv/appdata/moonfin/android-signing` untouched.
 
-Rollback record:
+Rollback record: `/srv/appdata/moonfin/rollback/server-migration-20260912-015401`
 
-`/srv/appdata/moonfin/rollback/server-migration-20260912-015401`
+Rollback command: `sudo bash /srv/appdata/moonfin/rollback/latest/rollback.sh`
 
-Rollback command:
-
-`sudo bash /srv/appdata/moonfin/rollback/latest/rollback.sh`
-
-Canonical live catalogue:
-
-`/srv/appdata/moonfin/discovery/discovery.catalogue.json`
-
-### Readiness rule retained
-
-`/System/Info/Public` can return 200 before Moonbase Web is ready. Any future restart/rollback acceptance must require **both** Jellyfin public API 200 and `/Moonfin/Web/` 200.
-
-Do not restore the full 2026-08-13 Moonfin XML. It is Moonbase 2.1-era. Seerr was successfully migrated field-by-field into the clean 2.2 configuration, preserving the 2.2 webhook secret.
+Readiness rule retained: future Jellyfin restart/rollback acceptance must require both `/System/Info/Public` 200 and `/Moonfin/Web/` 200.
 
 ## Catalogue / semantic repair — complete
 
-Locked result:
+Locked result: 486 authored / 481 compiled / 5 semantic drops / 0 provider drops. Tab counts: For You 16, Movies 129, Series 138, Anime 158, New/Upcoming 20, Lists 20.
 
-- authored `486`
-- compiled `481`
-- semantic drops `5`
-- provider drops `0`
-- tab counts: For You 16, Movies 129, Series 138, Anime 158, New/Upcoming 20, Lists 20.
-
-Compiler/test source `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`; Discovery workflow #145 / `34598425336` is GREEN. Do not revisit this work.
-
-`anime-theme-romantic-comedy` compiles as Japanese Animation + Comedy + exact broad `romance`; do not restore stale keyword ID `380334` or map it to narrower `lighthearted romantic comedy`.
+Compiler/test source `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`; workflow #145 / `34598425336` GREEN. Do not revisit.
 
 ## Exact release candidate
 
 Whole-product #139 / `34571653740`, source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`, artifact `10188826944`.
 
-- Web SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`; Moonfin `2.5.1`, build `30000149`.
 - Android mobile SHA-256 `117e63325942dddcf352a5756e2926a16340d86317e3d8706d540febeda7ae9c`.
 - Android TV SHA-256 `71c2b017cb827e216ef4e5eb23bb4bc40e595b1eb1255aff24cd51298be3e1e8`.
-- beta Android package `org.moonfin.androidtv.beta`; production package `org.moonfin.androidtv`.
-- beta signer intentionally differs from production; beta physical acceptance does not prove production signing/update compatibility.
+- beta package `org.moonfin.androidtv.beta`; production package `org.moonfin.androidtv`.
+- beta signer intentionally differs from production.
 
 ## Android mobile physical acceptance — in progress
 
-Exact beta candidate is installed side-by-side and first connection testing has begun.
+Exact beta candidate installed side-by-side.
 
-Observed initial failure: Moonfin Beta could not connect to the same server address while regular Moonfin worked from the same phone.
+Initial connection failure was resolved as a **Tailscale Android app-based split-tunnelling exclusion of `org.moonfin.androidtv.beta`**. This was local routing configuration, not a Moonfin/server defect. No rebuild required.
 
-Root cause confirmed on-device: **Tailscale Android app-based split tunnelling was excluding the separate beta package `org.moonfin.androidtv.beta`**. The production package is `org.moonfin.androidtv`, so production Moonfin remained routed through Tailscale while the beta was bypassed.
+### First on-device Discovery gate — PASS
 
-This was a local routing configuration issue, not a Moonfin networking/code defect and not a server regression. No APK rebuild is required. Remove Moonfin Beta from Tailscale's excluded apps before continuing acceptance.
+User-provided screenshots confirm the beta now reaches the live server and renders the custom Discovery v2 experience rather than stock fallback.
+
+Observed on-device:
+
+- expected v2 tab strip is active: For You / Movies / Series / Anime / New & Upcoming (Lists is beyond the visible phone-width portion of the strip and is not yet independently checked);
+- personalised `Because You Watched` and `Something Different` rows render under For You;
+- Movies renders many server-driven lanes including Trending Movies, Popular Movies, Critically Acclaimed, Fresh This Month, Animation, DreamWorks, Danish Cinema, Paramount Plus Movies and Space & Deep Space;
+- artwork, labels, availability/request badges and horizontal rows are rendering normally in the supplied portrait screenshots;
+- no stock-fallback presentation is evident.
+
+Session persistence after a force-close/reopen has not yet been explicitly confirmed in chat.
 
 ## Completed — do not redo
 
@@ -100,12 +81,13 @@ This was a local routing configuration issue, not a Moonfin networking/code defe
 - Moonbase duplicate-load repair: COMPLETE.
 - Moonbase 2.2 Seerr migration: COMPLETE.
 - Discovery v2 live server cutover: **COMPLETE / PASSED**.
-- Android beta initial connection blocker: **RESOLVED — Tailscale app-based split tunnelling exclusion**.
+- Android beta initial connection blocker: **RESOLVED — Tailscale split tunnelling**.
+- Android beta custom Discovery v2 first-load gate: **PASSED**.
 
 ## Exact next actions
 
-1. With Moonfin Beta no longer excluded by Tailscale, connect/authenticate to the live Jellyfin server and verify the session survives a complete app close/reopen.
-2. Prove Discovery is using the served schema-v2 catalogue rather than stock fallback.
-3. Physical acceptance: For You / Movies / Series / Anime recommendation quality; personalised Jellyfin/Seerr rows; See All; refresh/retention; touch/scroll; portrait/landscape; back/background behaviour; artwork/performance; owned-Jellyfin detail/playback; external-Seerr request state.
-4. Diagnose only genuine mobile defects. Poor recommendations should be traced to source/ranking rather than synthetic retuning.
+1. Confirm beta session survives a complete force-close/reopen if not already done.
+2. Continue Android mobile recommendation/interaction acceptance: Series, Anime, New/Upcoming and Lists; For You quality; See All; refresh/retention; touch/scroll; portrait/landscape; back/background; artwork/performance.
+3. Verify one owned Jellyfin item detail/playback path and one external Seerr request-state path.
+4. Diagnose only defects actually observed on-device; recommendation issues should be traced to source/ranking rather than synthetic retuning.
 5. If mobile passes, checkpoint it and proceed to LG OLED65C6PSA/webOS, then Android TV/Google TV.
