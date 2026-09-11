@@ -44,7 +44,7 @@ Locked physical device order:
 - beta is suitable for side-by-side functional acceptance without the production signer
 - production in-place update/signature compatibility remains a separate later promotion gate if required
 
-Before installation, verify read-only that `<server>/Moonfin/Web/homelab/discovery.catalogue.json` serves supported schema v3. Missing/unsupported catalogue intentionally falls back to stock Discovery and must not be counted as Discovery-v2 acceptance.
+Before installation, verify read-only that `<server>/Moonfin/Web/homelab/discovery.catalogue.json` serves a valid catalogue with supported `schemaVersion` `1` or `2`. Missing/unsupported catalogue intentionally falls back to stock Discovery and must not be counted as Discovery-v2 acceptance.
 
 ## Smart-TV 2.8.2 validated candidate
 
@@ -70,4 +70,4 @@ Before installation, verify read-only that `<server>/Moonfin/Web/homelab/discove
 
 ## Exact next action
 
-Read-only verify the live Moonbase schema-v3 catalogue endpoint. If present, verify/install the exact #139 mobile beta side-by-side and begin Android physical acceptance. If absent, establish only the minimum reversible catalogue/Web deployment prerequisite and then continue from Android installation.
+Read-only verify the live Moonbase catalogue endpoint and require supported `schemaVersion` `1` or `2`. If present, verify/install the exact #139 mobile beta side-by-side and begin Android physical acceptance. If absent, establish only the minimum reversible catalogue/Web deployment prerequisite and then continue from Android installation.
