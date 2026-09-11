@@ -11,4 +11,11 @@ Rules:
 - keep Web, Android mobile and Android TV behaviour in the same Flutter feature;
 - no secrets or per-user data in the catalogue.
 
-The current implementation starts with the guarded catalogue/loading boundary. Deeper lane composition and UI are ported only after this boundary is verified.
+UI invariants:
+
+- when mobile navigation is positioned at the top, Discovery content must reserve the fixed toolbar height so the page title never overlaps the back/navigation controls;
+- each non-TV landing carousel owns page-storage identity scoped to tab, section and refresh generation, preventing lazy row recycling from transplanting another lane's horizontal offset;
+- ordinary rebuilds may retain a lane's position, but an explicit Discovery refresh must give refreshed carousel content a fresh scroll identity;
+- TV focus-memory behaviour remains owned by the dedicated TV lane implementation and must not be coupled to mobile carousel state.
+
+The guarded catalogue/loading boundary, rotating lane composition, deep browsing and adaptive Web/mobile/TV presentation are implemented. Physical platform acceptance is the authority for UI defects that are not decidable in automated tests.
