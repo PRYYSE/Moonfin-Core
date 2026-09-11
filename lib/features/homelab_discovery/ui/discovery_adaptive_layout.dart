@@ -1,5 +1,8 @@
 enum HomeLabDiscoveryWindowClass { compact, medium, expanded }
 
+const homeLabDiscoveryDefaultHeaderTopPadding = 20.0;
+const homeLabDiscoveryMobileToolbarGap = 8.0;
+
 HomeLabDiscoveryWindowClass homeLabDiscoveryWindowClass(double viewportWidth) {
   if (!viewportWidth.isFinite || viewportWidth <= 0) {
     return HomeLabDiscoveryWindowClass.compact;
@@ -15,6 +18,26 @@ double homeLabDiscoveryLaneCardWidth(double viewportWidth) {
     HomeLabDiscoveryWindowClass.medium => 140.0,
     HomeLabDiscoveryWindowClass.expanded => 148.0,
   };
+}
+
+double homeLabDiscoveryHeaderTopPadding({
+  required bool isMobile,
+  required bool hasTopToolbar,
+  required double toolbarHeight,
+}) {
+  if (!isMobile || !hasTopToolbar || !toolbarHeight.isFinite) {
+    return homeLabDiscoveryDefaultHeaderTopPadding;
+  }
+  return toolbarHeight.clamp(0.0, double.infinity) +
+      homeLabDiscoveryMobileToolbarGap;
+}
+
+String homeLabDiscoveryLaneScrollStorageKey({
+  required String tabId,
+  required String sectionId,
+  required int refreshNonce,
+}) {
+  return 'homelab-discovery-lane-scroll-$tabId-$sectionId-r$refreshNonce';
 }
 
 int homeLabDiscoveryGridColumns(double crossAxisExtent) {
