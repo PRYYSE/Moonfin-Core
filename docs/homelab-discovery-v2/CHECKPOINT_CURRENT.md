@@ -3,7 +3,7 @@
 **Last updated:** 2026-09-11 Australia/Adelaide  
 **Primary branch:** `homelab/discovery-v2`
 
-Read with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PARITY_MATRIX.md`. GitHub/current repo state is authoritative. Do not restart completed platform implementation or touch live services during GitHub-only work.
+Read with `docs/AI_PROJECT_STATE.md`, `handover.md`, `CROSS_PLATFORM_PARITY_MATRIX.md` and `UPSTREAM_UPDATE_AUTOMATION.md`. GitHub/current repo state is authoritative. Do not restart completed platform implementation or touch live services during GitHub-only work.
 
 ## Current boundary
 
@@ -12,75 +12,95 @@ Read with `docs/AI_PROJECT_STATE.md`, `handover.md` and `CROSS_PLATFORM_PARITY_M
 - Android mobile/tablet: **GITHUB/CODE COMPLETE**
 - Android TV / Google TV: **GITHUB/CODE COMPLETE**
 - Smart-TV/webOS: **GITHUB/CODE COMPLETE + PARITY VALIDATED**
-- Cross-platform parity + recommendation quality: **COMPLETE for current GitHub/code evidence**
-- Whole-product CI / release engineering: **CURRENT — REPLACEMENT FULL BUILD #139 RUNNING**
+- Cross-platform parity + recommendation quality: **COMPLETE for GitHub/code evidence**
+- Whole-product CI / release engineering: **COMPLETE — #139 GREEN**
+- Upstream-update automation / protocol integration: **CURRENT — VALIDATION RUNS LAUNCHED**
 
-## Locked platform evidence
+## Locked release evidence
 
-- Moonfin parity: workflow #132 / `34439296054` GREEN.
-- Smart-TV parity: source `a9dfa657a220a3f8f77753261bd7d8e902c0d837`, workflow #52 / `34439022624` GREEN.
-- Smart-TV candidate artifact `10137277340`, ZIP digest `sha256:9d5ccfed0889a680fa6b4d3532725ce1877f950d306d9599bb6916e9d150c47f`.
-- Production Android certificate SHA-256 `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604` must not change.
+Smart-TV candidate:
 
-## Whole-product CI / release engineering
+- source `a9dfa657a220a3f8f77753261bd7d8e902c0d837`
+- workflow #52 / `34439022624` GREEN
+- artifact `10137277340`
+- ZIP digest `sha256:9d5ccfed0889a680fa6b4d3532725ce1877f950d306d9599bb6916e9d150c47f`
 
-Release gate covers Web + Android mobile/tablet + Android TV/Google TV; Smart-TV candidate is already validated separately.
+Flutter whole-product candidate:
 
-Recent recovery:
-
-- #135 / `34448096121`: all three candidates built; verifier exposed missing TV-manifest inheritance in `androidTv-beta`.
-- `e655545cbbc9902e24bf30c5aa8a43a86b39ce9d`: explicitly maps beta flavours to corresponding mobile/TV manifests.
-- #136 / `34466334114`: failed only because custom-scope allowlist rejected the intentional Gradle packaging change.
-- `90f3c7f2176751841729700acbda8ca21f75e4d3`: adds exactly `android/app/build.gradle.kts` to the narrow scope allowlist.
-- #137 / `34557174599`: focused validation, scope gate, Web, mobile-beta and androidTv-beta builds all passed; signing verifier failed before packaging/upload.
-- `3169a39c834c5b5e3bead0578449dd0453f55b99`: added explicit signer diagnostics.
-- #138 / `34559041907`: focused validation and all three builds again passed; only signer parsing failed. Current `apksigner` emitted: `V2 Signer: certificate SHA-256 digest: e2f6179d4bf86c09eaa512a6533e256a464086a60239a097695263585c2113cd`. This signer differs from protected production signing.
-- `fd06ec5602351e53f0eacb56b2457ad0e80f169e`: parser now accepts the current signer prefix while preserving 64-hex validation, same-CI-signer equality and production-certificate inequality.
-
-### Authoritative replacement gate
-
-- workflow **#139 / `34571653740`**
+- workflow **#139 / `34571653740`** GREEN
 - source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`
-- captured status: **IN PROGRESS**
+- artifact `10188826944`
+- size `304,690,594` bytes
+- ZIP digest `sha256:59f6678026ea665eceb74a2ed3fd3c43ae1d593c9c121b1d2ff2a81d29fc65e5` — independently rechecked
+- CI Android signer `9590094799a3b051292ad54904df0d964815a871ef9f6238068607e7ee1202b9`
+- production Android certificate remains `3163e01792e429ce972097a8e3ff9a4626488083142f8c2fdc102a4c75db2604`
+- Web SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`
+- mobile APK SHA-256 `117e63325942dddcf352a5756e2926a16340d86317e3d8706d540febeda7ae9c`
+- Android TV APK SHA-256 `71c2b017cb827e216ef4e5eb23bb4bc40e595b1eb1255aff24cd51298be3e1e8`
 
-Do not poll #139 again in this waiting cycle.
+All #139 focused validation, Web/mobile/TV builds, beta package identity, Leanback split, signer checks, packaging and artifact upload passed. CI APKs remain debug-fallback candidates, not deployment APKs. Physical/live acceptance remains deferred.
 
-Acceptance still requires:
+## Upstream-update integration
 
-- focused validation passes
-- Web release builds
-- `mobile-beta` and `androidTv-beta` APKs build
-- beta package ID is `org.moonfin.androidtv.beta`
-- mobile Leanback optional; Android-TV Leanback required
-- both APKs share a CI signer different from protected production certificate
-- candidate packaging succeeds
-- artifact upload succeeds
-- `BUILD_INFO.txt`, candidate SHA-256 values and artifact metadata are captured
+Official lineages/baselines:
 
-CI APKs remain debug-fallback candidates, not deployment APKs.
+- Core: `Moonfin-Client/Moonfin-Core` / `main`; accepted base `f18c45b1fbf9b63871b4f93237179f9706154763`; observed official head `3b7c07865b9ac9378606d267fcd35faed4ee5b89`.
+- Smart-TV: `Moonfin-Client/Smart-TV` / `main`; accepted base `384d7cab3642f846463a4308e92d213e51507edf`; observed official head `c7e1ff570ace275871f8c63589c30cfb58106edb`.
 
-## Known non-blocking CI debt
+Core integration source:
 
-GitHub runner warnings remain for older Node-targeted action versions and setup-java v4 deprecation. Flutter also warns about future Built-in Kotlin migration. Keep this maintenance separate until the current release gate is green.
+`6f0a333774ca430531f06e3985a968fcb7b4b645`
+
+Implemented:
+
+- machine-readable upstream baseline/identity registry
+- fail-closed upstream impact/overlap generator
+- read-only Core + Smart-TV impact workflow
+- implementation operating contract
+- `update/moonfin-*` support in the proven Discovery release workflow
+- branch-aware narrow-scope base using official-upstream merge-base on update branches
+
+Smart-TV integration source:
+
+`a4e0a3251bf3a987e6c92ad4c1575e5c528401e0`
+
+Implemented:
+
+- `update/webos-*` workflow support
+- Node 20 retained
+- app ID `org.moonfin.webos` / `index.html` preserved
+- accepted branch remains exactly `2.7.0`; update branches can advance semver but cannot regress below `2.7.0`
+- rollback branch `homelab/webos-v1-staging` and candidate `f5c3078ba388f8ba1da85166f62ebf7fe0bbda1e` untouched
+
+Local validation before push: Python compile, JSON/YAML parse, overlap fixture, fail-closed ancestry fixture and webOS version guard fixtures all PASS.
+
+### Validation runs — captured once; do not poll again this cycle
+
+- Core Discovery **#140 / `34576497402`**, source `6f0a333774ca430531f06e3985a968fcb7b4b645`, **QUEUED**
+- Upstream Impact **#1 / `34576497458`**, source `6f0a333774ca430531f06e3985a968fcb7b4b645`, **QUEUED**
+- Smart-TV webOS **#53 / `34576558771`**, source `a4e0a3251bf3a987e6c92ad4c1575e5c528401e0`, **IN PROGRESS**
+
+The impact workflow's cron is intentionally dormant while the control workflow lives only on the non-default Home Lab overlay branch, because GitHub schedules execute from the default branch. Do not merge product overlay code into the upstream-mirror/default branch merely to enable cron; manual dispatch remains safe.
 
 ## Exact next actions
 
-1. Next continuation: inspect **#139 / `34571653740` once**.
-2. If failed, inspect only its failing job/step and fix the genuine failure.
-3. If green, capture release artifact/signing/hash evidence and mark release engineering COMPLETE.
-4. Move directly to **upstream-update automation/protocol integration**.
+1. Inspect #140 / `34576497402` once.
+2. Inspect impact #1 / `34576497458` once; if green, download its report artifact and record current Core/Smart-TV drift + overlap counts.
+3. Inspect Smart-TV #53 / `34576558771` once.
+4. Fix only genuine failing integration gates, launch/record replacements if required, and do not continuously poll.
+5. When all three are green, mark upstream automation/protocol integration COMPLETE and create the explicit GitHub completion checkpoint.
+6. Stop before physical/live acceptance unless explicitly instructed to cross that boundary.
 
 ## Do not redo
 
 - shared catalogue/compiler foundations
-- Web completion
-- Android mobile/tablet completion
-- Android TV focus/deep-paging work
+- Web/mobile/TV platform implementation
+- Android TV focus/deep paging
 - webOS old-TV hardening
-- high-rating provenance correction
-- parity slices
+- parity/recommendation semantics
+- #133–#139 release-gate recovery
 - live services or physical-device acceptance
 
 ## Live boundary
 
-Live remains custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`, accepted legacy Discovery 481/486, Seerr enabled. Physical/device/live acceptance remains deferred.
+Live remains custom Moonbase 2.0.3.1, Web source `a9c789fff317b41bba268d3a213439e23b8d1af5`, accepted legacy Discovery 481/486, Seerr enabled. No physical/device/live acceptance is claimed by CI.
