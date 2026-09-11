@@ -69,6 +69,8 @@ Compiler/test source: `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`.
 
 The compiler refuses the transformation if the authored source shape changes. Regression coverage proves the lane survives loss of the removed `romantic comedy` keyword when exact `romance` exists, and still fails closed if `romance` also disappears.
 
+Automatic full Discovery workflow checkpoint: **#145 / `34598425336`**, source `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`, was `in_progress` when recorded. Do not poll it continuously; inspect this exact run once on the next continuation if needed.
+
 ## Final server cutover bundle
 
 Use only:
