@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../data/services/seerr/seerr_api_models.dart';
+import '../../../preference/preference_constants.dart';
 import '../../../ui/navigation/destinations.dart';
 import '../../../ui/widgets/navigation_layout.dart';
+import '../../../ui/widgets/top_toolbar.dart';
 import '../../../util/platform_detection.dart';
 import '../catalogue/discovery_catalogue.dart';
 import '../data/discovery_lane_loader.dart';
@@ -111,6 +113,13 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
           );
         }
 
+        final headerTopPadding = homeLabDiscoveryHeaderTopPadding(
+          isMobile: PlatformDetection.useMobileUi,
+          hasTopToolbar:
+              NavigationLayout.positionNotifier.value == NavbarPosition.top,
+          toolbarHeight: TopToolbar.heightFor(context),
+        );
+
         return DefaultTabController(
           length: tabs.length,
           child: Builder(
@@ -123,7 +132,12 @@ class _HomeLabDiscoveryScreenState extends State<HomeLabDiscoveryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+                        padding: EdgeInsets.fromLTRB(
+                          24,
+                          headerTopPadding,
+                          24,
+                          8,
+                        ),
                         child: Text(
                           'Discovery',
                           style: Theme.of(context).textTheme.headlineMedium,
@@ -440,7 +454,16 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
                 );
               }
 
-              return _DiscoveryLane(lane: lane, onSeeAll: onSeeAll);
+              final refreshNonce = widget.controller.refreshNonce;
+              return _DiscoveryLane(
+                key: ValueKey<String>(
+                  'homelab-discovery-lane-${lane.section.id}-r$refreshNonce',
+                ),
+                tabId: widget.controller.tab.id,
+                refreshNonce: refreshNonce,
+                lane: lane,
+                onSeeAll: onSeeAll,
+              );
             },
           ),
         );
@@ -472,10 +495,18 @@ class _HomeLabDiscoveryTabViewState extends State<_HomeLabDiscoveryTabView> {
 }
 
 class _DiscoveryLane extends StatelessWidget {
+  final String tabId;
+  final int refreshNonce;
   final HomeLabDiscoveryLaneLoadResult lane;
   final VoidCallback? onSeeAll;
 
-  const _DiscoveryLane({required this.lane, this.onSeeAll});
+  const _DiscoveryLane({
+    super.key,
+    required this.tabId,
+    required this.refreshNonce,
+    required this.lane,
+    this.onSeeAll,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -533,6 +564,13 @@ class _DiscoveryLane extends StatelessWidget {
           SizedBox(
             height: cardHeight,
             child: ListView.separated(
+              key: PageStorageKey<String>(
+                homeLabDiscoveryLaneScrollStorageKey(
+                  tabId: tabId,
+                  sectionId: lane.section.id,
+                  refreshNonce: refreshNonce,
+                ),
+              ),
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 24),
               itemCount: lane.items.length,
