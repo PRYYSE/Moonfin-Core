@@ -83,32 +83,35 @@ void main() {
     expect(homeLabDiscoveryGridColumns(792), 5);
   });
 
-  test('mobile Discovery header clears a top toolbar without affecting others', () {
-    expect(
-      homeLabDiscoveryHeaderTopPadding(
-        isMobile: true,
-        hasTopToolbar: true,
-        toolbarHeight: 60,
-      ),
-      68,
-    );
-    expect(
-      homeLabDiscoveryHeaderTopPadding(
-        isMobile: true,
-        hasTopToolbar: false,
-        toolbarHeight: 60,
-      ),
-      homeLabDiscoveryDefaultHeaderTopPadding,
-    );
-    expect(
-      homeLabDiscoveryHeaderTopPadding(
-        isMobile: false,
-        hasTopToolbar: true,
-        toolbarHeight: 80,
-      ),
-      homeLabDiscoveryDefaultHeaderTopPadding,
-    );
-  });
+  test(
+    'mobile Discovery header clears a top toolbar without affecting others',
+    () {
+      expect(
+        homeLabDiscoveryHeaderTopPadding(
+          isMobile: true,
+          hasTopToolbar: true,
+          toolbarHeight: 60,
+        ),
+        68,
+      );
+      expect(
+        homeLabDiscoveryHeaderTopPadding(
+          isMobile: true,
+          hasTopToolbar: false,
+          toolbarHeight: 60,
+        ),
+        homeLabDiscoveryDefaultHeaderTopPadding,
+      );
+      expect(
+        homeLabDiscoveryHeaderTopPadding(
+          isMobile: false,
+          hasTopToolbar: true,
+          toolbarHeight: 80,
+        ),
+        homeLabDiscoveryDefaultHeaderTopPadding,
+      );
+    },
+  );
 
   test('carousel storage is isolated by lane and explicit refresh', () {
     final initial = homeLabDiscoveryLaneScrollStorageKey(
