@@ -7,96 +7,79 @@ GitHub/current repo is authoritative. Completed implementation must not be resta
 
 ## Status
 
-**Discovery v2 server cutover PASSED.** Android mobile functional acceptance broadly passed, but physical acceptance found two UI defects plus a weak two-row For You experience. Both repair streams are implemented; workflow #151 is the current replacement-candidate checkpoint. A separate `Family Favourites` lane-semantics defect remains before final mobile sign-off.
+Discovery v2 server cutover is complete. Android mobile functional acceptance broadly passed; two UI defects and the weak For You experience have repairs implemented. The active long-CI checkpoint is now workflow #152 after #151 failed only because one test file was not `dart format`-clean. `Family Favourites` semantics still need correction before final mobile sign-off.
 
-## Live server cutover — complete
+## Live server — accepted
 
-- `=== CUTOVER PASSED ===`
 - `/moonfin-web/current -> releases/fd06ec560235`
 - product source `fd06ec5602351e53f0eacb56b2457ad0e80f169e`
-- live compiler source remains `ee00cb3867d9c294bae5759d6d19d5d5bd31dade` until the pending narrow catalogue-quality update
-- Web tar SHA-256 `0fbf4918a04581a6d79e7e0a6aa407a66d474402bfd33fb20cb38692112fa425`
-- served catalogue schema v2 / 481 lanes / SHA-256 `2331f6f24428de5203ec8fd4d5d867a4734ebd3449df1538ce60eb4448904b50`
-- Moonbase `2.2.0.0` Active; authenticated Moonbase -> Seerr proxy PASS
+- live compiler source still `ee00cb3867d9c294bae5759d6d19d5d5bd31dade`
+- served catalogue: schema v2 / 481 lanes / SHA-256 `2331f6f24428de5203ec8fd4d5d867a4734ebd3449df1538ce60eb4448904b50`
+- Moonbase `2.2.0.0` Active; Moonbase -> Seerr proxy PASS
 - rollback `/srv/appdata/moonfin/rollback/server-migration-20260912-015401`
 - rollback command `sudo bash /srv/appdata/moonfin/rollback/latest/rollback.sh`
 
-Locked live gate remains 486 authored / 481 compiled / 5 semantic drops / 0 provider drops. Do not lower it for current quality work.
+Locked catalogue gate remains **486 authored / 481 compiled / 5 semantic drops / 0 provider drops**.
 
-## Android mobile — confirmed functional evidence
+## Mobile repair — implemented
 
-The #139 beta candidate proved the live schema-v2 product flow. Tailscale split tunnelling initially excluded `org.moonfin.androidtv.beta`; that local routing problem is resolved.
+- carousel state identity = tab + section + refresh generation;
+- explicit refresh gets fresh horizontal state;
+- mobile top-navigation Discovery reserves toolbar height + 8 dp;
+- focused regression tests exist.
 
-User reports/checks cover:
+Do not reopen these root causes unless the replacement APK still reproduces them.
 
-- all Discovery tabs;
-- session/reopen;
-- `See all` + Back;
-- owned-Jellyfin detail/playback;
-- external Seerr request path;
-- orientation/background/reopen;
-- normal artwork/status rendering.
+## For You redesign — implemented, not live
 
-## Mobile UI defects — repair implemented
+Compiler commit `87390d713c24aba7a30aa66cee98d1c59b027752` adds the reviewed 16-row For You contract.
 
-1. **Carousel offset inheritance:** horizontal state now has a unique identity by tab + section + refresh generation. Lazy recycling cannot transplant another lane's offset; explicit refresh gets fresh state.
-2. **Discovery/top-toolbar spacing:** top-navigation mobile Discovery now reserves the toolbar height + 8 dp; left/bottom layouts keep normal padding.
+- separate movie and series recommendations from real recent watch history;
+- clearer optional-source rows for favourites/watchlist/ratings/likes;
+- useful affinity/novelty/rewatch/quick/older/recent rows;
+- all 16 strategies executable by current adapters;
+- For You `minItems=4`, tab minimum 4;
+- stale checks prevent silently applying the override if authoring assumptions drift.
 
-Implementation/tests are already on the branch. Do not reopen the root-cause investigation unless the replacement APK still reproduces either defect.
+Deploy only through a narrow catalogue-only update after CI validation. Preserve the current live catalogue and require the unchanged 481/5/0 gate. No Compose/Jellyfin/Moonbase changes.
 
-## For You defect — redesign implemented, pending live catalogue update
+## CI evidence
 
-On-device #139 showed only two usable For You rows with vague labels.
+### #151 / `34668019767`
 
-Root cause:
+Source `87390d713c24aba7a30aa66cee98d1c59b027752`.
 
-- 16 rows were authored; composer was not capped at 2;
-- many depend on optional favourites/watchlist/ratings/likes data;
-- personal rows required 8 usable items, hiding valid smaller sets;
-- one strategy had no truthful current source and failed closed.
+Result: **FAILURE at Format gate only**.
 
-Compiler source **`87390d713c24aba7a30aa66cee98d1c59b027752`** applies a stale-checked reviewed 16-row For You contract while preserving the existing overall catalogue counts.
+Before the failure:
+- route integration PASS;
+- generator PASS with 486 total lanes and For You 16;
+- catalogue tests **9/9 PASS**.
 
-Key changes:
+`dart format` changed only the line wrapping of one test in `test/homelab_discovery/homelab_discovery_mobile_test.dart`; later analyse/test/build jobs were skipped. The exact formatter output was committed with no semantic change.
 
-- explicit movie + series rows from real watch history;
-- clearer provenance/outcome names for favourites, watchlist, ratings, likes, mixed taste, novelty, movie/series/anime affinity, quick/older/recent picks and rewatch;
-- all 16 strategies are executable by current personalisation adapters;
-- `minItems` lowered from 8 to **4** for For You only;
-- For You minimum usable-lane contract set to **4**;
-- compiler validates the reviewed IDs/titles/strategies/media types and fails if the old authoring assumptions drift.
+### Current long-CI checkpoint — #152
 
-This is **not live yet**. Apply it only through the planned narrow compiler/catalogue-only server update after CI passes. Preserve the current live catalogue for rollback; require 481/486, 5 semantic drops and 0 provider drops; no Compose/Jellyfin/Moonbase restart.
+- source **`145678fae77feb733975ffbafe62a6ae2b6ec2cb`**
+- workflow **#152**
+- run ID **`34672828217`**
+- event push / `[full-build]`
+- status when recorded: **queued**
 
-## Current long CI checkpoint
+Do not continuously poll. On continuation inspect this exact run once.
 
-Previous #150 is superseded by the combined replacement build.
+## Other open quality issue
 
-- workflow **#151**
-- run **`34668019767`**
-- source **`87390d713c24aba7a30aa66cee98d1c59b027752`**
-- `[full-build]`
-- status when recorded: **in progress**
+`Lists -> Family Favourites` currently uses `genre: "10751|16"`, so Animation alone can qualify. Correct the authoritative generator semantics before final mobile sign-off.
 
-Do not continuously poll. On next continuation inspect this exact run once.
+## Deferred enhancement
 
-## Other open recommendation-quality defect
-
-`Lists -> Family Favourites` showed animation-only/non-family results because current authoring uses `genre: "10751|16"` (Family OR Animation). Correct authoritative semantics, not ranking.
-
-## Deferred UX enhancement
-
-After platform acceptance, retain rotating rows and add:
-
-- **All Lists** — searchable/text-first index of every lane grouped by tab, opening existing `See all`;
-- **Genres** — stable genre browser independent of lane rotation.
+After platform acceptance: add **All Lists** and **Genres** browsing while retaining rotating landing rows.
 
 ## Exact next action
 
-1. Inspect workflow #151 / `34668019767` once.
-2. If green, retrieve/hash its replacement mobile-beta APK.
-3. Apply the For You compiler change with a narrow catalogue-only server update; keep rollback and require the locked 481/5/0 gates.
-4. Install/update Moonfin Beta and retest only carousel behaviour, header spacing and For You richness/naming.
-5. Correct/sanity-check `Family Favourites` semantics.
-6. If mobile passes, checkpoint and proceed to LG webOS, then Android TV/Google TV.
-7. Implement All Lists + Genres after platform acceptance.
+1. Inspect #152 / `34672828217` exactly once.
+2. If green, retrieve/hash its mobile-beta APK.
+3. Perform one narrow catalogue-quality deployment on `docker01`: reviewed For You + corrected Family Favourites, rollback copy, locked 481/5/0 gate, no Jellyfin/Compose/Moonbase changes.
+4. Update Moonfin Beta side-by-side and retest only carousel behaviour, header spacing, For You richness/naming and Family Favourites content.
+5. If mobile passes, checkpoint and proceed to LG webOS, then Android TV/Google TV.
