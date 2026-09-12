@@ -2,9 +2,10 @@
 """Compile the Home Lab Discovery authoring catalogue to executable schema v2.
 
 Keyword/provider names are resolved from current server-produced lookup maps.
-Reviewed semantic external-list placeholders are converted to normal executable
-Discovery queries. Anything unresolved fails closed and is omitted with
-explicit diagnostics instead of silently becoming a broad/misleading query.
+Reviewed semantic and personalisation overrides are applied only when their
+source assumptions still match exactly. Anything unresolved fails closed and is
+omitted with explicit diagnostics instead of silently becoming broad or
+misleading.
 
 Expected lookup inputs may be either:
   {"name": 123, ...}
@@ -91,6 +92,143 @@ PROVIDER_ALIASES = {
 }
 
 
+# The authored catalogue intentionally remains stable at 486 lanes. This
+# reviewed compile-time overlay converts its original For You placeholders into
+# a truthful set that the current Flutter personal-source adapters can execute.
+# Every row is guarded by its old ID + strategy so upstream authoring drift fails
+# loudly instead of silently changing the meaning of personal recommendations.
+REVIEWED_FOR_YOU_OVERRIDES = (
+    (
+        "for-you-because-you-watched",
+        "recent-history",
+        "for-you-movies-from-watch-history",
+        "Movies Based on Your Watch History",
+        "recent-history",
+        "movie",
+    ),
+    (
+        "for-you-more-like-your-favourites",
+        "favourites",
+        "for-you-series-from-watch-history",
+        "Series Based on Your Watch History",
+        "recent-history",
+        "tv",
+    ),
+    (
+        "for-you-inspired-by-your-watchlist",
+        "watchlist",
+        "for-you-inspired-by-favourites",
+        "Inspired by Your Favourites",
+        "favourites",
+        "all",
+    ),
+    (
+        "for-you-based-on-your-highest-ratings",
+        "high-ratings",
+        "for-you-inspired-by-watchlist",
+        "Inspired by Your Watchlist",
+        "watchlist",
+        "all",
+    ),
+    (
+        "for-you-more-from-things-you-like",
+        "likes",
+        "for-you-based-on-high-ratings",
+        "Because You Rated These Highly",
+        "high-ratings",
+        "all",
+    ),
+    (
+        "for-you-picked-from-your-taste",
+        "mixed-positive",
+        "for-you-based-on-likes",
+        "Based on Things You Like",
+        "likes",
+        "all",
+    ),
+    (
+        "for-you-highly-rated-and-unseen",
+        "highly-rated-unseen",
+        "for-you-highly-rated-unseen",
+        "Highly Rated Picks You Haven't Seen",
+        "highly-rated-unseen",
+        "all",
+    ),
+    (
+        "for-you-something-different",
+        "novelty",
+        "for-you-try-something-different",
+        "Try Something Different",
+        "novelty",
+        "all",
+    ),
+    (
+        "for-you-movies-for-you",
+        "movie-affinity",
+        "for-you-movies-you-might-like",
+        "Movies You Might Like",
+        "movie-affinity",
+        "movie",
+    ),
+    (
+        "for-you-series-for-you",
+        "series-affinity",
+        "for-you-series-you-might-like",
+        "Series You Might Like",
+        "series-affinity",
+        "tv",
+    ),
+    (
+        "for-you-anime-for-you",
+        "anime-affinity",
+        "for-you-anime-you-might-like",
+        "Anime You Might Like",
+        "anime-affinity",
+        "all",
+    ),
+    (
+        "for-you-short-picks-for-you",
+        "short-runtime-affinity",
+        "for-you-quick-picks",
+        "Quick Picks for You",
+        "short-runtime-affinity",
+        "all",
+    ),
+    (
+        "for-you-older-gems-for-you",
+        "older-affinity",
+        "for-you-older-gems",
+        "Older Gems for You",
+        "older-affinity",
+        "all",
+    ),
+    (
+        "for-you-recent-releases-for-you",
+        "recent-affinity",
+        "for-you-recent-picks",
+        "Recent Picks for You",
+        "recent-affinity",
+        "all",
+    ),
+    (
+        "for-you-worth-rewatching",
+        "rewatch",
+        "for-you-worth-rewatching",
+        "Worth Rewatching",
+        "rewatch",
+        "all",
+    ),
+    (
+        "for-you-continue-exploring",
+        "recent-discovery-context",
+        "for-you-based-on-your-taste",
+        "Based on Your Taste",
+        "mixed-positive",
+        "all",
+    ),
+)
+
+
 def resolve_one(
     name: str,
     lookup: dict[str, int],
@@ -156,6 +294,55 @@ def apply_reviewed_semantic_overrides(catalogue: dict[str, Any]) -> None:
     raise ValueError(f"Reviewed semantic target is missing: {target_id}")
 
 
+def apply_reviewed_for_you_overrides(catalogue: dict[str, Any]) -> None:
+    """Make For You truthful, useful with sparse personal data, and self-explanatory."""
+
+    for tab in catalogue.get("tabs") or []:
+        if tab.get("id") != "for-you":
+            continue
+
+        sections = list(tab.get("sections") or [])
+        by_id = {str(section.get("id")): section for section in sections}
+        expected_ids = {entry[0] for entry in REVIEWED_FOR_YOU_OVERRIDES}
+        if len(sections) != len(REVIEWED_FOR_YOU_OVERRIDES) or set(by_id) != expected_ids:
+            raise ValueError(
+                "Reviewed For You authoring shape changed; refusing to apply a stale override"
+            )
+
+        for (
+            old_id,
+            expected_seed,
+            new_id,
+            new_title,
+            new_seed,
+            media_type,
+        ) in REVIEWED_FOR_YOU_OVERRIDES:
+            section = by_id[old_id]
+            query = section.get("query") or {}
+            if (
+                query.get("source") != "personalised"
+                or query.get("seedStrategy") != expected_seed
+                or query.get("mediaType") != "all"
+                or section.get("pool") != "personal"
+                or int(section.get("minItems") or 0) != 8
+            ):
+                raise ValueError(
+                    f"Reviewed For You source semantics changed for {old_id}; "
+                    "refusing to apply a stale override"
+                )
+
+            section["id"] = new_id
+            section["title"] = new_title
+            section["minItems"] = 4
+            query["seedStrategy"] = new_seed
+            query["mediaType"] = media_type
+
+        tab["minimumLaneCount"] = 4
+        return
+
+    raise ValueError("Reviewed For You tab is missing")
+
+
 def _resolve_external_section(section: dict[str, Any]) -> str | None:
     query = section["query"]
     if query.get("source") != "externalList":
@@ -179,6 +366,7 @@ def compile_catalogue(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     catalogue = copy.deepcopy(authoring.build())
     apply_reviewed_semantic_overrides(catalogue)
+    apply_reviewed_for_you_overrides(catalogue)
     diagnostics: dict[str, Any] = {
         "droppedSections": [],
         "resolvedKeywordSections": 0,
@@ -309,6 +497,32 @@ def _validate_compiled(catalogue: dict[str, Any]) -> None:
                 raise ValueError(f"Unresolved externalList remains in {section_id}")
             if query.get("listProvider") or query.get("listId"):
                 raise ValueError(f"Opaque list metadata remains in {section_id}")
+
+    for_you = next(
+        (tab for tab in catalogue["tabs"] if tab.get("id") == "for-you"),
+        None,
+    )
+    if for_you is None or len(for_you["sections"]) != 16:
+        raise ValueError("Compiled For You must retain all 16 reviewed lanes")
+    if int(for_you.get("minimumLaneCount") or 0) != 4:
+        raise ValueError("Compiled For You minimum lane count must be 4")
+    if any(int(section.get("minItems") or 0) != 4 for section in for_you["sections"]):
+        raise ValueError("Every compiled For You lane must use minItems=4")
+
+    expected = {
+        new_id: (new_title, new_seed, media_type)
+        for _, _, new_id, new_title, new_seed, media_type in REVIEWED_FOR_YOU_OVERRIDES
+    }
+    actual = {
+        section["id"]: (
+            section["title"],
+            section["query"].get("seedStrategy"),
+            section["query"].get("mediaType"),
+        )
+        for section in for_you["sections"]
+    }
+    if actual != expected:
+        raise ValueError("Compiled For You semantics differ from the reviewed contract")
 
 
 def main() -> int:
