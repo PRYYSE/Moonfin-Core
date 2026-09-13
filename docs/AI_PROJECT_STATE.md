@@ -1,10 +1,10 @@
 # AI Project State
 
-**Updated:** 2026-09-12 Australia/Adelaide
+**Updated:** 2026-09-13 Australia/Adelaide
 
 ## Current objective
 
-Discovery v2 server cutover is complete. Finish Android mobile repair/recommendation-quality acceptance, then continue in locked order: **LG webOS -> Android TV/Google TV**.
+Discovery v2 server cutover and the For You catalogue-quality deployment are complete. Finish the repaired Android mobile physical retest, then continue in locked order: **LG webOS -> Android TV/Google TV**.
 
 Primary repo/branch: `PRYYSE/Moonfin-Core` / `homelab/discovery-v2`. GitHub/current repo is authoritative.
 
@@ -14,13 +14,16 @@ Primary repo/branch: `PRYYSE/Moonfin-Core` / `homelab/discovery-v2`. GitHub/curr
 - Compose: `/opt/stacks/media/compose.yaml` + `compose.jellyfin-opencl.yml`.
 - external Web: `/moonfin-web/current -> releases/fd06ec560235`.
 - live product source: `fd06ec5602351e53f0eacb56b2457ad0e80f169e`.
-- live semantic compiler source remains `ee00cb3867d9c294bae5759d6d19d5d5bd31dade` until the pending catalogue-only For You deployment.
-- served catalogue: schema v2 / 481 lanes / SHA-256 `2331f6f24428de5203ec8fd4d5d867a4734ebd3449df1538ce60eb4448904b50`.
+- live Discovery compiler/catalogue source: `145678fae77feb733975ffbafe62a6ae2b6ec2cb`.
+- served catalogue: schema v2 / 481 lanes / SHA-256 `592a96c2752cd00a4fada31ebeae7bf31619658cd24f8fed6f92f531a8dc2af4`.
 - locked catalogue gate: **486 authored / 481 compiled / 5 semantic drops / 0 provider drops**.
+- For You: 16 reviewed rows, `minItems=4`, tab minimum 4; deployed and served successfully.
 - Moonbase `2.2.0.0` Active; Moonbase -> Seerr proxy PASS.
 - `/srv/appdata/moonfin/android-signing` untouched.
-- rollback record: `/srv/appdata/moonfin/rollback/server-migration-20260912-015401`.
-- rollback command: `sudo bash /srv/appdata/moonfin/rollback/latest/rollback.sh`.
+- original cutover rollback: `/srv/appdata/moonfin/rollback/server-migration-20260912-015401`.
+- latest catalogue rollback: `/srv/appdata/moonfin/rollback/discovery-for-you-20260913-192027`.
+
+The For You deployment was catalogue-only: **no Jellyfin restart, no Compose change, no Moonbase change**. Pre/post HTTP gates passed and served SHA matches canonical.
 
 Do not reopen server cutover, Moonbase migration, QSV, Compose architecture or completed semantic repair without current defect evidence.
 
@@ -28,7 +31,7 @@ Do not reopen server cutover, Moonbase migration, QSV, Compose architecture or c
 
 Functional acceptance already passed for login/session/reopen, custom schema-v2 Discovery, all Discovery tabs, See All/back, owned playback, Seerr request flow, artwork/status rendering and orientation/background behaviour.
 
-Physical acceptance then found two UI defects; fixes are now CI-green:
+Physical acceptance then found two UI defects; fixes are CI-green:
 
 1. carousel horizontal offset inheritance — storage identity is tab + section + refresh generation;
 2. Discovery title/header colliding with fixed mobile top toolbar — top-navigation layout reserves toolbar height + 8 dp.
@@ -51,19 +54,24 @@ Artefact:
 - app `2.5.1+30000149`; beta package `org.moonfin.androidtv.beta`
 - CI signer `2ebdd4396ed9a64c6d0e073906001eb76650d7380d3c512ac64444e96a334b5e`; production signing remains untouched.
 
-## For You redesign — implemented, not live
+## For You redesign — LIVE / PASSED SERVER GATE
 
 On-device #139 showed only two useful For You rows with vague naming. Root cause was not a two-row catalogue cap: 16 rows existed, but optional-source rows could be empty, personal rows required 8 usable items, and one strategy had no truthful adapter.
 
-Commit `87390d713c24aba7a30aa66cee98d1c59b027752` adds a stale-checked reviewed For You contract while preserving 16 rows and the locked total-count model. Personal rows now use `minItems=4`; the tab minimum is 4. Empty optional-source rows still fail closed.
+Commit `87390d713c24aba7a30aa66cee98d1c59b027752`, included in #152 source, adds a stale-checked reviewed For You contract while preserving 16 rows and the locked total-count model. Personal rows now use `minItems=4`; the tab minimum is 4. Empty optional source rows still fail closed.
 
-Reviewed rows include separate movie/series watch-history recommendations, favourites, watchlist, ratings, likes, unseen-high-rated, novelty, movie/series/anime affinity, quick picks, older/recent picks, rewatch and mixed-taste recommendations with clearer names.
-
-This change is **server-catalogue driven and not live yet**. Next server action is a bounded catalogue-only compile/install from exact source `145678fae77feb733975ffbafe62a6ae2b6ec2cb`: stage candidate files first, require the unchanged 481/486 + 5 semantic drops + 0 provider drops gate, preserve rollback files, atomically swap the catalogue, and verify the served catalogue. Do not edit Compose, recreate Jellyfin or change Moonbase.
+The bounded live compile/install on 2026-09-13 passed:
+- compiler source `145678fae77feb733975ffbafe62a6ae2b6ec2cb`;
+- `481/486` compiled;
+- 5 semantic drops;
+- 0 provider drops;
+- 16 For You rows and reviewed contract PASS;
+- served SHA `592a96c2752cd00a4fada31ebeae7bf31619658cd24f8fed6f92f531a8dc2af4`;
+- rollback `/srv/appdata/moonfin/rollback/discovery-for-you-20260913-192027`.
 
 ## Other quality defect — separate
 
-`Lists -> Family Favourites` currently uses `genre: "10751|16"`, admitting Family **or** Animation. Correct authoritative generator semantics separately after the already-green For You/mobile repair candidate is physically verified; do not stack an unvalidated semantic edit into that candidate.
+`Lists -> Family Favourites` currently uses `genre: "10751|16"`, admitting Family **or** Animation. Correct authoritative generator semantics separately after the already-green For You/mobile repair candidate is physically verified; do not stack an unvalidated semantic edit into the accepted candidate.
 
 ## Deferred UX enhancement
 
@@ -84,13 +92,13 @@ After platform acceptance, preserve rotating rows but add:
 - mobile repair/replacement candidate #152 / `34672828217` GREEN.
 - Moonbase duplicate-load repair and 2.2 Seerr migration COMPLETE.
 - Discovery v2 server cutover COMPLETE/PASSED.
+- For You catalogue-only deployment COMPLETE/PASSED.
 - Android beta Tailscale split-tunnel issue RESOLVED.
-- Android mobile functional acceptance PASS except current repaired UI/For You retest.
+- Android mobile functional acceptance PASS except current repaired UI/For You physical retest.
 
 ## Exact next actions
 
-1. Perform the bounded For You catalogue-only quality deployment on `docker01` from source `145678fae77feb733975ffbafe62a6ae2b6ec2cb`; preserve rollback and require exact 481/5/0 gates; no Jellyfin/Compose/Moonbase restart.
-2. Extract/install the exact #152 mobile-beta APK and retest only carousel start/retention/refresh reset, header spacing, and For You richness/naming.
-3. If those pass, correct and narrowly validate/deploy `Family Favourites` semantics.
-4. Checkpoint Android mobile as accepted, then proceed to LG OLED65C6PSA/webOS, then Android TV/Google TV.
-5. After platform acceptance, implement deferred **All Lists** + **Genres** browsing.
+1. Install/update the exact #152 mobile-beta APK and retest only carousel start/retention/refresh reset, Discovery header spacing, and For You richness/naming.
+2. If those pass, correct and narrowly validate/deploy `Family Favourites` semantics.
+3. Checkpoint Android mobile as accepted, then proceed to LG OLED65C6PSA/webOS, then Android TV/Google TV.
+4. After platform acceptance, implement deferred **All Lists** + **Genres** browsing.
